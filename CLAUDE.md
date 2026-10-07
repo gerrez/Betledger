@@ -13,8 +13,8 @@ user data belongs to a user, and no user may ever see or change another user's d
 
 ## Stack
 
-- Laravel 12, PHP 8.4+ (Composer platform is pinned to 8.4 — keep it that way so CI and
-  cloud sessions can install the lock file)
+- Laravel 12, PHP 8.3+ (Composer platform is pinned to 8.3 — keep it that way so CI and
+  cloud sessions, which run PHP 8.3, can install the lock file)
 - Livewire 4 + Volt (single-file components in `resources/views/livewire/`), Flux UI
   (free edition only — no Flux Pro components), Tailwind CSS 4, Vite
 - SQLite for local dev and tests (tests use an in-memory database, see `phpunit.xml`)
@@ -95,8 +95,10 @@ matches it and would overwrite the text in between). **Where the generated guide
 conflict with this file, this file wins:**
 
 - They say the app runs on PHP 8.5 (detected from the owner's machine). The target is
-  **PHP 8.4**: don't use 8.5-only features (pipe operator `|>`, `clone()` with
-  properties, `array_first()`/`array_last()`, etc.).
+  **PHP 8.3**: don't use 8.4-only features (property hooks, asymmetric visibility like
+  `private(set)`, `array_find()`/`array_any()`/`array_all()`, `mb_trim()`,
+  `new Foo()->bar()` without wrapping parentheses, `#[\Deprecated]`) or 8.5-only ones
+  (pipe operator `|>`, `clone()` with properties, `array_first()`/`array_last()`, etc.).
 - "Don't change dependencies / create base folders without approval": in a cloud session,
   a dependency justified in the PR description counts as asking; merging is the
   approval. `app/Domain/` is already approved.

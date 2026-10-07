@@ -1,6 +1,6 @@
 # BetLedger — product spec
 
-> Status: **in design**. Scope, data model and settlement rules are drafted; screens are
+> Status: **in design**. Scope, data model, settlement and statistics rules are agreed; screens are
 > next. This file is the source of truth for implementation work.
 
 ## Purpose
@@ -48,7 +48,8 @@ how they are actually performing.
 
 ## Data model
 
-All amounts are integers in minor units (cents/øre). All odds and rates are exact
+All amounts are integers in minor units (cents/øre); v1 supports currencies with 2
+decimal places only (EUR, DKK, GBP, NOK, SEK, USD, …). All odds and rates are exact
 decimals (`decimal` columns, handled as strings/bcmath in PHP). Every table holding user
 data has a `user_id` (directly, or via its parent bet) and is scoped by policies.
 
@@ -99,6 +100,7 @@ data has a `user_id` (directly, or via its parent bet) and is scoped by policies
 | `status` | enum `open`, `settled` | |
 | `settled_at` | datetime, nullable | |
 | `payout` | bigint, nullable | minor units, set on settlement |
+| `payout_is_manual` | bool | true when the user replaced the calculated payout with the amount actually paid |
 | `profit` | bigint, nullable | `payout − stake` (free bets: `payout`) |
 | `notes` | text, nullable | |
 | timestamps | | |
@@ -149,6 +151,10 @@ The bet's factor is the **product** of its selection factors (a single has one).
 - **Reversing:** clearing or changing a selection result recalculates the bet. If it is
   no longer settleable it goes back to `open` and `payout`, `profit` and `settled_at` are
   cleared.
+- **Manual payout:** on a settled bet the user may replace the calculated payout with the
+  amount the bookmaker actually paid (rounding, max-payout caps); `profit` follows from
+  it with the same formulas. Any later change to a selection result discards the manual
+  payout (`payout_is_manual = false`) and recalculates; the UI warns before doing so.
 
 Worked examples (stake 100.00 = 10000 minor units):
 
@@ -189,7 +195,7 @@ odds, average CLV, open stake.
 2. **Breakdowns:** the totals table split by bookmaker, sport, competition, team, market,
    tipster, tag and bet type. Selection-level dimensions (sport, competition, team,
    market): an accumulator counts under **every distinct value its selections have**, so
-   breakdown rows can add up to more than the overall total. The UI says so.
+   breakdown rows can add up to more than the overall total (decided). The UI says so.
 3. **Odds ranges:** totals grouped by `total_odds` bands: 1.01–1.50, 1.51–2.00, 2.01–3.00,
    3.01–5.00, 5.01–10.00, 10.01+.
 4. **CLV:** average CLV, share of bets that beat the closing line, and CLV by breakdown.
@@ -198,9 +204,4 @@ odds, average CLV, open stake.
 
 <!-- Owner decisions still pending, plus assumptions Claude sessions had to make. -->
 
-- Accumulator payouts at some bookmakers differ slightly from the product of the odds
-  (rounding, max-payout caps). v1 calculates the return; should the user be able to
-  override the actual amount paid?
-- Breakdown counting for accumulators (above): OK, or count accumulators only under
-  "Mixed" when their selections differ?
-- Minor units assume currencies with 2 decimals (EUR, DKK, GBP, NOK, SEK, USD…). Fine for v1?
+_None yet._

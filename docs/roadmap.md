@@ -17,8 +17,8 @@ unless the owner says otherwise. Tick the box in the same PR that completes the 
 
 ## Phase 1 — Design (with the owner, not a cloud task)
 
-- [ ] Resolve the "To decide" list in `docs/spec.md`
-- [ ] Data model (tables, columns, money/odds types)
+- [x] Resolve the open scope decisions (see `docs/spec.md`)
+- [x] Data model (tables, columns, money/odds types)
 - [ ] Screen designs: bet entry, bet list, settlement, statistics dashboard
 - [ ] Break the build into Phase 2 tasks below
 

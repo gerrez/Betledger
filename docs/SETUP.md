@@ -41,6 +41,9 @@ delete both so each PR runs one workflow. Claude left them for you to decide.
 3. Create a cloud environment for the repo:
    - **Network access: Limited** (the default allowlist covers package registries such as
      Packagist and npm). Full internet isn't needed.
+   - Add **`boost.laravel.com`** to the allowed domains. Laravel Boost's `search-docs`
+     tool calls it for version-specific Laravel/Livewire/Flux docs. Everything else in
+     Boost works offline.
    - No environment variables or secrets are needed; `.env` is generated from
      `.env.example` by `.claude/hooks/session-start.sh`.
    - If the first session reports that `php`, `composer` or `node` is missing, add an
@@ -58,6 +61,21 @@ description reports the hook ran. Then merge it yourself.
 1. Start a cloud session: "Do the next unchecked task in docs/roadmap.md" (or a specific one).
 2. Review the PR on GitHub. Request changes in the session or with PR comments.
 3. Merge when CI is green and you're happy.
+
+## Keeping Laravel Boost current
+
+Every month or so, or after upgrading Laravel/Livewire/Flux, run:
+
+```bash
+composer update laravel/boost
+```
+
+```bash
+php artisan boost:update
+```
+
+Then commit the changes to `CLAUDE.md` and `.claude/skills/`. Boost only targets Claude Code
+(`boost.json` → `agents`). Keep it that way unless you start using another AI editor.
 
 ## Running locally
 

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bet detail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5241D0}a:hover{color:#3F2FB8}
+input,button{font:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 1060px; box-sizing: border-box; position: relative; overflow: hidden; background: #F7F7FB; color: #16151F; font-family: Geist, system-ui, sans-serif; font-variant-numeric: tabular-nums;">
+<div style="display: flex; flex-direction: column; gap: 16px; padding: 12px 20px 32px;">
+
+  <header style="display: flex; align-items: center; gap: 8px;">
+    <a href="Bets.dc.html" aria-label="Back to bets" style="width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #16151F; background: #FFFFFF; border: 1px solid #E7E6F0;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 20px; font-weight: 600; flex-grow: 1; text-align: center;">Single bet</h1>
+    <a href="NewBet.dc.html" style="height: 44px; padding: 0 14px; border-radius: 14px; display: flex; align-items: center; color: #5241D0; background: #FFFFFF; border: 1px solid #E7E6F0; text-decoration: none; font-size: 15px; font-weight: 500;">Edit</a>
+  </header>
+
+  <section style="background: #FFFFFF; border-radius: 20px; padding: 20px; box-shadow: 0 1px 2px rgba(22,21,31,0.04), 0 6px 20px rgba(22,21,31,0.05); display: flex; flex-direction: column; gap: 8px;">
+    <span style="align-self: flex-start; font-size: 13px; font-weight: 600; color: #054F31; background: #E7F8EF; padding: 4px 10px; border-radius: 999px;">Won</span>
+    <div style="display: flex; align-items: baseline; gap: 8px;">
+      <span style="font-size: 36px; font-weight: 600; letter-spacing: -0.03em; color: #067647;">{{profit}}</span>
+      <span style="font-size: 15px; color: #5B5970;">{{profitBase}}</span>
+    </div>
+    <span style="font-size: 14px; color: #5B5970;">Payout {{payout}} · <span style="{{sourceStyle}}">{{source}}</span></span>
+  </section>
+
+  <section style="background: #FFFFFF; border-radius: 18px; padding: 16px; border: 1px solid #EEEDF4; display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: flex; align-items: flex-start; gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1;">
+        <span style="font-size: 16px; font-weight: 600;">Arsenal −0.25</span>
+        <span style="font-size: 13px; color: #5B5970;">Arsenal v Chelsea · Premier League · Asian handicap</span>
+      </div>
+      <span style="font-size: 16px; font-weight: 600;">1.95</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; background: #F7F7FB; border-radius: 12px; padding: 10px 12px;">
+      <span style="font-size: 14px; color: #5B5970;">Closing odds 1.88</span>
+      <span style="font-size: 14px; font-weight: 600; color: #067647;">Beat the close +3.7%</span>
+    </div>
+    <div role="group" aria-label="Result" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px;">
+      <button type="button" aria-pressed="true" style="height: 44px; border-radius: 10px; border: 1px solid #12B76A; background: #E7F8EF; color: #054F31; font-size: 13px; font-weight: 700; padding: 0;">Won</button>
+      <button type="button" aria-pressed="false" style="height: 44px; border-radius: 10px; border: 1px solid #DDDCE8; background: #FFFFFF; color: #16151F; font-size: 13px; font-weight: 600; padding: 0;">Lost</button>
+      <button type="button" aria-pressed="false" style="height: 44px; border-radius: 10px; border: 1px solid #DDDCE8; background: #FFFFFF; color: #16151F; font-size: 13px; font-weight: 600; padding: 0;">Void</button>
+      <button type="button" aria-pressed="false" style="height: 44px; border-radius: 10px; border: 1px solid #DDDCE8; background: #FFFFFF; color: #16151F; font-size: 13px; font-weight: 600; padding: 0;">½ Won</button>
+      <button type="button" aria-pressed="false" style="height: 44px; border-radius: 10px; border: 1px solid #DDDCE8; background: #FFFFFF; color: #16151F; font-size: 13px; font-weight: 600; padding: 0;">½ Lost</button>
+    </div>
+    <button type="button" style="height: 40px; align-self: flex-start; border: 0; background: transparent; color: #5241D0; font-size: 14px; font-weight: 500; padding: 0;">Clear result (back to open)</button>
+  </section>
+
+  <section style="background: #FFFFFF; border-radius: 18px; padding: 16px; border: 1px solid #EEEDF4; display: flex; flex-direction: column; gap: 12px;">
+    <sc-if value="{{showAsk}}" hint-placeholder-val="{{true}}">
+      <button type="button" onClick="{{startEdit}}" style="height: 48px; border-radius: 12px; border: 1px dashed #C9C6DD; background: #FFFFFF; color: #16151F; font-size: 15px; font-weight: 500;">Bookmaker paid a different amount?</button>
+    </sc-if>
+    <sc-if value="{{editing}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #5B5970; font-weight: 500;">
+          Amount actually paid
+          <div style="display: flex; align-items: center; height: 52px; border-radius: 12px; border: 2px solid #6C5CE7; padding: 0 14px; gap: 8px;">
+            <input type="text" inputmode="decimal" value="389.50" aria-label="Amount actually paid" style="border: 0; outline: none; flex-grow: 1; min-width: 0; font-size: 20px; font-weight: 600; color: #16151F; background: transparent;">
+            <span style="font-size: 15px; font-weight: 600; color: #5B5970;">EUR</span>
+          </div>
+          <span style="font-weight: 400;">Calculated: €390.00. Changing the result later replaces this amount.</span>
+        </label>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+          <button type="button" onClick="{{cancelEdit}}" style="height: 48px; border-radius: 12px; border: 1px solid #DDDCE8; background: #FFFFFF; color: #16151F; font-size: 15px; font-weight: 500;">Cancel</button>
+          <button type="button" onClick="{{saveManual}}" style="height: 48px; border-radius: 12px; border: 0; background: #6C5CE7; color: #FFFFFF; font-size: 15px; font-weight: 600;">Save amount</button>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{manual}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 14px; color: #5B5970; flex-grow: 1;">Payout entered manually (calculated €390.00)</span>
+        <button type="button" onClick="{{resetCalc}}" style="height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid #DDDCE8; background: #FFFFFF; color: #16151F; font-size: 14px; font-weight: 500;">Use calculated</button>
+      </div>
+    </sc-if>
+  </section>
+
+  <dl style="margin: 0; background: #FFFFFF; border-radius: 18px; padding: 4px 16px; border: 1px solid #EEEDF4; display: flex; flex-direction: column;">
+    <sc-for list="{{facts}}" as="f" hint-placeholder-count="7">
+      <div style="display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid #F1F0F6;">
+        <dt style="font-size: 14px; color: #5B5970;">{{f.k}}</dt>
+        <dd style="margin: 0; font-size: 14px; font-weight: 500; text-align: right;">{{f.v}}</dd>
+      </div>
+    </sc-for>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 0;">
+      <dt style="font-size: 14px; color: #5B5970;">Notes</dt>
+      <dd style="margin: 0; font-size: 14px; line-height: 1.45;">Saka back in training; line moved from −0.25 at 2.02.</dd>
+    </div>
+  </dl>
+
+  <button type="button" style="height: 48px; border-radius: 12px; border: 1px solid #F4C7C3; background: #FFFFFF; color: #B42318; font-size: 15px; font-weight: 500;">Delete bet</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1060}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'calc' };
+  }
+  renderVals() {
+    var self = this;
+    var manual = this.state.mode === 'manual';
+    return {
+      profit: manual ? '+€189.50' : '+€190.00',
+      profitBase: manual ? '≈ +1,413.67 kr' : '≈ +1,417.40 kr',
+      payout: manual ? '€389.50' : '€390.00',
+      source: manual ? 'entered manually' : 'calculated',
+      sourceStyle: manual ? 'color: #4B3FA8; font-weight: 600;' : 'color: #5B5970;',
+      showAsk: this.state.mode === 'calc',
+      editing: this.state.mode === 'editing',
+      manual: manual,
+      startEdit: function () { self.setState({ mode: 'editing' }); },
+      cancelEdit: function () { self.setState({ mode: 'calc' }); },
+      saveManual: function () { self.setState({ mode: 'manual' }); },
+      resetCalc: function () { self.setState({ mode: 'calc' }); },
+      facts: [
+        { k: 'Bookmaker', v: 'Pinnacle (EUR, rate 7.46)' },
+        { k: 'Stake', v: '€200.00 ≈ 1,492.00 kr' },
+        { k: 'Placed', v: '7 Oct 2026, 17:42' },
+        { k: 'Settled', v: '7 Oct 2026, 20:24' },
+        { k: 'Sport', v: 'Football' },
+        { k: 'Tipster', v: 'Own model' },
+        { k: 'Tags', v: 'value · pre-match' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

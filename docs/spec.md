@@ -200,6 +200,43 @@ odds, average CLV, open stake.
    3.01–5.00, 5.01–10.00, 10.01+.
 4. **CLV:** average CLV, share of bets that beat the closing line, and CLV by breakdown.
 
+## Screens and visual design
+
+Mockups: `docs/design/project/*.dc.html` (also published as a private canvas for the owner).
+They are the reference for layout and copy; sample numbers in them are illustrative.
+
+| Screen | Mockup | Notes |
+|---|---|---|
+| Home / overview | `Main.dc.html` | Month profit card with sparkline, 4 KPI tiles, open bets preview |
+| New / edit bet | `NewBet.dc.html` | Single/Accumulator switch; essentials first, "More details" folds competition, market, closing odds, tipster, tags, notes, exchange rate; live payout preview; sticky Save |
+| Bets list | `Bets.dc.html` | Open/Settled/All tabs, filter chips; **inline settle buttons** per pending selection (Won, Lost, Void, ½ Won, ½ Lost) with Undo |
+| Bet detail | `BetDetail.dc.html` | Result, profit in bet + base currency, CLV, result buttons, clear result, **manual payout override**, facts, delete |
+| Statistics | `Statistics.dc.html` | Date range, filter chips, include-free-bets toggle, KPI tiles, cumulative profit chart, breakdown table by dimension, odds-range ROI bars, CLV panel |
+
+Not mocked (build plainly in the same style): bookmakers management, lists management,
+settings (base currency).
+
+**Layout:** phone first for everything except statistics. Phone: bottom tab bar (Home,
+Bets, centre "+" New bet, Stats, Settings). Desktop (≥ 1024 px): left sidebar with the
+same items. Touch targets ≥ 44 px.
+
+**Style: "calm fintech".**
+
+| Token | Light | Dark |
+|---|---|---|
+| Background | `#F7F7FB` | `#111118` |
+| Surface (cards) | `#FFFFFF`, 16–20 px radius, soft shadow or `#EEEDF4` border | `#1A1A23` |
+| Text / muted | `#16151F` / `#5B5970` | `#ECEBF3` / `#A3A1B5` |
+| Accent | `#6C5CE7` (soft: `#EFEDFD`, text on soft: `#3F2FB8`) | `#8B7FF0` |
+| Profit text / fill | `#067647` / `#12B76A` (soft bg `#E7F8EF`) | `#4ADE80` / `#12B76A` |
+| Loss text / fill | `#B42318` / `#F04438` (soft bg `#FEECEB`) | `#F97066` / `#F04438` |
+
+- Font: **Geist** (Google Fonts), `font-variant-numeric: tabular-nums` everywhere numbers
+  appear.
+- Profit/loss is never shown by colour alone: always a `+`/`−` sign.
+- Implement with Flux (free) components + Tailwind 4 theme tokens; map the tokens above
+  into the Tailwind theme rather than hard-coding hex values in views.
+
 ## Open questions
 
 <!-- Owner decisions still pending, plus assumptions Claude sessions had to make. -->

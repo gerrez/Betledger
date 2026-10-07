@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Statistics</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5241D0}a:hover{color:#3F2FB8}
+button{font:inherit}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #F7F7FB; color: #16151F; font-family: Geist, system-ui, sans-serif; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; align-items: flex-start;">
+
+  <aside style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px;">
+      <span style="width: 34px; height: 34px; border-radius: 10px; background: #6C5CE7; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;">BL</span>
+      <span style="font-size: 17px; font-weight: 600;">BetLedger</span>
+    </div>
+    <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 4px; flex-direction: column;">
+      <a href="Main.dc.html" style="height: 42px; display: flex; align-items: center; padding: 0 12px; border-radius: 10px; text-decoration: none; color: #3B3A4A; font-size: 15px; font-weight: 500;">Overview</a>
+      <a href="Bets.dc.html" style="height: 42px; display: flex; align-items: center; padding: 0 12px; border-radius: 10px; text-decoration: none; color: #3B3A4A; font-size: 15px; font-weight: 500;">Bets</a>
+      <a href="Statistics.dc.html" aria-current="page" style="height: 42px; display: flex; align-items: center; padding: 0 12px; border-radius: 10px; text-decoration: none; color: #3F2FB8; background: #EFEDFD; font-size: 15px; font-weight: 600;">Statistics</a>
+      <a href="Statistics.dc.html" style="height: 42px; display: flex; align-items: center; padding: 0 12px; border-radius: 10px; text-decoration: none; color: #3B3A4A; font-size: 15px; font-weight: 500;">Bookmakers</a>
+      <a href="Statistics.dc.html" style="height: 42px; display: flex; align-items: center; padding: 0 12px; border-radius: 10px; text-decoration: none; color: #3B3A4A; font-size: 15px; font-weight: 500;">Lists</a>
+      <a href="Statistics.dc.html" style="height: 42px; display: flex; align-items: center; padding: 0 12px; border-radius: 10px; text-decoration: none; color: #3B3A4A; font-size: 15px; font-weight: 500;">Settings</a>
+    </nav>
+    <a href="NewBet.dc.html" style="height: 44px; border-radius: 12px; background: #6C5CE7; color: #FFFFFF; text-decoration: none; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600;">+ New bet</a>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 24px clamp(16px, 3vw, 40px) 48px;">
+  <div style="max-width: 1120px; display: flex; flex-direction: column; gap: 20px;">
+
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <h1 style="margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.02em;">Statistics</h1>
+        <span style="font-size: 14px; color: #5B5970;">All amounts in your base currency, DKK</span>
+      </div>
+      <div role="group" aria-label="Date range" style="display: flex; gap: 4px; padding: 4px; background: #ECEBF3; border-radius: 12px; flex-wrap: wrap;">
+        <button type="button" style="height: 36px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #5B5970; font-size: 14px; font-weight: 500;">30 days</button>
+        <button type="button" aria-pressed="true" style="height: 36px; padding: 0 12px; border: 0; border-radius: 9px; background: #FFFFFF; color: #16151F; font-size: 14px; font-weight: 600; box-shadow: 0 1px 3px rgba(22,21,31,0.10);">90 days</button>
+        <button type="button" style="height: 36px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #5B5970; font-size: 14px; font-weight: 500;">This year</button>
+        <button type="button" style="height: 36px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #5B5970; font-size: 14px; font-weight: 500;">All time</button>
+        <button type="button" style="height: 36px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #5B5970; font-size: 14px; font-weight: 500;">Custom…</button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+      <sc-for list="{{filters}}" as="f" hint-placeholder-count="8">
+        <button type="button" style="height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #E7E6F0; background: #FFFFFF; color: #16151F; font-size: 14px;">{{f}} ▾</button>
+      </sc-for>
+      <button type="button" onClick="{{toggleFree}}" aria-pressed="{{includeFree}}" style="height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #E7E6F0; background: #FFFFFF; color: #16151F; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+        <span style="{{freeBox}}" aria-hidden="true"></span>
+        Include free bets
+      </button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">
+      <sc-for list="{{kpis}}" as="k" hint-placeholder-count="6">
+        <div style="background: #FFFFFF; border-radius: 16px; padding: 16px; border: 1px solid #EEEDF4; display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 13px; color: #5B5970;">{{k.label}}</span>
+          <span style="{{k.style}}">{{k.value}}</span>
+          <span style="font-size: 12px; color: #5B5970;">{{k.sub}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <section style="background: #FFFFFF; border-radius: 20px; padding: 20px; border: 1px solid #EEEDF4; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Profit over time</h2>
+        <span style="font-size: 13px; color: #5B5970;">Cumulative, by week settled</span>
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <div style="display: flex; flex-direction: column; justify-content: space-between; height: 260px; font-size: 12px; color: #5B5970; text-align: right; min-width: 44px;">
+          <span>4,000</span><span>3,000</span><span>2,000</span><span>1,000</span><span>0</span>
+        </div>
+        <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+          <svg width="100%" height="260" viewBox="0 0 1000 260" preserveAspectRatio="none" role="img" aria-label="Cumulative profit rising from 0 to 3,486 kr over 13 weeks">
+            <line x1="0" y1="1" x2="1000" y2="1" stroke="#EEEDF4" vector-effect="non-scaling-stroke"></line>
+            <line x1="0" y1="65" x2="1000" y2="65" stroke="#EEEDF4" vector-effect="non-scaling-stroke"></line>
+            <line x1="0" y1="130" x2="1000" y2="130" stroke="#EEEDF4" vector-effect="non-scaling-stroke"></line>
+            <line x1="0" y1="195" x2="1000" y2="195" stroke="#EEEDF4" vector-effect="non-scaling-stroke"></line>
+            <line x1="0" y1="259" x2="1000" y2="259" stroke="#DDDCE8" vector-effect="non-scaling-stroke"></line>
+            <path d="{{area}}" fill="#EFEDFD" stroke="none"></path>
+            <path d="{{line}}" fill="none" stroke="#6C5CE7" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+          </svg>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #5B5970;">
+            <span>8 Jul</span><span>31 Jul</span><span>23 Aug</span><span>15 Sep</span><span>7 Oct</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+
+      <section style="flex: 3 1 520px; min-width: 0; background: #FFFFFF; border-radius: 20px; padding: 20px; border: 1px solid #EEEDF4; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+          <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Breakdown</h2>
+          <div role="tablist" aria-label="Break down by" style="display: flex; flex-wrap: wrap; gap: 4px;">
+            <sc-for list="{{dims}}" as="d" hint-placeholder-count="4">
+              <button type="button" role="tab" aria-selected="{{d.on}}" onClick="{{d.pick}}" style="{{d.style}}">{{d.label}}</button>
+            </sc-for>
+            <button type="button" style="height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid #E7E6F0; background: #FFFFFF; color: #5B5970; font-size: 13px; font-weight: 500;">More ▾</button>
+          </div>
+        </div>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px;">
+            <thead>
+              <tr style="text-align: right; color: #5B5970; font-size: 12px;">
+                <th scope="col" style="text-align: left; font-weight: 500; padding: 8px 8px 8px 0; border-bottom: 1px solid #EEEDF4;">{{dimLabel}}</th>
+                <th scope="col" style="font-weight: 500; padding: 8px; border-bottom: 1px solid #EEEDF4;">Bets</th>
+                <th scope="col" style="font-weight: 500; padding: 8px; border-bottom: 1px solid #EEEDF4;">Turnover</th>
+                <th scope="col" style="font-weight: 500; padding: 8px; border-bottom: 1px solid #EEEDF4;">Profit</th>
+                <th scope="col" style="font-weight: 500; padding: 8px; border-bottom: 1px solid #EEEDF4;">ROI</th>
+                <th scope="col" style="font-weight: 500; padding: 8px; border-bottom: 1px solid #EEEDF4;">Strike</th>
+                <th scope="col" style="font-weight: 500; padding: 8px 0 8px 8px; border-bottom: 1px solid #EEEDF4;">CLV</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+                <tr style="text-align: right;">
+                  <th scope="row" style="text-align: left; font-weight: 600; padding: 12px 8px 12px 0; border-bottom: 1px solid #F4F3F8;">{{r.name}}</th>
+                  <td style="padding: 12px 8px; border-bottom: 1px solid #F4F3F8;">{{r.bets}}</td>
+                  <td style="padding: 12px 8px; border-bottom: 1px solid #F4F3F8;">{{r.turnover}}</td>
+                  <td style="{{r.profitStyle}}">{{r.profit}}</td>
+                  <td style="{{r.roiStyle}}">{{r.roi}}</td>
+                  <td style="padding: 12px 8px; border-bottom: 1px solid #F4F3F8;">{{r.strike}}</td>
+                  <td style="padding: 12px 0 12px 8px; border-bottom: 1px solid #F4F3F8;">{{r.clv}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <sc-if value="{{showAccaNote}}" hint-placeholder-val="{{false}}">
+          <span style="font-size: 13px; color: #5B5970;">Accumulators count under every value their selections include, so rows can add up to more than the total.</span>
+        </sc-if>
+      </section>
+
+      <div style="flex: 2 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 20px;">
+        <section style="background: #FFFFFF; border-radius: 20px; padding: 20px; border: 1px solid #EEEDF4; display: flex; flex-direction: column; gap: 12px;">
+          <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Odds ranges</h2>
+          <span style="font-size: 13px; color: #5B5970;">ROI by total odds of the bet</span>
+          <sc-for list="{{bands}}" as="b" hint-placeholder-count="6">
+            <div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) 64px; align-items: center; gap: 10px; font-size: 13px;">
+              <span style="display: flex; flex-direction: column;">
+                <span style="font-weight: 600;">{{b.range}}</span>
+                <span style="color: #5B5970; font-size: 12px;">{{b.bets}} bets</span>
+              </span>
+              <span style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); height: 14px;">
+                <span style="display: flex; justify-content: flex-end; border-right: 1px solid #C9C6DD;"><span style="{{b.neg}}"></span></span>
+                <span style="display: flex;"><span style="{{b.pos}}"></span></span>
+              </span>
+              <span style="{{b.roiStyle}}">{{b.roi}}</span>
+            </div>
+          </sc-for>
+        </section>
+
+        <section style="background: #FFFFFF; border-radius: 20px; padding: 20px; border: 1px solid #EEEDF4; display: flex; flex-direction: column; gap: 12px;">
+          <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Closing line value</h2>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 13px; color: #5B5970;">Average CLV</span>
+              <span style="font-size: 26px; font-weight: 600; color: #067647;">+2.4%</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 13px; color: #5B5970;">Beat the close</span>
+              <span style="font-size: 26px; font-weight: 600;">63%</span>
+            </div>
+          </div>
+          <div style="height: 10px; border-radius: 999px; background: #F1F0F6; display: flex; overflow: hidden;" role="img" aria-label="45 of 71 bets beat the closing line">
+            <span style="width: 63%; background: #6C5CE7;"></span>
+          </div>
+          <span style="font-size: 13px; color: #5B5970;">45 of 71 bets with closing odds beat the closing line. 47 settled bets have no closing odds.</span>
+        </section>
+      </div>
+    </div>
+  </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1360,"height":1640}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { dim: 'sport', free: true };
+  }
+  renderVals() {
+    var self = this;
+    var pts = [0, 210, 480, 390, 820, 1150, 980, 1460, 1890, 2240, 2050, 2710, 3120, 3486.2];
+    var W = 1000, H = 260, MAX = 4000;
+    var coords = pts.map(function (v, i) {
+      return ((i / (pts.length - 1)) * W).toFixed(1) + ' ' + (H - (v / MAX) * H).toFixed(1);
+    });
+    var line = 'M' + coords.join(' L');
+    var area = line + ' L' + W + ' ' + H + ' L0 ' + H + ' Z';
+
+    var G = 'color: #067647;', R = 'color: #B42318;';
+    var cell = 'padding: 12px 8px; border-bottom: 1px solid #F4F3F8; font-weight: 600; ';
+    function row(name, bets, turnover, profit, roi, strike, clv) {
+      var neg = profit.charAt(0) === '−';
+      return { name: name, bets: bets, turnover: turnover, profit: profit, roi: roi, strike: strike, clv: clv,
+        profitStyle: cell + (neg ? R : G), roiStyle: cell + (neg ? R : G) };
+    }
+    var DATA = {
+      sport: { label: 'Sport', acca: true, rows: [
+        row('Football', '82', '44,100.00', '+3,120.40', '+7.1%', '53.7%', '+2.9%'),
+        row('Tennis', '21', '9,860.00', '+612.30', '+6.2%', '57.1%', '+1.8%'),
+        row('Ice hockey', '15', '7,280.00', '−246.50', '−3.4%', '40.0%', '+0.6%')
+      ] },
+      bookmaker: { label: 'Bookmaker', acca: false, rows: [
+        row('Pinnacle', '54', '32,450.00', '+2,310.80', '+7.1%', '55.6%', '+3.0%'),
+        row('Bet365', '41', '18,900.00', '+1,402.10', '+7.4%', '51.2%', '+2.2%'),
+        row('Unibet', '23', '9,890.00', '−226.70', '−2.3%', '43.5%', '+1.1%')
+      ] },
+      tipster: { label: 'Tipster', acca: false, rows: [
+        row('Own model', '71', '38,600.00', '+3,050.90', '+7.9%', '56.3%', '+3.4%'),
+        row('Value service', '30', '15,140.00', '+702.40', '+4.6%', '50.0%', '+1.6%'),
+        row('Gut feeling', '17', '7,500.00', '−267.10', '−3.6%', '41.2%', '−0.8%')
+      ] },
+      type: { label: 'Bet type', acca: false, rows: [
+        row('Singles', '104', '56,040.00', '+3,301.70', '+5.9%', '53.1%', '+2.6%'),
+        row('Accumulators', '14', '5,200.00', '+184.50', '+3.5%', '28.6%', '+1.2%')
+      ] }
+    };
+    var on = 'height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid #6C5CE7; background: #EFEDFD; color: #3F2FB8; font-size: 13px; font-weight: 600;';
+    var off = 'height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid #E7E6F0; background: #FFFFFF; color: #3B3A4A; font-size: 13px; font-weight: 500;';
+    var dims = ['sport', 'bookmaker', 'tipster', 'type'].map(function (k) {
+      var sel = self.state.dim === k;
+      return { label: DATA[k].label, on: sel, style: sel ? on : off, pick: function () { self.setState({ dim: k }); } };
+    });
+    var cur = DATA[this.state.dim];
+
+    var SCALE = 25;
+    var bandData = [
+      ['1.01–1.50', 22, 2.1], ['1.51–2.00', 48, 6.8], ['2.01–3.00', 31, 8.9],
+      ['3.01–5.00', 12, -4.3], ['5.01–10.00', 4, -22.0], ['10.01+', 1, -100]
+    ];
+    var bands = bandData.map(function (b) {
+      var pct = Math.min(Math.abs(b[2]) / SCALE, 1) * 100;
+      var neg = b[2] < 0;
+      return {
+        range: b[0], bets: b[1],
+        roi: (neg ? '−' : '+') + Math.abs(b[2]).toFixed(1) + '%',
+        roiStyle: 'text-align: right; font-weight: 600; ' + (neg ? R : G),
+        neg: neg ? 'height: 14px; border-radius: 4px 0 0 4px; background: #F04438; width: ' + pct + '%;' : 'width: 0;',
+        pos: neg ? 'width: 0;' : 'height: 14px; border-radius: 0 4px 4px 0; background: #12B76A; width: ' + pct + '%;'
+      };
+    });
+
+    var free = this.state.free;
+    return {
+      line: line, area: area,
+      filters: ['Bookmaker', 'Sport', 'Competition', 'Team', 'Market', 'Tipster', 'Tag', 'Bet type'],
+      includeFree: free,
+      toggleFree: function () { self.setState({ free: !self.state.free }); },
+      freeBox: 'width: 18px; height: 18px; border-radius: 5px; box-sizing: border-box; ' + (free ? 'background: #6C5CE7; border: 0;' : 'border: 2px solid #A9A6BF;'),
+      kpis: [
+        { label: 'Profit', value: '+3,486.20', sub: 'kr · 118 settled bets', style: 'font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: #067647;' },
+        { label: 'Turnover', value: '61,240.00', sub: 'kr · cash stakes only', style: 'font-size: 26px; font-weight: 600; letter-spacing: -0.02em;' },
+        { label: 'ROI', value: '+5.7%', sub: 'profit ÷ turnover', style: 'font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: #067647;' },
+        { label: 'Strike rate', value: '52.4%', sub: 'pushes excluded', style: 'font-size: 26px; font-weight: 600; letter-spacing: -0.02em;' },
+        { label: 'Average odds', value: '2.11', sub: 'settled bets', style: 'font-size: 26px; font-weight: 600; letter-spacing: -0.02em;' },
+        { label: 'Open', value: '3', sub: '1,542.00 kr at stake', style: 'font-size: 26px; font-weight: 600; letter-spacing: -0.02em;' }
+      ],
+      dims: dims,
+      dimLabel: cur.label,
+      rows: cur.rows,
+      showAccaNote: cur.acca,
+      bands: bands
+    };
+  }
+}
+</script>
+</body>
+</html>

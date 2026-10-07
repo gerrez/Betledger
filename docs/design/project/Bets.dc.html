@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Open bets</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5241D0}a:hover{color:#3F2FB8}
+button{font:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 1180px; box-sizing: border-box; position: relative; overflow: hidden; background: #F7F7FB; color: #16151F; font-family: Geist, system-ui, sans-serif; font-variant-numeric: tabular-nums;">
+
+  <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 84px; overflow-y: auto;">
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 20px 20px 32px;">
+
+    <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em;">Bets</h1>
+
+    <div role="tablist" aria-label="Bet status" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #ECEBF3; border-radius: 14px;">
+      <button type="button" role="tab" aria-selected="true" style="height: 40px; border: 0; border-radius: 11px; background: #FFFFFF; color: #16151F; font-size: 15px; font-weight: 600; box-shadow: 0 1px 3px rgba(22,21,31,0.10);">Open · {{openCount}}</button>
+      <button type="button" role="tab" aria-selected="false" style="height: 40px; border: 0; border-radius: 11px; background: transparent; color: #5B5970; font-size: 15px; font-weight: 500;">Settled</button>
+      <button type="button" role="tab" aria-selected="false" style="height: 40px; border: 0; border-radius: 11px; background: transparent; color: #5B5970; font-size: 15px; font-weight: 500;">All</button>
+    </div>
+
+    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px;">
+      <button type="button" style="height: 36px; flex-shrink: 0; padding: 0 12px; border-radius: 999px; border: 1px solid #E7E6F0; background: #FFFFFF; color: #16151F; font-size: 14px;">All bookmakers ▾</button>
+      <button type="button" style="height: 36px; flex-shrink: 0; padding: 0 12px; border-radius: 999px; border: 1px solid #E7E6F0; background: #FFFFFF; color: #16151F; font-size: 14px;">All sports ▾</button>
+      <button type="button" style="height: 36px; flex-shrink: 0; padding: 0 12px; border-radius: 999px; border: 1px solid #E7E6F0; background: #FFFFFF; color: #16151F; font-size: 14px;">Starts soonest ▾</button>
+    </div>
+
+    <sc-for list="{{cards}}" as="c" hint-placeholder-count="3">
+      <article style="background: #FFFFFF; border-radius: 18px; padding: 16px; border: 1px solid #EEEDF4; display: flex; flex-direction: column; gap: 12px;">
+        <a href="BetDetail.dc.html" style="text-decoration: none; color: #16151F; display: flex; gap: 12px; align-items: flex-start;">
+          <div style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1; min-width: 0;">
+            <span style="font-size: 16px; font-weight: 600;">{{c.title}}</span>
+            <span style="font-size: 13px; color: #5B5970;">{{c.meta}}</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0;">
+            <span style="font-size: 16px; font-weight: 600;">{{c.stake}}</span>
+            <span style="font-size: 13px; color: #5B5970;">{{c.odds}}</span>
+          </div>
+        </a>
+
+        <sc-if value="{{c.isFree}}" hint-placeholder-val="{{false}}">
+          <span style="align-self: flex-start; font-size: 12px; font-weight: 600; color: #4B3FA8; background: #EFEDFD; padding: 4px 10px; border-radius: 999px;">FREE BET</span>
+        </sc-if>
+
+        <sc-if value="{{c.isSingle}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; align-items: center; justify-content: space-between; background: #F7F7FB; border-radius: 12px; padding: 10px 12px;">
+            <span style="font-size: 15px; font-weight: 500;">{{c.pick}}</span>
+            <span style="font-size: 15px; font-weight: 600;">{{c.pickOdds}}</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{c.isAcca}}" hint-placeholder-val="{{false}}">
+          <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{c.legs}}" as="l" hint-placeholder-count="3">
+              <li style="display: flex; align-items: center; gap: 10px; background: #F7F7FB; border-radius: 12px; padding: 10px 12px;">
+                <span style="{{l.dot}}" aria-hidden="true"></span>
+                <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0;">
+                  <span style="font-size: 14px; font-weight: 500;">{{l.pick}}</span>
+                  <span style="font-size: 12px; color: #5B5970;">{{l.event}}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                  <span style="font-size: 14px; font-weight: 600;">{{l.odds}}</span>
+                  <span style="font-size: 12px; color: #5B5970;">{{l.status}}</span>
+                </div>
+              </li>
+            </sc-for>
+          </ol>
+        </sc-if>
+
+        <sc-if value="{{c.pending}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-size: 13px; color: #5B5970;">{{c.prompt}}</span>
+            <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px;">
+              <sc-for list="{{c.options}}" as="o" hint-placeholder-count="5">
+                <button type="button" onClick="{{o.pick}}" style="{{o.style}}">{{o.label}}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{c.settled}}" hint-placeholder-val="{{false}}">
+          <div style="{{c.bannerStyle}}">
+            <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+              <span style="font-size: 14px; font-weight: 600;">{{c.resultLabel}}</span>
+              <span style="font-size: 13px;">Payout {{c.payout}} · profit {{c.profit}}</span>
+            </div>
+            <button type="button" onClick="{{c.undo}}" style="height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(22,21,31,0.12); background: #FFFFFF; color: #16151F; font-size: 14px; font-weight: 500;">Undo</button>
+          </div>
+        </sc-if>
+      </article>
+    </sc-for>
+  </div>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; box-sizing: border-box; padding: 8px 16px 20px; background: #FFFFFF; border-top: 1px solid #EEEDF4; display: flex; align-items: center; justify-content: space-between;">
+    <a href="Main.dc.html" style="width: 60px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: #5B5970; font-size: 11px; font-weight: 500;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
+      Home
+    </a>
+    <a href="Bets.dc.html" aria-current="page" style="width: 60px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: #5241D0; font-size: 11px; font-weight: 600;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>
+      Bets
+    </a>
+    <a href="NewBet.dc.html" aria-label="New bet" style="width: 56px; height: 56px; border-radius: 18px; background: #6C5CE7; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(108,92,231,0.35);">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+    </a>
+    <a href="Statistics.dc.html" style="width: 60px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: #5B5970; font-size: 11px; font-weight: 500;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>
+      Stats
+    </a>
+    <a href="Main.dc.html" style="width: 60px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: #5B5970; font-size: 11px; font-weight: 500;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"></path></svg>
+      Settings
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1180}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { res: { b1: null, a3: null, b3: null } };
+  }
+  setRes(key, val) {
+    var next = Object.assign({}, this.state.res);
+    next[key] = val;
+    this.setState({ res: next });
+  }
+  renderVals() {
+    var self = this;
+    var LABELS = { won: 'Won', lost: 'Lost', void: 'Void', half_won: '½ Won', half_lost: '½ Lost' };
+    var ORDER = ['won', 'lost', 'void', 'half_won', 'half_lost'];
+    var OUTCOMES = {
+      b1: { won: ['€390.00', '+€190.00', 1], lost: ['€0.00', '−€200.00', -1], void: ['€200.00', '€0.00', 0], half_won: ['€295.00', '+€95.00', 1], half_lost: ['€100.00', '−€100.00', -1] },
+      a3: { won: ['270.27 kr', '+220.27 kr', 1], lost: ['0.00 kr', '−50.00 kr', -1], void: ['148.50 kr', '+98.50 kr', 1], half_won: ['209.39 kr', '+159.39 kr', 1], half_lost: ['74.25 kr', '+24.25 kr', 1] },
+      b3: { won: ['130.00 kr', '+130.00 kr', 1], lost: ['0.00 kr', '0.00 kr', 0], void: ['0.00 kr', '0.00 kr', 0], half_won: ['65.00 kr', '+65.00 kr', 1], half_lost: ['0.00 kr', '0.00 kr', 0] }
+    };
+    var btn = 'height: 44px; border-radius: 10px; border: 1px solid #DDDCE8; background: #FFFFFF; color: #16151F; font-size: 13px; font-weight: 600; padding: 0;';
+    function options(key) {
+      return ORDER.map(function (r) {
+        return { label: LABELS[r], style: btn, pick: function () { self.setRes(key, r); } };
+      });
+    }
+    function settlement(key) {
+      var r = self.state.res[key];
+      if (!r) { return { pending: true, settled: false }; }
+      var o = OUTCOMES[key][r];
+      var tone = o[2] > 0 ? 'background: #E7F8EF; color: #054F31;' : (o[2] < 0 ? 'background: #FEECEB; color: #7A1A12;' : 'background: #F1F0F6; color: #16151F;');
+      return {
+        pending: false, settled: true,
+        resultLabel: key === 'a3' ? 'Final leg ' + LABELS[r].toLowerCase() + ' · bet settled' : 'Settled: ' + LABELS[r],
+        payout: o[0], profit: o[1],
+        bannerStyle: 'display: flex; align-items: center; gap: 12px; border-radius: 12px; padding: 10px 12px; ' + tone,
+        undo: function () { self.setRes(key, null); }
+      };
+    }
+    var dotWon = 'width: 10px; height: 10px; border-radius: 999px; background: #12B76A; flex-shrink: 0;';
+    var dotPending = 'width: 10px; height: 10px; border-radius: 999px; border: 2px solid #A9A6BF; box-sizing: border-box; flex-shrink: 0;';
+    var dotLost = 'width: 10px; height: 10px; border-radius: 999px; background: #F04438; flex-shrink: 0;';
+    var dotVoid = 'width: 10px; height: 10px; border-radius: 999px; background: #A9A6BF; flex-shrink: 0;';
+    var a3 = this.state.res.a3;
+    var cards = [
+      Object.assign({
+        title: 'Arsenal v Chelsea', meta: 'Premier League · Pinnacle · today 18:30',
+        stake: '€200.00', odds: '@ 1.95', isSingle: true, isAcca: false, isFree: false,
+        pick: 'Arsenal −0.25', pickOdds: '1.95', prompt: 'How did it go?', options: options('b1')
+      }, settlement('b1')),
+      Object.assign({
+        title: '3-fold accumulator', meta: 'Bet365 · placed Sat 11:05',
+        stake: '50.00 kr', odds: '@ 5.41', isSingle: false, isAcca: true, isFree: false,
+        legs: [
+          { pick: 'Brentford (draw no bet)', event: 'Brentford v Fulham', odds: '1.80', status: 'Won', dot: dotWon },
+          { pick: 'Both teams to score', event: 'Celtic v Rangers', odds: '1.65', status: 'Won', dot: dotWon },
+          { pick: 'Over 2.5 goals', event: 'Bodø/Glimt v Molde · today 20:00', odds: '1.82', status: a3 ? LABELS[a3] : 'Pending', dot: !a3 ? dotPending : (a3 === 'lost' || a3 === 'half_lost' ? dotLost : (a3 === 'void' ? dotVoid : dotWon)) }
+        ],
+        prompt: 'Settle the last selection, Over 2.5 goals:', options: options('a3')
+      }, settlement('a3')),
+      Object.assign({
+        title: 'Sinner v Alcaraz', meta: 'ATP Finals · Unibet · Sun 14:00',
+        stake: '100.00 kr', odds: '@ 2.30', isSingle: true, isAcca: false, isFree: true,
+        pick: 'Sinner to win', pickOdds: '2.30', prompt: 'How did it go?', options: options('b3')
+      }, settlement('b3'))
+    ];
+    var open = cards.filter(function (c) { return c.pending; }).length;
+    return { cards: cards, openCount: open };
+  }
+}
+</script>
+</body>
+</html>

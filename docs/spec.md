@@ -1,7 +1,7 @@
 # BetLedger — product spec
 
-> Status: **in design**. Scope, data model, settlement and statistics rules are agreed; screens are
-> next. This file is the source of truth for implementation work.
+> Status: **agreed (v1)**. Scope, data model, settlement and statistics rules, and screens
+> are settled. This file is the source of truth for implementation work.
 
 ## Purpose
 

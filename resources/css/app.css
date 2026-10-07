@@ -9,30 +9,62 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-    --color-zinc-50: #fafafa;
-    --color-zinc-100: #f5f5f5;
-    --color-zinc-200: #e5e5e5;
-    --color-zinc-300: #d4d4d4;
-    --color-zinc-400: #a3a3a3;
-    --color-zinc-500: #737373;
-    --color-zinc-600: #525252;
-    --color-zinc-700: #404040;
-    --color-zinc-800: #262626;
-    --color-zinc-900: #171717;
-    --color-zinc-950: #0a0a0a;
+    /* Flux's gray ("zinc"), re-tinted to match the BetLedger palette. */
+    --color-zinc-50: #f7f7fb;
+    --color-zinc-100: #eeedf4;
+    --color-zinc-200: #e7e6f0;
+    --color-zinc-300: #d3d1df;
+    --color-zinc-400: #a3a1b5;
+    --color-zinc-500: #7c7a91;
+    --color-zinc-600: #5b5970;
+    --color-zinc-700: #3b3a4a;
+    --color-zinc-800: #26252f;
+    --color-zinc-900: #16151f;
+    --color-zinc-950: #111118;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
-    --color-accent-foreground: var(--color-white);
+    /* BetLedger design tokens (docs/spec.md, "Screens and visual design"). Dark values below. */
+    --color-canvas: #f7f7fb;
+    --color-surface: #ffffff;
+    --color-line: #eeedf4;
+    --color-ink: #16151f;
+    --color-muted: #5b5970;
+
+    --color-accent: #6c5ce7;
+    --color-accent-content: #5241d0;
+    --color-accent-foreground: #ffffff;
+    --color-accent-soft: #efedfd;
+    --color-accent-soft-content: #3f2fb8;
+
+    --color-profit: #067647;
+    --color-profit-fill: #12b76a;
+    --color-profit-soft: #e7f8ef;
+    --color-loss: #b42318;
+    --color-loss-fill: #f04438;
+    --color-loss-soft: #feeceb;
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-canvas: #111118;
+        --color-surface: #1a1a23;
+        --color-line: #2a2935;
+        --color-ink: #ecebf3;
+        --color-muted: #a3a1b5;
+
+        --color-accent: #8b7ff0;
+        --color-accent-content: #8b7ff0;
+        --color-accent-foreground: #111118;
+        --color-accent-soft: #26233f;
+        --color-accent-soft-content: #c4bdfa;
+
+        --color-profit: #4ade80;
+        --color-profit-fill: #12b76a;
+        --color-profit-soft: #12261d;
+        --color-loss: #f97066;
+        --color-loss-fill: #f04438;
+        --color-loss-soft: #2e1717;
     }
 }
 
@@ -44,6 +76,10 @@
     ::backdrop,
     ::file-selector-button {
         border-color: var(--color-gray-200, currentColor);
+    }
+
+    body {
+        font-variant-numeric: tabular-nums;
     }
 }
 

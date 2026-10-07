@@ -30,7 +30,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
 
 ### Foundation
 
-- [ ] **2.1 App shell and theme.** Load Geist; add the spec's colour tokens (light and
+- [x] **2.1 App shell and theme.** Load Geist; add the spec's colour tokens (light and
       dark) to the Tailwind 4 theme; app layout with the bottom tab bar on phones and the
       sidebar on desktop (Home, Bets, New bet, Stats, Settings), replacing the starter
       kit's nav. Placeholder pages for routes that don't exist yet. Feature tests: every

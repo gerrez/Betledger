@@ -5,6 +5,17 @@
             <flux:navlist.item href="{{ route('settings.password') }}" wire:navigate>Password</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.appearance') }}" wire:navigate>Appearance</flux:navlist.item>
         </flux:navlist>
+
+        {{-- On desktop these live in the sidebar; phones reach them from Settings. --}}
+        <flux:navlist class="mt-4 lg:hidden">
+            <flux:navlist.item href="{{ route('bookmakers.index') }}" wire:navigate>Bookmakers</flux:navlist.item>
+            <flux:navlist.item href="{{ route('lists.index') }}" wire:navigate>Lists</flux:navlist.item>
+
+            <form method="POST" action="{{ route('logout') }}" class="w-full">
+                @csrf
+                <flux:navlist.item as="button" type="submit">{{ __('Log Out') }}</flux:navlist.item>
+            </form>
+        </flux:navlist>
     </div>
 
     <flux:separator class="md:hidden" />

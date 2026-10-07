@@ -36,6 +36,7 @@ vendor/bin/pint --dirty --format agent   # format changed files (CI runs `pint -
 vendor/bin/phpstan analyse --memory-limit=1G
 npm run build                        # build assets (feature tests need public/build)
 composer run dev                     # local dev server + queue + logs + vite
+composer run check                   # pint --test, phpstan, full test suite (what CI checks)
 php artisan boost:update             # refresh the Boost section below + .claude/skills
 ```
 

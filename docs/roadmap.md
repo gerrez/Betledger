@@ -12,7 +12,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
 - [x] Laravel + Livewire starter kit (auth, profile settings)
 - [x] Larastan, Pint, CI workflow, PR template
 - [x] `CLAUDE.md`, `.claude/settings.json`, cloud session-start hook
-- [ ] **Harness smoke test (first cloud session).** Add a `check` script to
+- [x] **Harness smoke test (first cloud session).** Add a `check` script to
       `composer.json` that runs `pint --test`, `phpstan analyse --memory-limit=1G` and
       `php artisan test` in sequence, and mention `composer run check` in `CLAUDE.md`'s
       Commands section. In the PR description, report whether the session-start hook ran

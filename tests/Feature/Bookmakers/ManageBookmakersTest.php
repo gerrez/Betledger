@@ -3,11 +3,12 @@
 namespace Tests\Feature\Bookmakers;
 
 use App\Domain\Currency;
+use App\Livewire\Bookmakers\Index;
 use App\Models\Bookmaker;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -56,7 +57,7 @@ class ManageBookmakersTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        Volt::test('bookmakers.index')
+        Livewire::test(Index::class)
             ->call('create')
             ->set('name', '  Danske Spil  ')
             ->set('currency', 'DKK')
@@ -78,7 +79,7 @@ class ManageBookmakersTest extends TestCase
         $user = User::factory()->create(['base_currency' => Currency::Dkk]);
         $this->actingAs($user);
 
-        Volt::test('bookmakers.index')
+        Livewire::test(Index::class)
             ->call('create')
             ->assertSet('currency', 'DKK')
             ->assertSet('exchange_rate', '1')
@@ -94,7 +95,7 @@ class ManageBookmakersTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        Volt::test('bookmakers.index')
+        Livewire::test(Index::class)
             ->call('create')
             ->set('currency', 'GBP')
             ->assertSet('exchange_rate', '')
@@ -107,7 +108,7 @@ class ManageBookmakersTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        Volt::test('bookmakers.index')
+        Livewire::test(Index::class)
             ->call('create')
             ->set('currency', 'GBP')
             ->call('save')
@@ -134,7 +135,7 @@ class ManageBookmakersTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        Volt::test('bookmakers.index')
+        Livewire::test(Index::class)
             ->call('create')
             ->set('name', 'Bet365')
             ->set('currency', 'GBP')
@@ -150,7 +151,7 @@ class ManageBookmakersTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        Volt::test('bookmakers.index')
+        Livewire::test(Index::class)
             ->call('create')
             ->set('name', 'Bet365')
             ->set('currency', 'JPY')
@@ -169,7 +170,7 @@ class ManageBookmakersTest extends TestCase
         Bookmaker::factory()->create(['name' => 'Unibet']);
         $this->actingAs($user);
 
-        Volt::test('bookmakers.index')
+        Livewire::test(Index::class)
             ->call('create')
             ->set('name', 'Bet365')
             ->call('save')
@@ -188,7 +189,7 @@ class ManageBookmakersTest extends TestCase
         $bookmaker = Bookmaker::factory()->for($user)->inCurrency(Currency::Gbp, '1.17')->create(['name' => 'Bet365']);
         $this->actingAs($user);
 
-        Volt::test('bookmakers.index')
+        Livewire::test(Index::class)
             ->call('edit', $bookmaker->id)
             ->assertSet('showForm', true)
             ->assertSet('name', 'Bet365')
@@ -210,7 +211,7 @@ class ManageBookmakersTest extends TestCase
         $bookmaker = Bookmaker::factory()->for($user)->create();
         $this->actingAs($user);
 
-        $component = Volt::test('bookmakers.index')->call('deactivate', $bookmaker->id);
+        $component = Livewire::test(Index::class)->call('deactivate', $bookmaker->id);
 
         $this->assertFalse($bookmaker->refresh()->is_active);
 
@@ -237,7 +238,7 @@ class ManageBookmakersTest extends TestCase
         $bookmaker = Bookmaker::factory()->inactive()->create(['name' => 'Bet365']);
         $this->actingAs(User::factory()->create());
 
-        Volt::test('bookmakers.index')
+        Livewire::test(Index::class)
             ->call($action, $bookmaker->id)
             ->assertNotFound()
             ->assertSet('showForm', false);
@@ -250,7 +251,7 @@ class ManageBookmakersTest extends TestCase
         $bookmaker = Bookmaker::factory()->create(['name' => 'Bet365']);
         $this->actingAs(User::factory()->create());
 
-        Volt::test('bookmakers.index')
+        Livewire::test(Index::class)
             ->call('create')
             ->set('editingId', $bookmaker->id)
             ->set('name', 'Hijacked')

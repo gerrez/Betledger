@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Currency;
+use App\Domain\Decimal;
 use Database\Factories\BookmakerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -53,5 +54,13 @@ class Bookmaker extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The rate without the column's trailing zeros: "0.13410000" → "0.1341".
+     */
+    public function formattedExchangeRate(): string
+    {
+        return Decimal::normalize($this->exchange_rate);
     }
 }

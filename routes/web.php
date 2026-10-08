@@ -1,7 +1,11 @@
 <?php
 
+use App\Livewire\Bookmakers\Index as BookmakersIndex;
+use App\Livewire\Settings\Appearance;
+use App\Livewire\Settings\BaseCurrency;
+use App\Livewire\Settings\Password;
+use App\Livewire\Settings\Profile;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::get('/', function () {
     return view('welcome');
@@ -28,7 +32,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         'description' => 'Profit, ROI, strike rate and closing line value, broken down every way.',
     ])->name('statistics');
 
-    Volt::route('bookmakers', 'bookmakers.index')->name('bookmakers.index');
+    Route::get('bookmakers', BookmakersIndex::class)->name('bookmakers.index');
 
     Route::view('lists', 'coming-soon', [
         'title' => 'Lists',
@@ -39,10 +43,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
-    Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
-    Volt::route('settings/currency', 'settings.currency')->name('settings.currency');
-    Volt::route('settings/password', 'settings.password')->name('settings.password');
-    Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
+    Route::get('settings/profile', Profile::class)->name('settings.profile');
+    Route::get('settings/currency', BaseCurrency::class)->name('settings.currency');
+    Route::get('settings/password', Password::class)->name('settings.password');
+    Route::get('settings/appearance', Appearance::class)->name('settings.appearance');
 });
 
 require __DIR__.'/auth.php';

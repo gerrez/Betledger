@@ -3,10 +3,12 @@
 namespace Tests\Feature\Settings;
 
 use App\Domain\Currency;
+use App\Livewire\Auth\Register;
+use App\Livewire\Settings\BaseCurrency;
 use App\Models\Bookmaker;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class BaseCurrencyTest extends TestCase
@@ -15,7 +17,7 @@ class BaseCurrencyTest extends TestCase
 
     public function test_new_users_start_with_euro(): void
     {
-        Volt::test('auth.register')
+        Livewire::test(Register::class)
             ->set('name', 'Test User')
             ->set('email', 'test@example.com')
             ->set('password', 'password')
@@ -30,7 +32,7 @@ class BaseCurrencyTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['base_currency' => Currency::Dkk]));
 
-        Volt::test('settings.currency')->assertSet('base_currency', 'DKK');
+        Livewire::test(BaseCurrency::class)->assertSet('base_currency', 'DKK');
     }
 
     public function test_the_base_currency_can_be_changed(): void
@@ -38,7 +40,7 @@ class BaseCurrencyTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        Volt::test('settings.currency')
+        Livewire::test(BaseCurrency::class)
             ->set('base_currency', 'DKK')
             ->call('updateBaseCurrency')
             ->assertHasNoErrors()
@@ -52,7 +54,7 @@ class BaseCurrencyTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        Volt::test('settings.currency')
+        Livewire::test(BaseCurrency::class)
             ->set('base_currency', 'JPY')
             ->call('updateBaseCurrency')
             ->assertHasErrors(['base_currency']);
@@ -68,7 +70,7 @@ class BaseCurrencyTest extends TestCase
         $someoneElses = Bookmaker::factory()->inCurrency(Currency::Dkk, '0.1341')->create();
         $this->actingAs($user);
 
-        Volt::test('settings.currency')
+        Livewire::test(BaseCurrency::class)
             ->set('base_currency', 'DKK')
             ->call('updateBaseCurrency')
             ->assertHasNoErrors();

@@ -35,7 +35,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
       sidebar on desktop (Home, Bets, New bet, Stats, Settings), replacing the starter
       kit's nav. Placeholder pages for routes that don't exist yet. Feature tests: every
       app route requires auth. Mockups: `Main`, `Statistics` (sidebar).
-- [ ] **2.2 Settlement calculator (domain only, no DB).** In `app/Domain/`: odds and
+- [x] **2.2 Settlement calculator (domain only, no DB).** In `app/Domain/`: odds and
       money handling with bcmath (add `ext-bcmath` to `composer.json`), selection factors,
       bet factor, cash vs free-bet payout/profit, round half up once, and the "when is a
       bet settled" rule (any `lost`, or all decided). Unit tests for every worked example

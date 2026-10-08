@@ -28,10 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         'description' => 'Profit, ROI, strike rate and closing line value, broken down every way.',
     ])->name('statistics');
 
-    Route::view('bookmakers', 'coming-soon', [
-        'title' => 'Bookmakers',
-        'description' => 'The bookmakers you bet with, their currency and exchange rate.',
-    ])->name('bookmakers.index');
+    Volt::route('bookmakers', 'bookmakers.index')->name('bookmakers.index');
 
     Route::view('lists', 'coming-soon', [
         'title' => 'Lists',
@@ -43,6 +40,7 @@ Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
     Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
+    Volt::route('settings/currency', 'settings.currency')->name('settings.currency');
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 });

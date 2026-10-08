@@ -40,7 +40,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
       bet factor, cash vs free-bet payout/profit, round half up once, and the "when is a
       bet settled" rule (any `lost`, or all decided). Unit tests for every worked example
       in the spec plus edge cases (free bet void, half results in accumulators).
-- [ ] **2.3 Base currency and bookmakers.** `users.base_currency` + `bookmakers` table,
+- [x] **2.3 Base currency and bookmakers.** `users.base_currency` + `bookmakers` table,
       model, policy, factory. Settings: choose base currency. Bookmakers page: list,
       create, edit (name, currency, exchange rate; rate fixed at 1 when currency = base),
       deactivate. Isolation tests.

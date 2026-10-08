@@ -255,3 +255,15 @@ same items. Touch targets ≥ 44 px.
   negative values, which settlement never rounds (payouts are ≥ 0) but base-currency
   conversion of a loss does. Chosen: negatives round half **away from zero** (−2.5 → −3),
   so a loss converts to the same magnitude as an equal profit.
+- **Supported currencies (assumed in 2.3).** v1 offers a fixed list of two-decimal
+  currencies: AUD, CAD, CHF, CZK, DKK, EUR, GBP, NOK, NZD, PLN, SEK, USD
+  (`App\Domain\Currency`). Adding one is a one-line change.
+- **Changing the base currency (assumed in 2.3).** Base currency is set on its own
+  Settings → Currency page. Changing it sets the rate of bookmakers in the *new* base
+  currency to 1 and leaves every other rate as it was; the page tells the user to check
+  their bookmakers' rates. Rates are not converted automatically (a bookmaker in the old
+  base currency keeps its rate of 1 until the user edits it).
+- **Reactivating bookmakers (assumed in 2.3).** Deactivation is reversible: an inactive
+  bookmaker has a Reactivate button. Bookmakers can't be deleted (they will hold bets).
+- **Decimal comma (assumed in 2.3).** Exchange rates must use a decimal point (`7.46`);
+  `7,46` is rejected with a message. Revisit together with odds and stake input in 2.6.

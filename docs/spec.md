@@ -241,4 +241,13 @@ same items. Touch targets ≥ 44 px.
 
 <!-- Owner decisions still pending, plus assumptions Claude sessions had to make. -->
 
-_None yet._
+- **Bookmakers and Lists on phones (assumed in 2.1).** The phone tab bar has five slots
+  (Home, Bets, New bet, Stats, Settings) and the mockups don't show where Bookmakers and
+  Lists go on phones. They are linked from the Settings page on phones (and from the
+  sidebar on desktop), and the Settings tab stays highlighted on those pages. Log out is
+  also on the Settings page on phones.
+- **Dark-mode tokens not in the style table (assumed in 2.1).** The table gives no dark
+  values for the card border, the soft accent/profit/loss backgrounds or text on the
+  accent colour. Chosen: border `#2A2935`, accent soft `#26233F` (text `#C4BDFA`), profit
+  soft `#12261D`, loss soft `#2E1717`, and dark text (`#111118`) on the `#8B7FF0` accent
+  for contrast. Revisit in 2.16.

@@ -13,7 +13,6 @@
         "testing-best-practices",
         "fluxui-development",
         "livewire-development",
-        "volt-development",
         "tailwindcss-development"
     ]
 }

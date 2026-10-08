@@ -26,6 +26,7 @@ class AppShellTest extends TestCase
             'bookmakers' => ['bookmakers.index'],
             'lists' => ['lists.index'],
             'settings profile' => ['settings.profile'],
+            'settings currency' => ['settings.currency'],
             'settings password' => ['settings.password'],
             'settings appearance' => ['settings.appearance'],
         ];

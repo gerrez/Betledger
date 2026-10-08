@@ -2,9 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Livewire\Auth\Login;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Volt\Volt as LivewireVolt;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -22,7 +23,7 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = LivewireVolt::test('auth.login')
+        $response = Livewire::test(Login::class)
             ->set('email', $user->email)
             ->set('password', 'password')
             ->call('login');

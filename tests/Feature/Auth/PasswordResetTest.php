@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Livewire\Auth\ForgotPassword;
+use App\Livewire\Auth\ResetPassword;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
@@ -26,11 +28,11 @@ class PasswordResetTest extends TestCase
 
         $user = User::factory()->create();
 
-        Volt::test('auth.forgot-password')
+        Livewire::test(ForgotPassword::class)
             ->set('email', $user->email)
             ->call('sendPasswordResetLink');
 
-        Notification::assertSentTo($user, ResetPassword::class);
+        Notification::assertSentTo($user, ResetPasswordNotification::class);
     }
 
     public function test_reset_password_screen_can_be_rendered(): void
@@ -39,11 +41,11 @@ class PasswordResetTest extends TestCase
 
         $user = User::factory()->create();
 
-        Volt::test('auth.forgot-password')
+        Livewire::test(ForgotPassword::class)
             ->set('email', $user->email)
             ->call('sendPasswordResetLink');
 
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
+        Notification::assertSentTo($user, ResetPasswordNotification::class, function ($notification) {
             $response = $this->get('/reset-password/'.$notification->token);
 
             $response->assertStatus(200);
@@ -58,12 +60,12 @@ class PasswordResetTest extends TestCase
 
         $user = User::factory()->create();
 
-        Volt::test('auth.forgot-password')
+        Livewire::test(ForgotPassword::class)
             ->set('email', $user->email)
             ->call('sendPasswordResetLink');
 
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
-            $response = Volt::test('auth.reset-password', ['token' => $notification->token])
+        Notification::assertSentTo($user, ResetPasswordNotification::class, function ($notification) use ($user) {
+            $response = Livewire::test(ResetPassword::class, ['token' => $notification->token])
                 ->set('email', $user->email)
                 ->set('password', 'password')
                 ->set('password_confirmation', 'password')

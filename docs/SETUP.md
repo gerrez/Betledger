@@ -48,6 +48,10 @@ delete both so each PR runs one workflow. Claude left them for you to decide.
      `.env.example` by `.claude/hooks/session-start.sh`.
    - If the first session reports that `php`, `composer` or `node` is missing, add an
      install step to the environment's setup script.
+   - The app needs PHP's **bcmath** extension (`ext-bcmath` in `composer.json`), and
+     the default cloud image doesn't ship it. Add this to the environment's setup script:
+     `apt-get update && apt-get install -y php8.3-bcmath`. Without it `composer install`
+     fails in the session-start hook.
 
 ## 5. First cloud session (smoke test)
 

@@ -251,3 +251,7 @@ same items. Touch targets ≥ 44 px.
   accent colour. Chosen: border `#2A2935`, accent soft `#26233F` (text `#C4BDFA`), profit
   soft `#12261D`, loss soft `#2E1717`, and dark text (`#111118`) on the `#8B7FF0` accent
   for contrast. Revisit in 2.16.
+- **Rounding negative amounts (assumed in 2.2).** "Round half up" is only ambiguous for
+  negative values, which settlement never rounds (payouts are ≥ 0) but base-currency
+  conversion of a loss does. Chosen: negatives round half **away from zero** (−2.5 → −3),
+  so a loss converts to the same magnitude as an equal profit.

@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Bookmakers\Index as BookmakersIndex;
+use App\Livewire\Lists\Index as ListsIndex;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\BaseCurrency;
 use App\Livewire\Settings\Password;
@@ -34,10 +35,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('bookmakers', BookmakersIndex::class)->name('bookmakers.index');
 
-    Route::view('lists', 'coming-soon', [
-        'title' => 'Lists',
-        'description' => 'Sports, competitions, teams, markets, tipsters and tags.',
-    ])->name('lists.index');
+    Route::get('lists', ListsIndex::class)->name('lists.index');
 });
 
 Route::middleware(['auth'])->group(function () {

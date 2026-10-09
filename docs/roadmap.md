@@ -44,7 +44,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
       model, policy, factory. Settings: choose base currency. Bookmakers page: list,
       create, edit (name, currency, exchange rate; rate fixed at 1 when currency = base),
       deactivate. Isolation tests.
-- [ ] **2.4 Lists.** `sports`, `competitions`, `teams`, `markets`, `tipsters`, `tags`
+- [x] **2.4 Lists.** `sports`, `competitions`, `teams`, `markets`, `tipsters`, `tags`
       tables, models, policies, factories. A "Lists" page to rename entries and delete
       unused ones. Isolation tests (including: a competition/team can't belong to another
       user's sport).

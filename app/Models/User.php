@@ -74,6 +74,54 @@ class User extends Authenticatable // implements MustVerifyEmail
     }
 
     /**
+     * @return HasMany<Sport, $this>
+     */
+    public function sports(): HasMany
+    {
+        return $this->hasMany(Sport::class);
+    }
+
+    /**
+     * @return HasMany<Competition, $this>
+     */
+    public function competitions(): HasMany
+    {
+        return $this->hasMany(Competition::class);
+    }
+
+    /**
+     * @return HasMany<Team, $this>
+     */
+    public function teams(): HasMany
+    {
+        return $this->hasMany(Team::class);
+    }
+
+    /**
+     * @return HasMany<Market, $this>
+     */
+    public function markets(): HasMany
+    {
+        return $this->hasMany(Market::class);
+    }
+
+    /**
+     * @return HasMany<Tipster, $this>
+     */
+    public function tipsters(): HasMany
+    {
+        return $this->hasMany(Tipster::class);
+    }
+
+    /**
+     * @return HasMany<Tag, $this>
+     */
+    public function tags(): HasMany
+    {
+        return $this->hasMany(Tag::class);
+    }
+
+    /**
      * Switch to another base currency. Bookmakers in the new base currency get the
      * fixed rate of 1; other rates are left for the user to review.
      */

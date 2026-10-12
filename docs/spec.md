@@ -267,3 +267,12 @@ same items. Touch targets ≥ 44 px.
   bookmaker has a Reactivate button. Bookmakers can't be deleted (they will hold bets).
 - **Decimal comma (assumed in 2.3).** Exchange rates must use a decimal point (`7.46`);
   `7,46` is rejected with a message. Revisit together with odds and stake input in 2.6.
+- **Deleting list entries (assumed in 2.4).** The Lists page deletes an entry only while
+  nothing uses it; otherwise it shows "In use" instead of Delete. A sport counts as in use
+  while it has competitions or teams (deleting it would delete them too); from 2.5 on, an
+  entry used by a bet or selection is in use. Renaming to a name that already exists in
+  the list (or, for competitions and teams, in the same sport) is refused — merging is a
+  "Later" feature. Competitions and teams can't be moved to another sport.
+- **Case in list names (assumed in 2.4).** Names are unique as typed, so "Arsenal" and
+  "arsenal" are two entries (on SQLite; MySQL's default collation would treat them as
+  one). Revisit in 2.6, where typing a name should match an existing entry.

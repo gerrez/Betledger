@@ -19,7 +19,10 @@ return new class extends Migration
 
             $table->unique(['user_id', 'name']);
 
-            // Target of the (sport_id, user_id) foreign keys on competitions and teams.
+            // Always unique because `id` is, so this adds no rule of its own. It exists
+            // because a foreign key may only reference columns covered by a primary key or
+            // unique index, and competitions and teams reference (sport_id, user_id) →
+            // sports (id, user_id) so a sport of another user can't be used.
             $table->unique(['id', 'user_id']);
         });
     }

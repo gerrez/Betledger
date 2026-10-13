@@ -36,6 +36,7 @@ sets `component_layout` to `components.layouts.app` to bridge that. Don't revert
 ```bash
 composer install && npm ci          # dependencies
 php artisan migrate                  # apply migrations to database/database.sqlite
+php artisan db:seed                  # (re)create the demo accounts, see docs/SETUP.md
 php artisan test                     # full test suite
 vendor/bin/pint --dirty --format agent   # format changed files (CI runs `pint --test`)
 vendor/bin/phpstan analyse --memory-limit=1G
@@ -81,6 +82,8 @@ All of these must pass. CI runs the same checks and a PR can't merge without the
   in the PR description, and add it to the "Open questions" section of `docs/spec.md`.
   Don't silently invent product behaviour.
 - Migrations: add new migrations; never edit a migration that has been merged to `main`.
+- When a task adds user data the owner should be able to try (bets, settled results, …),
+  extend `Database\Seeders\DemoDataSeeder` so `php artisan db:seed` shows it.
 - Keep dependencies lean. Adding a Composer/npm package needs a one-line justification in
   the PR description.
 - Don't modify CI workflows, `.claude/` settings or `phpstan.neon` (e.g. lowering the

@@ -87,4 +87,13 @@ Then commit the changes to `CLAUDE.md` and `.claude/skills/`. Boost only targets
 composer run dev
 ```
 
-Then open <http://localhost:8000> and register an account.
+Then open <http://localhost:8000> and register an account, or load the demo accounts:
+
+```bash
+php artisan db:seed
+```
+
+This creates `demo@example.com` (bookmakers and lists to try things with) and
+`other@example.com` (a second user whose data the demo user must never see), both with the
+password `password`. Running it again resets both accounts to the demo data; other
+accounts are left alone. It does nothing in production.

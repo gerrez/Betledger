@@ -105,13 +105,14 @@ data has a `user_id` (directly, or via its parent bet) and is scoped by policies
 | `notes` | text, nullable | |
 | timestamps | | |
 
-`bet_tag` pivot: `bet_id`, `tag_id`.
+`bet_tag` pivot: `bet_id`, `tag_id`, `user_id` (the bet's owner).
 
 ### `selections`
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | pk | |
+| `user_id` | fk users | the bet's owner |
 | `bet_id` | fk bets, cascade delete | |
 | `position` | smallint | order within the bet |
 | `sport_id` | fk sports | |
@@ -125,7 +126,7 @@ data has a `user_id` (directly, or via its parent bet) and is scoped by policies
 | `result` | enum `won`, `lost`, `void`, `half_won`, `half_lost`, nullable | null = pending |
 | timestamps | | |
 
-`selection_team` pivot: `selection_id`, `team_id`.
+`selection_team` pivot: `selection_id`, `team_id`, `user_id` (the selection's owner).
 
 ## Settlement rules
 
@@ -276,3 +277,16 @@ same items. Touch targets ≥ 44 px.
 - **Case in list names (assumed in 2.4).** Names are unique as typed, so "Arsenal" and
   "arsenal" are two entries (on SQLite; MySQL's default collation would treat them as
   one). Revisit in 2.6, where typing a name should match an existing entry.
+- **Owner on selections and pivots (assumed in 2.5).** `selections`, `bet_tag` and
+  `selection_team` also store `user_id` (always the bet's owner). Bets and selections
+  reference bookmakers, list entries, bets and selections together with the owner
+  (`(x_id, user_id)` foreign keys), so the database itself refuses linking another user's
+  records, as for competitions and teams in 2.4. `type`, `status` and `result` are string
+  columns backed by PHP enums rather than database enums.
+- **What 2.5 leaves to the bet form (assumed in 2.5).** The database does not check that a
+  selection's competition and teams belong to the selection's sport, that `type` matches
+  the number of selections, or that `total_odds` matches them; saving a bet (2.6/2.7) and
+  settling it (2.9) keep these consistent.
+- **Base currency with bets (assumed in 2.5).** Once a user has a bet, the Currency page
+  shows the base currency without a Save button and explains why; the model refuses the
+  change too. Deleting every bet unlocks it again.

@@ -12,6 +12,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use LogicException;
 
 /**
  * @property Currency $base_currency
@@ -74,6 +75,22 @@ class User extends Authenticatable // implements MustVerifyEmail
     }
 
     /**
+     * @return HasMany<Bet, $this>
+     */
+    public function bets(): HasMany
+    {
+        return $this->hasMany(Bet::class);
+    }
+
+    /**
+     * @return HasMany<Selection, $this>
+     */
+    public function selections(): HasMany
+    {
+        return $this->hasMany(Selection::class);
+    }
+
+    /**
      * @return HasMany<Sport, $this>
      */
     public function sports(): HasMany
@@ -122,11 +139,30 @@ class User extends Authenticatable // implements MustVerifyEmail
     }
 
     /**
+     * The base currency can only change while the user has no bets: each bet's exchange
+     * rate converts to the base currency it was saved with.
+     */
+    public function canChangeBaseCurrency(): bool
+    {
+        return $this->bets()->doesntExist();
+    }
+
+    /**
      * Switch to another base currency. Bookmakers in the new base currency get the
      * fixed rate of 1; other rates are left for the user to review.
+     *
+     * @throws LogicException when the user has bets
      */
     public function changeBaseCurrency(Currency $currency): void
     {
+        if ($currency === $this->base_currency) {
+            return;
+        }
+
+        if (! $this->canChangeBaseCurrency()) {
+            throw new LogicException('The base currency cannot change once the user has bets.');
+        }
+
         DB::transaction(function () use ($currency): void {
             $this->base_currency = $currency;
             $this->save();

@@ -8,6 +8,7 @@ use Database\Factories\BookmakerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -62,5 +63,13 @@ class Bookmaker extends Model
     public function formattedExchangeRate(): string
     {
         return Decimal::normalize($this->exchange_rate);
+    }
+
+    /**
+     * @return HasMany<Bet, $this>
+     */
+    public function bets(): HasMany
+    {
+        return $this->hasMany(Bet::class);
     }
 }

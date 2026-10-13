@@ -3,6 +3,7 @@
 namespace App\Livewire\Settings;
 
 use App\Domain\Currency;
+use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -27,11 +28,21 @@ class BaseCurrency extends Component
      */
     public function updateBaseCurrency(): void
     {
+        $user = Auth::user();
+
         $validated = $this->validate([
-            'base_currency' => ['required', Rule::enum(Currency::class)],
+            'base_currency' => [
+                'required',
+                Rule::enum(Currency::class),
+                function (string $attribute, string $value, Closure $fail) use ($user): void {
+                    if ($value !== $user->base_currency->value && ! $user->canChangeBaseCurrency()) {
+                        $fail('The base currency can’t be changed once you have recorded bets.');
+                    }
+                },
+            ],
         ]);
 
-        Auth::user()->changeBaseCurrency(Currency::from($validated['base_currency']));
+        $user->changeBaseCurrency(Currency::from($validated['base_currency']));
 
         $this->dispatch('base-currency-updated');
     }
@@ -40,6 +51,7 @@ class BaseCurrency extends Component
     {
         return view('livewire.settings.base-currency', [
             'currencies' => Currency::cases(),
+            'canChange' => Auth::user()->canChangeBaseCurrency(),
         ]);
     }
 }

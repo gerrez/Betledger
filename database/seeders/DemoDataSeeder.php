@@ -2,7 +2,17 @@
 
 namespace Database\Seeders;
 
+use App\Domain\BetStatus;
+use App\Domain\BetType;
 use App\Domain\Currency;
+use App\Domain\Odds;
+use App\Domain\Settlement\Leg;
+use App\Domain\Settlement\SelectionResult;
+use App\Domain\Settlement\SettlementCalculator;
+use App\Models\Bet;
+use App\Models\Bookmaker;
+use App\Models\Tag;
+use App\Models\Tipster;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -54,50 +64,94 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * The account to test with: bookmakers in several currencies (one inactive) and
-     * every list, including a sport nothing uses yet so it can be deleted.
+     * The account to test with: bookmakers in several currencies (one inactive), every
+     * list, and bets that are open and settled, singles and accumulators, cash and free.
+     * Some entries are unused (Ice hockey, Both teams to score, Value hunting, boost) so
+     * they can be deleted on the Lists page.
      */
     private function seedDemoUser(User $user): void
     {
-        $user->bookmakers()->createMany([
-            ['name' => 'Unibet', 'currency' => Currency::Eur, 'exchange_rate' => '1'],
-            ['name' => 'Bet365', 'currency' => Currency::Gbp, 'exchange_rate' => '1.17'],
-            ['name' => 'Danske Spil', 'currency' => Currency::Dkk, 'exchange_rate' => '0.1341'],
-            ['name' => 'Old Bookie', 'currency' => Currency::Eur, 'exchange_rate' => '1', 'is_active' => false],
-        ]);
+        $unibet = $user->bookmakers()->create(['name' => 'Unibet', 'currency' => Currency::Eur, 'exchange_rate' => '1']);
+        $bet365 = $user->bookmakers()->create(['name' => 'Bet365', 'currency' => Currency::Gbp, 'exchange_rate' => '1.17']);
+        $danskeSpil = $user->bookmakers()->create(['name' => 'Danske Spil', 'currency' => Currency::Dkk, 'exchange_rate' => '0.1341']);
+        $oldBookie = $user->bookmakers()->create(['name' => 'Old Bookie', 'currency' => Currency::Eur, 'exchange_rate' => '1', 'is_active' => false]);
 
         $football = $user->sports()->create(['name' => 'Football']);
         $tennis = $user->sports()->create(['name' => 'Tennis']);
         $basketball = $user->sports()->create(['name' => 'Basketball']);
         $user->sports()->create(['name' => 'Ice hockey']);
 
+        $competitions = [];
         foreach (['Premier League', 'La Liga', 'Champions League'] as $name) {
-            $user->competitions()->create(['sport_id' => $football->id, 'name' => $name]);
+            $competitions[$name] = $user->competitions()->create(['sport_id' => $football->id, 'name' => $name]);
         }
         foreach (['Wimbledon', 'US Open'] as $name) {
-            $user->competitions()->create(['sport_id' => $tennis->id, 'name' => $name]);
+            $competitions[$name] = $user->competitions()->create(['sport_id' => $tennis->id, 'name' => $name]);
         }
-        $user->competitions()->create(['sport_id' => $basketball->id, 'name' => 'NBA']);
+        $competitions['NBA'] = $user->competitions()->create(['sport_id' => $basketball->id, 'name' => 'NBA']);
 
+        $teams = [];
         foreach (['Arsenal', 'Chelsea', 'Liverpool', 'Real Madrid', 'FC Barcelona'] as $name) {
-            $user->teams()->create(['sport_id' => $football->id, 'name' => $name]);
+            $teams[$name] = $user->teams()->create(['sport_id' => $football->id, 'name' => $name]);
         }
         foreach (['Carlos Alcaraz', 'Jannik Sinner'] as $name) {
-            $user->teams()->create(['sport_id' => $tennis->id, 'name' => $name]);
+            $teams[$name] = $user->teams()->create(['sport_id' => $tennis->id, 'name' => $name]);
         }
         foreach (['Boston Celtics', 'Los Angeles Lakers'] as $name) {
-            $user->teams()->create(['sport_id' => $basketball->id, 'name' => $name]);
+            $teams[$name] = $user->teams()->create(['sport_id' => $basketball->id, 'name' => $name]);
         }
 
+        $markets = [];
         foreach (['1X2', 'Asian handicap', 'Over/Under', 'Both teams to score'] as $name) {
-            $user->markets()->create(['name' => $name]);
+            $markets[$name] = $user->markets()->create(['name' => $name]);
         }
-        foreach (['Own model', 'Value hunting'] as $name) {
-            $user->tipsters()->create(['name' => $name]);
-        }
+        $ownModel = $user->tipsters()->create(['name' => 'Own model']);
+        $user->tipsters()->create(['name' => 'Value hunting']);
+        $tags = [];
         foreach (['value', 'live', 'boost'] as $name) {
-            $user->tags()->create(['name' => $name]);
+            $tags[$name] = $user->tags()->create(['name' => $name]);
         }
+
+        $leg = fn (string $home, string $away, string $competition, string $market, string $pick, string $odds, ?SelectionResult $result, int $daysAgo, ?string $closingOdds = null): array => [
+            'sport_id' => $teams[$home]->sport_id,
+            'competition_id' => $competitions[$competition]->id,
+            'market_id' => $markets[$market]->id,
+            'event_name' => "{$home} v {$away}",
+            'event_starts_at' => now()->subDays($daysAgo)->setTime(18, 0),
+            'pick' => $pick,
+            'odds' => $odds,
+            'closing_odds' => $closingOdds,
+            'result' => $result,
+            'teams' => [$teams[$home], $teams[$away]],
+        ];
+
+        $this->placeBet($unibet, 2000, daysAgo: 12, tipster: $ownModel, tags: [$tags['value']], selections: [
+            $leg('Arsenal', 'Chelsea', 'Premier League', '1X2', 'Arsenal', '2.10', SelectionResult::Won, 11, closingOdds: '1.95'),
+        ]);
+        $this->placeBet($bet365, 1500, daysAgo: 9, selections: [
+            $leg('Real Madrid', 'FC Barcelona', 'La Liga', 'Asian handicap', 'Real Madrid −0.25', '1.95', SelectionResult::HalfLost, 8, closingOdds: '2.02'),
+        ]);
+        $this->placeBet($unibet, 1000, daysAgo: 7, selections: [
+            $leg('Liverpool', 'Arsenal', 'Champions League', '1X2', 'Liverpool', '1.50', SelectionResult::Won, 6),
+            $leg('Chelsea', 'FC Barcelona', 'Champions League', '1X2', 'Chelsea', '2.00', SelectionResult::Void, 6),
+            $leg('Real Madrid', 'Liverpool', 'Champions League', 'Over/Under', 'Over 2.5', '1.80', SelectionResult::Won, 6),
+        ]);
+        $this->placeBet($bet365, 1000, daysAgo: 5, isFreeBet: true, tags: [$tags['live']], selections: [
+            $leg('Boston Celtics', 'Los Angeles Lakers', 'NBA', '1X2', 'Boston Celtics', '3.00', SelectionResult::Won, 5),
+        ]);
+        $this->placeBet($unibet, 2500, daysAgo: 4, tipster: $ownModel, selections: [
+            $leg('Carlos Alcaraz', 'Jannik Sinner', 'Wimbledon', '1X2', 'Carlos Alcaraz', '1.75', SelectionResult::Lost, 3, closingOdds: '1.70'),
+        ]);
+        $this->placeBet($oldBookie, 5000, daysAgo: 40, selections: [
+            $leg('Chelsea', 'Liverpool', 'Premier League', 'Over/Under', 'Under 2.5', '2.05', SelectionResult::Won, 39),
+        ]);
+        $this->placeBet($danskeSpil, 10000, daysAgo: 1, selections: [
+            $leg('Liverpool', 'Chelsea', 'Premier League', '1X2', 'Liverpool', '1.65', SelectionResult::Won, 1),
+            $leg('Jannik Sinner', 'Carlos Alcaraz', 'US Open', '1X2', 'Jannik Sinner', '2.20', null, -2),
+        ]);
+        $this->placeBet($unibet, 2000, daysAgo: 0, tags: [$tags['value']], selections: [
+            $leg('Arsenal', 'Liverpool', 'Premier League', 'Over/Under', 'Over 2.5', '1.90', null, -3),
+        ]);
     }
 
     /**
@@ -105,13 +159,74 @@ class DemoDataSeeder extends Seeder
      */
     private function seedOtherUser(User $user): void
     {
-        $user->bookmakers()->create(['name' => 'Other Users Bookie', 'currency' => Currency::Eur, 'exchange_rate' => '1']);
+        $bookmaker = $user->bookmakers()->create(['name' => 'Other Users Bookie', 'currency' => Currency::Eur, 'exchange_rate' => '1']);
 
         $sport = $user->sports()->create(['name' => 'Other Users Sport']);
-        $user->competitions()->create(['sport_id' => $sport->id, 'name' => 'Other Users Competition']);
-        $user->teams()->create(['sport_id' => $sport->id, 'name' => 'Other Users Team']);
-        $user->markets()->create(['name' => 'Other Users Market']);
-        $user->tipsters()->create(['name' => 'Other Users Tipster']);
-        $user->tags()->create(['name' => 'Other Users Tag']);
+        $competition = $user->competitions()->create(['sport_id' => $sport->id, 'name' => 'Other Users Competition']);
+        $team = $user->teams()->create(['sport_id' => $sport->id, 'name' => 'Other Users Team']);
+        $market = $user->markets()->create(['name' => 'Other Users Market']);
+        $tipster = $user->tipsters()->create(['name' => 'Other Users Tipster']);
+        $tag = $user->tags()->create(['name' => 'Other Users Tag']);
+
+        $this->placeBet($bookmaker, 5000, daysAgo: 2, tipster: $tipster, tags: [$tag], selections: [[
+            'sport_id' => $sport->id,
+            'competition_id' => $competition->id,
+            'market_id' => $market->id,
+            'event_name' => 'Other Users Event',
+            'event_starts_at' => now()->subDay(),
+            'pick' => 'Other Users Pick',
+            'odds' => '2.50',
+            'result' => SelectionResult::Won,
+            'teams' => [$team],
+        ]]);
+    }
+
+    /**
+     * Record a bet with its selections in the bookmaker's currency and rate, and settle
+     * it when its results say so.
+     *
+     * @param  int  $stake  minor units
+     * @param  list<Tag>  $tags
+     * @param  list<array<string, mixed>>  $selections  selection attributes plus `teams` (list<Team>)
+     */
+    private function placeBet(Bookmaker $bookmaker, int $stake, int $daysAgo, array $selections, bool $isFreeBet = false, ?Tipster $tipster = null, array $tags = []): Bet
+    {
+        $bet = new Bet([
+            'bookmaker_id' => $bookmaker->id,
+            'tipster_id' => $tipster?->id,
+            'type' => BetType::forSelectionCount(count($selections)),
+            'placed_at' => now()->subDays($daysAgo)->setTime(12, 0),
+            'stake' => $stake,
+            'currency' => $bookmaker->currency,
+            'exchange_rate' => $bookmaker->exchange_rate,
+            'is_free_bet' => $isFreeBet,
+            'total_odds' => Odds::total(array_column($selections, 'odds')),
+        ]);
+        $bet->user()->associate($bookmaker->user_id);
+        $bet->save();
+        $bet->tags()->attach($tags);
+
+        $legs = [];
+        foreach ($selections as $position => $attributes) {
+            $teams = $attributes['teams'];
+            unset($attributes['teams']);
+
+            $selection = $bet->selections()->create(['position' => $position + 1, ...$attributes]);
+            $selection->teams()->attach($teams);
+            $legs[] = new Leg($selection->odds, $selection->result);
+        }
+
+        $settlement = (new SettlementCalculator)->settle($stake, $isFreeBet, $legs);
+
+        if ($settlement !== null) {
+            $bet->forceFill([
+                'status' => BetStatus::Settled,
+                'settled_at' => $bet->selections->max('event_starts_at')?->copy()->addHours(2),
+                'payout' => $settlement->payout,
+                'profit' => $settlement->profit,
+            ])->save();
+        }
+
+        return $bet;
     }
 }

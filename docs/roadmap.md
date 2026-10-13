@@ -48,7 +48,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
       tables, models, policies, factories. A "Lists" page to rename entries and delete
       unused ones. Isolation tests (including: a competition/team can't belong to another
       user's sport).
-- [ ] **2.5 Bets schema.** `bets`, `selections`, `bet_tag`, `selection_team` migrations,
+- [x] **2.5 Bets schema.** `bets`, `selections`, `bet_tag`, `selection_team` migrations,
       models, relationships, casts (integer money, string odds), policies, factories with
       states (single, accumulator, free, settled). Enforce "base currency can't change
       once the user has bets". No UI.

@@ -46,12 +46,21 @@ class Sport extends Model
     }
 
     /**
-     * A sport is in use while it has competitions or teams (deleting it would delete them).
+     * @return HasMany<Selection, $this>
+     */
+    public function selections(): HasMany
+    {
+        return $this->hasMany(Selection::class);
+    }
+
+    /**
+     * A sport is in use while it has competitions or teams (deleting it would delete
+     * them) or a selection refers to it.
      *
      * @return list<string>
      */
     public static function usageRelations(): array
     {
-        return ['competitions', 'teams'];
+        return ['competitions', 'teams', 'selections'];
     }
 }

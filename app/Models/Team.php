@@ -7,6 +7,7 @@ use Database\Factories\TeamFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * A participant of an event: a club, or a player in sports like tennis. It always
@@ -39,5 +40,25 @@ class Team extends Model
     public function sport(): BelongsTo
     {
         return $this->belongsTo(Sport::class);
+    }
+
+    /**
+     * The selections on events this team took part in.
+     *
+     * @return BelongsToMany<Selection, $this, OwnedPivot>
+     */
+    public function selections(): BelongsToMany
+    {
+        return $this->belongsToMany(Selection::class)->using(OwnedPivot::class);
+    }
+
+    /**
+     * In use while a selection refers to it.
+     *
+     * @return list<string>
+     */
+    public static function usageRelations(): array
+    {
+        return ['selections'];
     }
 }

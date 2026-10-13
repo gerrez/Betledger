@@ -6,6 +6,7 @@ use App\Models\Concerns\IsListEntry;
 use Database\Factories\TagFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * A free label for bets.
@@ -27,4 +28,22 @@ class Tag extends Model
     protected $fillable = [
         'name',
     ];
+
+    /**
+     * @return BelongsToMany<Bet, $this, OwnedPivot>
+     */
+    public function bets(): BelongsToMany
+    {
+        return $this->belongsToMany(Bet::class)->using(OwnedPivot::class);
+    }
+
+    /**
+     * In use while a bet refers to it.
+     *
+     * @return list<string>
+     */
+    public static function usageRelations(): array
+    {
+        return ['bets'];
+    }
 }

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Domain\BetStatus;
+use App\Domain\BetType;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoDataSeeder;
@@ -29,17 +31,23 @@ class DemoDataSeederTest extends TestCase
         $this->assertSame(4, $demo->markets()->count());
         $this->assertSame(2, $demo->tipsters()->count());
         $this->assertSame(3, $demo->tags()->count());
+        $this->assertSame(8, $demo->bets()->count());
+        $this->assertSame(2, $demo->bets()->where('status', BetStatus::Open)->count());
+        $this->assertSame(2, $demo->bets()->where('type', BetType::Accumulator)->count());
+        $this->assertSame(1, $demo->bets()->where('is_free_bet', true)->count());
+        $this->assertFalse($demo->canChangeBaseCurrency());
 
         $other = User::query()->where('email', DemoDataSeeder::OTHER_EMAIL)->sole();
         $this->assertSame(1, $other->sports()->count());
         $this->assertSame(1, $other->tags()->count());
+        $this->assertSame(1, $other->bets()->count());
     }
 
     public function test_running_it_again_starts_the_demo_accounts_over(): void
     {
         $this->seed(DemoDataSeeder::class);
         $demo = User::query()->where('email', DemoDataSeeder::DEMO_EMAIL)->sole();
-        $demo->tags()->delete();
+        $demo->tags()->where('name', 'boost')->delete();
         $demo->markets()->create(['name' => 'Added while testing']);
         $someoneElse = User::factory()->create();
 

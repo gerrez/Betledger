@@ -56,4 +56,17 @@ class DecimalTest extends TestCase
 
         Decimal::divide('1', '0.000');
     }
+
+    public function test_typed_numbers_accept_a_decimal_comma(): void
+    {
+        $this->assertSame('1.95', Decimal::fromInput(' 1,95 '));
+        $this->assertSame('1.95', Decimal::fromInput('1.95'));
+        $this->assertSame('25', Decimal::fromInput('25'));
+    }
+
+    public function test_typed_numbers_with_ambiguous_separators_are_left_for_validation(): void
+    {
+        $this->assertSame('1,000.50', Decimal::fromInput('1,000.50'));
+        $this->assertSame('1,000,000', Decimal::fromInput('1,000,000'));
+    }
 }

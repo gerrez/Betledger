@@ -74,6 +74,22 @@ class ManageBookmakersTest extends TestCase
         $this->assertTrue($bookmaker->is_active);
     }
 
+    public function test_the_rate_may_use_a_decimal_comma(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Livewire::test(Index::class)
+            ->call('create')
+            ->set('name', 'Danske Spil')
+            ->set('currency', 'DKK')
+            ->set('exchange_rate', '0,1341')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('0.13410000', $user->bookmakers()->sole()->exchange_rate);
+    }
+
     public function test_a_bookmaker_in_the_base_currency_always_gets_a_rate_of_1(): void
     {
         $user = User::factory()->create(['base_currency' => Currency::Dkk]);

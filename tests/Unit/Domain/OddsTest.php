@@ -50,4 +50,19 @@ class OddsTest extends TestCase
 
         Odds::total(['1.50', '1.00']);
     }
+
+    public function test_selection_odds_are_above_1_with_at_most_three_decimals(): void
+    {
+        $this->assertTrue(Odds::isValidSelectionOdds('1.95'));
+        $this->assertTrue(Odds::isValidSelectionOdds('1.001'));
+        $this->assertTrue(Odds::isValidSelectionOdds('1000'));
+        $this->assertTrue(Odds::isValidSelectionOdds('9999999.999'));
+
+        $this->assertFalse(Odds::isValidSelectionOdds('1'));
+        $this->assertFalse(Odds::isValidSelectionOdds('1.000'));
+        $this->assertFalse(Odds::isValidSelectionOdds('0.5'));
+        $this->assertFalse(Odds::isValidSelectionOdds('1.9524'));
+        $this->assertFalse(Odds::isValidSelectionOdds('10000000'));
+        $this->assertFalse(Odds::isValidSelectionOdds('1,95'));
+    }
 }

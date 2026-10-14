@@ -37,4 +37,24 @@ enum Currency: string
             self::Usd => 'US dollar',
         };
     }
+
+    /**
+     * Put the currency symbol on a formatted amount: "€1,492.00", "1,492.00 kr",
+     * "CHF 1,492.00". DKK, NOK and SEK all show as "kr".
+     */
+    public function withSymbol(string $amount): string
+    {
+        return match ($this) {
+            self::Aud => 'A$'.$amount,
+            self::Cad => 'C$'.$amount,
+            self::Chf => 'CHF '.$amount,
+            self::Czk => $amount.' Kč',
+            self::Dkk, self::Nok, self::Sek => $amount.' kr',
+            self::Eur => '€'.$amount,
+            self::Gbp => '£'.$amount,
+            self::Nzd => 'NZ$'.$amount,
+            self::Pln => $amount.' zł',
+            self::Usd => '$'.$amount,
+        };
+    }
 }

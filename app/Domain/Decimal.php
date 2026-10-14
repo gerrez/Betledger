@@ -17,6 +17,22 @@ final class Decimal
 
     private const PATTERN = '/^-?\d+(\.\d+)?$/';
 
+    /**
+     * Clean up a number as typed into a form: surrounding spaces are dropped, and a
+     * single decimal comma ("1,95", as phone keyboards in many locales type it) becomes a
+     * decimal point. Anything else is returned as typed, for validation to reject.
+     */
+    public static function fromInput(string $input): string
+    {
+        $input = trim($input);
+
+        if (substr_count($input, ',') === 1 && ! str_contains($input, '.')) {
+            return str_replace(',', '.', $input);
+        }
+
+        return $input;
+    }
+
     public static function isValid(string $value): bool
     {
         return preg_match(self::PATTERN, $value) === 1;

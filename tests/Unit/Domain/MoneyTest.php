@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Domain;
 
+use App\Domain\Currency;
 use App\Domain\Money;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -70,5 +71,36 @@ class MoneyTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         Money::convert(10000, '0');
+    }
+
+    public function test_formats_amounts_for_display_with_the_currency_symbol(): void
+    {
+        $this->assertSame('€390.00', Money::format(39000, Currency::Eur));
+        $this->assertSame('1,492.00 kr', Money::format(149200, Currency::Dkk));
+        $this->assertSame('CHF 1,234,567.89', Money::format(123456789, Currency::Chf));
+        $this->assertSame('€0.05', Money::format(5, Currency::Eur));
+    }
+
+    public function test_signed_amounts_always_show_plus_or_minus(): void
+    {
+        $this->assertSame('+€190.00', Money::format(19000, Currency::Eur, signed: true));
+        $this->assertSame('−€100.00', Money::format(-10000, Currency::Eur, signed: true));
+        $this->assertSame('−50.00 kr', Money::format(-5000, Currency::Dkk));
+        $this->assertSame('0.00 kr', Money::format(0, Currency::Dkk, signed: true));
+    }
+
+    public function test_accepts_stakes_above_zero_with_up_to_two_decimals(): void
+    {
+        $this->assertTrue(Money::isValidStake('25'));
+        $this->assertTrue(Money::isValidStake('0.01'));
+        $this->assertTrue(Money::isValidStake('999999999.99'));
+
+        $this->assertFalse(Money::isValidStake('0'));
+        $this->assertFalse(Money::isValidStake('0.00'));
+        $this->assertFalse(Money::isValidStake('-5'));
+        $this->assertFalse(Money::isValidStake('25.505'));
+        $this->assertFalse(Money::isValidStake('25,50'));
+        $this->assertFalse(Money::isValidStake('1000000000'));
+        $this->assertFalse(Money::isValidStake(''));
     }
 }

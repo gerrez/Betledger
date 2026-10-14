@@ -7,6 +7,7 @@ use Database\Factories\CompetitionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A league, cup or tournament. It always belongs to one of its owner's own sports.
@@ -38,5 +39,23 @@ class Competition extends Model
     public function sport(): BelongsTo
     {
         return $this->belongsTo(Sport::class);
+    }
+
+    /**
+     * @return HasMany<Selection, $this>
+     */
+    public function selections(): HasMany
+    {
+        return $this->hasMany(Selection::class);
+    }
+
+    /**
+     * In use while a selection refers to it.
+     *
+     * @return list<string>
+     */
+    public static function usageRelations(): array
+    {
+        return ['selections'];
     }
 }

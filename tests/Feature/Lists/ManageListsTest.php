@@ -3,6 +3,7 @@
 namespace Tests\Feature\Lists;
 
 use App\Livewire\Lists\Index;
+use App\Models\Bet;
 use App\Models\Competition;
 use App\Models\Market;
 use App\Models\Sport;
@@ -225,6 +226,39 @@ class ManageListsTest extends TestCase
             ->assertSee('“Football” is in use, so it can’t be deleted.');
 
         $this->assertModelExists($sport);
+    }
+
+    public function test_entries_used_by_a_bet_cannot_be_deleted(): void
+    {
+        $user = User::factory()->create();
+        $football = Sport::factory()->for($user)->create();
+        $tennis = Sport::factory()->for($user)->create();
+        $entries = [
+            'sports' => $football,
+            'competitions' => Competition::factory()->forSport($tennis)->create(),
+            'teams' => Team::factory()->forSport($tennis)->create(),
+            'markets' => Market::factory()->for($user)->create(),
+            'tipsters' => Tipster::factory()->for($user)->create(),
+            'tags' => Tag::factory()->for($user)->create(),
+        ];
+        $bet = Bet::factory()->for($user)->create(['tipster_id' => $entries['tipsters']->id]);
+        $bet->tags()->attach($entries['tags']);
+        $selection = $bet->selections[0];
+        $selection->update([
+            'sport_id' => $football->id,
+            'competition_id' => $entries['competitions']->id,
+            'market_id' => $entries['markets']->id,
+        ]);
+        $selection->teams()->attach($entries['teams']);
+        $this->actingAs($user);
+
+        foreach ($entries as $list => $entry) {
+            Livewire::test(Index::class, ['list' => $list])
+                ->call('delete', $entry->id)
+                ->assertHasErrors(['delete']);
+
+            $this->assertModelExists($entry);
+        }
     }
 
     /**

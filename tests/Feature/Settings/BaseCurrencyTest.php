@@ -5,10 +5,12 @@ namespace Tests\Feature\Settings;
 use App\Domain\Currency;
 use App\Livewire\Auth\Register;
 use App\Livewire\Settings\BaseCurrency;
+use App\Models\Bet;
 use App\Models\Bookmaker;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use LogicException;
 use Tests\TestCase;
 
 class BaseCurrencyTest extends TestCase
@@ -78,5 +80,45 @@ class BaseCurrencyTest extends TestCase
         $this->assertSame('1.00000000', $danish->refresh()->exchange_rate);
         $this->assertSame('1.17000000', $british->refresh()->exchange_rate);
         $this->assertSame('0.13410000', $someoneElses->refresh()->exchange_rate);
+    }
+
+    public function test_the_base_currency_cannot_change_once_the_user_has_bets(): void
+    {
+        $user = User::factory()->create();
+        Bet::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        Livewire::test(BaseCurrency::class)
+            ->assertSee('can’t be changed once you have recorded bets')
+            ->set('base_currency', 'DKK')
+            ->call('updateBaseCurrency')
+            ->assertHasErrors(['base_currency']);
+
+        $this->assertSame(Currency::Eur, $user->refresh()->base_currency);
+    }
+
+    public function test_the_model_refuses_to_change_the_base_currency_once_the_user_has_bets(): void
+    {
+        $user = User::factory()->create();
+        Bet::factory()->for($user)->create();
+
+        $this->expectException(LogicException::class);
+
+        $user->changeBaseCurrency(Currency::Dkk);
+    }
+
+    public function test_another_users_bets_do_not_lock_the_base_currency(): void
+    {
+        $user = User::factory()->create();
+        Bet::factory()->create();
+        $this->actingAs($user);
+
+        Livewire::test(BaseCurrency::class)
+            ->assertDontSee('can’t be changed once you have recorded bets')
+            ->set('base_currency', 'DKK')
+            ->call('updateBaseCurrency')
+            ->assertHasNoErrors();
+
+        $this->assertSame(Currency::Dkk, $user->refresh()->base_currency);
     }
 }

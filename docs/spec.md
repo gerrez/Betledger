@@ -380,3 +380,24 @@ same items. Touch targets ≥ 44 px.
   with "Bet deleted.". The edit form's close button and saving now go back to the bet
   detail page (not the bets list, as in 2.7). The Bets tab stays highlighted on the
   detail and edit pages.
+- **Statistics service (assumed in 2.12).** `App\Domain\Statistics`: `StatisticsQuery`
+  loads the user's filtered bets, `StatisticsCalculator` does the sums. Each filter takes
+  one value (one bookmaker, one sport, …); dates are whole days in the app's time zone
+  (UTC), both included. Stake and profit are each converted to the base currency with the
+  bet's rate and rounded per bet; profit is the stored one, so a manual payout counts.
+  **Open stake** counts open cash bets only (a free bet's stake isn't at risk, as for
+  turnover), while the open bet count includes free bets. **Average odds** cover every
+  settled bet, free bets included. **CLV** and "beat the close" cover settled bets only
+  (as in the mockup: "47 settled bets have no closing odds"); a bet beats the close when
+  its CLV is above 0, so matching it doesn't count. As the spec says, the strike rate
+  leaves out every bet with profit 0, which includes a lost free bet. Owner: should a
+  lost free bet count as a loss in the strike rate? **Breakdowns:** a bet with several
+  tags counts under each tag, like an accumulator under each sport; bets without a value
+  (no tipster, tags, competition, market or teams) form a "none" row, always last; the
+  other rows come by number of settled bets, most first, then by name, and a value with
+  only open bets still gets a row. **Odds bands** run up to and including their upper
+  bound at the stored four decimals: 1.5000 is in 1.01–1.50, 1.5050 in 1.51–2.00.
+  **Profit over time** counts profit on the settlement date, by day for ranges up to 31
+  days, by week (from Monday) up to 182 days, else by month, with a point for every
+  period, empty ones included, from the start of the range (or the first settled bet,
+  for "All time") to its end (or the last settled bet).

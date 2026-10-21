@@ -41,18 +41,29 @@ enum BetSort: string
     {
         match ($this) {
             self::StartsSoonest => $query
-                ->addSelect(['next_event_starts_at' => Selection::query()
-                    ->selectRaw('min(event_starts_at)')
-                    ->whereColumn('selections.bet_id', 'bets.id')
-                    ->whereNull('result'),
-                ])
-                ->orderByRaw('next_event_starts_at is null')
-                ->orderBy('next_event_starts_at'),
+                ->orderBy(self::nextPendingStart('case when min(event_starts_at) is null then 1 else 0 end'))
+                ->orderBy(self::nextPendingStart('min(event_starts_at)')),
             self::Newest => $query,
             self::Oldest => $query->oldest('placed_at')->oldest('id'),
             self::RecentlySettled => $query->orderByDesc('settled_at'),
         };
 
         return $query->latest('placed_at')->latest('id');
+    }
+
+    /**
+     * A subquery over the bet's pending selections, for ordering. Bets are ordered by the
+     * subquery itself rather than by a selected alias, which Postgres doesn't allow inside
+     * an expression, and "no start time" is its own key because databases disagree on
+     * where nulls sort.
+     *
+     * @return Builder<Selection>
+     */
+    private static function nextPendingStart(string $aggregate): Builder
+    {
+        return Selection::query()
+            ->selectRaw($aggregate)
+            ->whereColumn('selections.bet_id', 'bets.id')
+            ->whereNull('result');
     }
 }

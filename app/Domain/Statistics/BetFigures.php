@@ -4,6 +4,7 @@ namespace App\Domain\Statistics;
 
 use App\Domain\BetType;
 use App\Domain\ClosingLineValue;
+use App\Domain\Decimal;
 use App\Domain\Money;
 use App\Domain\Odds;
 use Carbon\CarbonImmutable;
@@ -27,6 +28,7 @@ final readonly class BetFigures
     /**
      * @param  int  $stake  minor units of the bet's currency
      * @param  int|null  $profit  minor units of the bet's currency, null while open
+     * @param  string|null  $factor  the bet factor by the settlement rules, null while open
      * @param  string  $exchangeRate  the bet's own rate: 1 unit of its currency = this many units of the base currency
      * @param  list<string|null>  $closingOdds  one per selection, null when it has none
      * @param  array<value-of<Dimension>, list<Group>>  $groups  what the bet counts under per dimension (bet type excepted, which follows from $type); a dimension left out counts it under none
@@ -34,6 +36,7 @@ final readonly class BetFigures
     public function __construct(
         int $stake,
         ?int $profit,
+        public ?string $factor,
         string $exchangeRate,
         public BetType $type,
         public bool $isFreeBet,
@@ -42,8 +45,8 @@ final readonly class BetFigures
         array $closingOdds = [],
         public array $groups = [],
     ) {
-        if (($profit === null) !== ($settledAt === null)) {
-            throw new InvalidArgumentException('A settled bet has a profit and a settlement date; an open bet has neither.');
+        if (($profit === null) !== ($settledAt === null) || ($factor === null) !== ($settledAt === null)) {
+            throw new InvalidArgumentException('A settled bet has a profit, a factor and a settlement date; an open bet has none of them.');
         }
 
         Odds::assertValid($totalOdds);
@@ -56,6 +59,25 @@ final readonly class BetFigures
     public function isSettled(): bool
     {
         return $this->settledAt !== null;
+    }
+
+    /**
+     * Whether the bet counts as a win in the strike rate: it made a profit.
+     */
+    public function isWin(): bool
+    {
+        return $this->profit > 0;
+    }
+
+    /**
+     * Whether the bet counts as a loss in the strike rate: it lost money, or it is a
+     * free bet that came back with nothing because it lost (bet factor below 1, e.g. a
+     * lost or ½ lost free bet). A void bet is neither a win nor a loss.
+     */
+    public function isLoss(): bool
+    {
+        return $this->profit < 0
+            || ($this->isFreeBet && $this->profit === 0 && $this->factor !== null && Decimal::compare($this->factor, '1') < 0);
     }
 
     /**

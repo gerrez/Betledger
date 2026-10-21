@@ -18,7 +18,7 @@ final readonly class Totals
         public int $profit,
         /** Profit ÷ turnover. */
         public ?string $roi,
-        /** Bets with profit > 0 ÷ settled bets with profit ≠ 0. */
+        /** Winning bets ÷ winning and losing bets (see BetFigures::isWin() and isLoss()); void bets don't count. */
         public ?string $strikeRate,
         /** Mean total odds of settled bets. */
         public ?string $averageOdds,

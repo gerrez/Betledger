@@ -28,8 +28,8 @@ use PHPUnit\Framework\TestCase;
  * | 3  | Unibet      | 1000  | +1700  | 5.4000  | 2026-10-03 | acca, football + tennis; CLV +0.1020408163 |
  * | 4  | Bet365      | 1170  | +2340  | 3.0000  | 2026-10-05 | free bet                      |
  * | 5  | Danske Spil | 1341  | −1341  | 1.7500  | 2026-10-08 | CLV +0.0294117647             |
- * | 6  | Unibet      | 3000  | 0      | 2.0500  | 2026-10-08 | void; CLV 0                   |
- * | 7  | Unibet      | 500   | 0      | 12.0000 | 2026-10-15 | free bet, lost                |
+ * | 6  | Unibet      | 3000  | 0      | 2.0500  | 2026-10-08 | void: not in the strike rate; CLV 0 |
+ * | 7  | Unibet      | 500   | 0      | 12.0000 | 2026-10-15 | free bet, lost: a loss in the strike rate |
  * | 8  | Danske Spil | 335   | +503   | 2.5000  | 2026-10-20 | 2500 DKK → 335.25; 3750 DKK → 502.875 |
  * | 9  | Unibet      | 5000  | +2500  | 1.5000  | 2026-10-21 |                               |
  * | 10 | Unibet      | 2000  | open   | 1.9000  |            |                               |
@@ -68,7 +68,7 @@ class StatisticsCalculatorTest extends TestCase
             turnover: 14431,
             profit: 7024,
             roi: '0.4867299563',
-            strikeRate: '0.7142857142',
+            strikeRate: '0.6250000000',
             averageOdds: '3.5833333333',
             averageClv: '0.0347444385',
             clvBets: 5,
@@ -86,8 +86,8 @@ class StatisticsCalculatorTest extends TestCase
     public function test_free_bets_add_profit_but_no_turnover(): void
     {
         $totals = $this->calculator->totals([
-            $this->bet('Bet365', 1000, 2000, '3.0000', '2026-10-05', [$this->leg('Basketball', 'NBA')], isFreeBet: true),
-            $this->bet('Bet365', 500, null, '1.8000', null, [$this->leg('Basketball', 'NBA')], isFreeBet: true),
+            $this->bet('Bet365', 1000, 2000, '3.00', '3.0000', '2026-10-05', [$this->leg('Basketball', 'NBA')], isFreeBet: true),
+            $this->bet('Bet365', 500, null, null, '1.8000', null, [$this->leg('Basketball', 'NBA')], isFreeBet: true),
         ]);
 
         $this->assertSame(0, $totals->turnover);
@@ -106,7 +106,7 @@ class StatisticsCalculatorTest extends TestCase
 
         [$football, $tennis, $basketball] = $rows;
         $this->assertSame(1, $football->group->key);
-        $this->assertSame([13090, 6025, '0.4602750190', '0.8000000000', 2, 3341], $this->summary($football->totals));
+        $this->assertSame([13090, 6025, '0.4602750190', '0.6666666666', 2, 3341], $this->summary($football->totals));
         $this->assertSame([2341, 359, '0.1533532678', '0.5000000000', 1, 1341], $this->summary($tennis->totals));
         $this->assertSame('0.0657262905', $tennis->totals->averageClv);
         $this->assertSame([0, 2340, null, '1.0000000000', 1, 0], $this->summary($basketball->totals));
@@ -117,7 +117,7 @@ class StatisticsCalculatorTest extends TestCase
         $rows = $this->calculator->breakdown($this->bets(), Dimension::Bookmaker);
 
         $this->assertSame(['Unibet', 'Bet365', 'Danske Spil'], $this->labels($rows));
-        $this->assertSame([11000, 6400, '0.5818181818', '1.0000000000', 1, 2000], $this->summary($rows[0]->totals));
+        $this->assertSame([11000, 6400, '0.5818181818', '0.7500000000', 1, 2000], $this->summary($rows[0]->totals));
         $this->assertSame([1755, 1462, '0.8330484330', '0.5000000000', 1, 0], $this->summary($rows[1]->totals));
         $this->assertSame([1676, -838, '-0.5000000000', '0.5000000000', 1, 1341], $this->summary($rows[2]->totals));
     }
@@ -154,7 +154,7 @@ class StatisticsCalculatorTest extends TestCase
         $arsenal = $this->calculator->breakdown($this->bets(), Dimension::Team)[0];
 
         $this->assertSame('Arsenal', $arsenal->group->label);
-        $this->assertSame([8000, 6400, '0.8000000000', '1.0000000000', 1, 2000], $this->summary($arsenal->totals));
+        $this->assertSame([8000, 6400, '0.8000000000', '0.7500000000', 1, 2000], $this->summary($arsenal->totals));
         $this->assertSame(4, $arsenal->totals->settledBets);
     }
 
@@ -177,6 +177,7 @@ class StatisticsCalculatorTest extends TestCase
         $this->assertSame([5000, 3096, 5335, 0, 1000, 0], array_map(fn (OddsBandRow $row): int => $row->totals->turnover, $rows));
         $this->assertSame([2500, -2219, 5043, 0, 1700, 0], array_map(fn (OddsBandRow $row): int => $row->totals->profit, $rows));
         $this->assertSame(['0.5000000000', '-0.7167312661', '0.9452671040', null, '1.7000000000', null], array_map(fn (OddsBandRow $row): ?string => $row->totals->roi, $rows));
+        $this->assertSame(['1.0000000000', '0.0000000000', '1.0000000000', null, '1.0000000000', '0.0000000000'], array_map(fn (OddsBandRow $row): ?string => $row->totals->strikeRate, $rows));
     }
 
     public function test_profit_over_time_by_week(): void
@@ -236,42 +237,44 @@ class StatisticsCalculatorTest extends TestCase
     private function bets(): array
     {
         return [
-            $this->bet('Unibet', 2000, 2200, '2.1000', '2026-10-01 10:00', [$this->leg('Football', 'Premier League', '1X2', ['Arsenal', 'Chelsea'])], tipster: 'Own model', tags: ['value'], closingOdds: ['1.950']),
-            $this->bet('Bet365', 1500, -750, '1.9500', '2026-10-02 21:00', [$this->leg('Football', 'La Liga', 'Asian handicap', ['Real Madrid', 'FC Barcelona'])], closingOdds: ['2.020']),
-            $this->bet('Unibet', 1000, 1700, '5.4000', '2026-10-03 22:00', [
+            $this->bet('Unibet', 2000, 2200, '2.10', '2.1000', '2026-10-01 10:00', [$this->leg('Football', 'Premier League', '1X2', ['Arsenal', 'Chelsea'])], tipster: 'Own model', tags: ['value'], closingOdds: ['1.950']),
+            $this->bet('Bet365', 1500, -750, '0.5', '1.9500', '2026-10-02 21:00', [$this->leg('Football', 'La Liga', 'Asian handicap', ['Real Madrid', 'FC Barcelona'])], closingOdds: ['2.020']),
+            $this->bet('Unibet', 1000, 1700, '2.70', '5.4000', '2026-10-03 22:00', [
                 $this->leg('Football', 'Premier League', '1X2', ['Liverpool', 'Arsenal']),
                 $this->leg('Tennis', 'Wimbledon', null, ['Carlos Alcaraz', 'Jannik Sinner']),
                 $this->leg('Football', 'La Liga', 'Over/Under', ['Real Madrid', 'FC Barcelona']),
             ], tipster: 'Own model', tags: ['value', 'live'], closingOdds: ['1.400', '2.000', '1.750']),
-            $this->bet('Bet365', 1000, 2000, '3.0000', '2026-10-05 23:30', [$this->leg('Basketball', 'NBA', '1X2', ['Boston Celtics', 'Los Angeles Lakers'])], isFreeBet: true, tags: ['live']),
-            $this->bet('Danske Spil', 10000, -10000, '1.7500', '2026-10-08 15:00', [$this->leg('Tennis', 'US Open', '1X2', ['Jannik Sinner', 'Carlos Alcaraz'])], tipster: 'Own model', closingOdds: ['1.700']),
-            $this->bet('Unibet', 3000, 0, '2.0500', '2026-10-08 20:00', [$this->leg('Football', 'Premier League', 'Over/Under', ['Chelsea', 'Liverpool'])], closingOdds: ['2.050']),
-            $this->bet('Unibet', 500, 0, '12.0000', '2026-10-15 20:00', [$this->leg('Football', 'Premier League', '1X2', ['Arsenal', 'Chelsea'])], isFreeBet: true),
-            $this->bet('Danske Spil', 2500, 3750, '2.5000', '2026-10-20 22:00', [$this->leg('Football', 'Champions League', '1X2', ['Liverpool', 'Real Madrid'])]),
-            $this->bet('Unibet', 5000, 2500, '1.5000', '2026-10-21 18:00', [$this->leg('Football', 'Premier League', '1X2', ['Arsenal', 'Liverpool'])]),
-            $this->bet('Unibet', 2000, null, '1.9000', null, [$this->leg('Football', 'Premier League', 'Over/Under', ['Arsenal', 'Liverpool'])]),
-            $this->bet('Danske Spil', 10000, null, '3.6300', null, [
+            $this->bet('Bet365', 1000, 2000, '3.00', '3.0000', '2026-10-05 23:30', [$this->leg('Basketball', 'NBA', '1X2', ['Boston Celtics', 'Los Angeles Lakers'])], isFreeBet: true, tags: ['live']),
+            $this->bet('Danske Spil', 10000, -10000, '0', '1.7500', '2026-10-08 15:00', [$this->leg('Tennis', 'US Open', '1X2', ['Jannik Sinner', 'Carlos Alcaraz'])], tipster: 'Own model', closingOdds: ['1.700']),
+            $this->bet('Unibet', 3000, 0, '1', '2.0500', '2026-10-08 20:00', [$this->leg('Football', 'Premier League', 'Over/Under', ['Chelsea', 'Liverpool'])], closingOdds: ['2.050']),
+            $this->bet('Unibet', 500, 0, '0', '12.0000', '2026-10-15 20:00', [$this->leg('Football', 'Premier League', '1X2', ['Arsenal', 'Chelsea'])], isFreeBet: true),
+            $this->bet('Danske Spil', 2500, 3750, '2.50', '2.5000', '2026-10-20 22:00', [$this->leg('Football', 'Champions League', '1X2', ['Liverpool', 'Real Madrid'])]),
+            $this->bet('Unibet', 5000, 2500, '1.50', '1.5000', '2026-10-21 18:00', [$this->leg('Football', 'Premier League', '1X2', ['Arsenal', 'Liverpool'])]),
+            $this->bet('Unibet', 2000, null, null, '1.9000', null, [$this->leg('Football', 'Premier League', 'Over/Under', ['Arsenal', 'Liverpool'])]),
+            $this->bet('Danske Spil', 10000, null, null, '3.6300', null, [
                 $this->leg('Football', 'Premier League', '1X2', ['Liverpool', 'Chelsea']),
                 $this->leg('Tennis', 'US Open', '1X2', ['Jannik Sinner', 'Carlos Alcaraz']),
             ]),
-            $this->bet('Bet365', 500, null, '1.8000', null, [$this->leg('Basketball', 'NBA', '1X2', ['Boston Celtics', 'Los Angeles Lakers'])], isFreeBet: true),
+            $this->bet('Bet365', 500, null, null, '1.8000', null, [$this->leg('Basketball', 'NBA', '1X2', ['Boston Celtics', 'Los Angeles Lakers'])], isFreeBet: true),
         ];
     }
 
     /**
      * @param  int  $stake  minor units of the bookmaker's currency
      * @param  int|null  $profit  minor units of the bookmaker's currency
+     * @param  string|null  $factor  the bet factor, null while open
      * @param  list<array{sport: string, competition: string, market: string|null, teams: list<string>}>  $legs
      * @param  list<string>  $tags
      * @param  list<string|null>  $closingOdds
      */
-    private function bet(string $bookmaker, int $stake, ?int $profit, string $totalOdds, ?string $settledAt, array $legs, bool $isFreeBet = false, ?string $tipster = null, array $tags = [], array $closingOdds = []): BetFigures
+    private function bet(string $bookmaker, int $stake, ?int $profit, ?string $factor, string $totalOdds, ?string $settledAt, array $legs, bool $isFreeBet = false, ?string $tipster = null, array $tags = [], array $closingOdds = []): BetFigures
     {
         $group = fn (string $name): Group => new Group(self::IDS[$name], $name);
 
         return new BetFigures(
             stake: $stake,
             profit: $profit,
+            factor: $factor,
             exchangeRate: self::RATES[$bookmaker],
             type: BetType::forSelectionCount(count($legs)),
             isFreeBet: $isFreeBet,

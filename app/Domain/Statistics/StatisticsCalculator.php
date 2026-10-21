@@ -22,8 +22,8 @@ final class StatisticsCalculator
 
         $turnover = $this->sumOfStakes(array_filter($settled, fn (BetFigures $bet): bool => ! $bet->isFreeBet));
         $profit = array_sum(array_map(fn (BetFigures $bet): int => $bet->profit ?? 0, $settled));
-        $winners = count(array_filter($settled, fn (BetFigures $bet): bool => $bet->profit > 0));
-        $decided = count(array_filter($settled, fn (BetFigures $bet): bool => $bet->profit !== 0));
+        $winners = count(array_filter($settled, fn (BetFigures $bet): bool => $bet->isWin()));
+        $losers = count(array_filter($settled, fn (BetFigures $bet): bool => $bet->isLoss()));
         $beatClose = count(array_filter($clvs, fn (string $clv): bool => Decimal::compare($clv, '0') > 0));
 
         return new Totals(
@@ -32,7 +32,7 @@ final class StatisticsCalculator
             turnover: $turnover,
             profit: $profit,
             roi: $this->ratio($profit, $turnover),
-            strikeRate: $this->ratio($winners, $decided),
+            strikeRate: $this->ratio($winners, $winners + $losers),
             averageOdds: $this->mean(array_map(fn (BetFigures $bet): string => $bet->totalOdds, $settled)),
             averageClv: $this->mean($clvs),
             clvBets: count($clvs),

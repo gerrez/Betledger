@@ -3,6 +3,8 @@
 namespace App\Domain\Statistics;
 
 use App\Domain\BetStatus;
+use App\Domain\Settlement\Leg;
+use App\Domain\Settlement\SettlementCalculator;
 use App\Models\Bet;
 use App\Models\Selection;
 use App\Models\Tag;
@@ -17,6 +19,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 final class StatisticsQuery
 {
+    public function __construct(private SettlementCalculator $calculator) {}
+
     /**
      * @return list<BetFigures>
      */
@@ -67,10 +71,12 @@ final class StatisticsQuery
     private function figures(Bet $bet): BetFigures
     {
         $selections = $bet->selections;
+        $legs = array_values($selections->map(fn (Selection $selection): Leg => new Leg($selection->odds, $selection->result))->all());
 
         return new BetFigures(
             stake: $bet->stake,
             profit: $bet->isSettled() ? $bet->profit : null,
+            factor: $bet->isSettled() ? $this->calculator->factor($legs) : null,
             exchangeRate: $bet->exchange_rate,
             type: $bet->type,
             isFreeBet: $bet->is_free_bet,

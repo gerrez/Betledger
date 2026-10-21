@@ -183,7 +183,10 @@ odds, average CLV, open stake.
 - **Turnover** = sum of stakes of settled **cash** bets (free bet stakes aren't money risked).
 - **ROI** = profit ÷ turnover. Free bet profit is included in profit when free bets are
   included, so ROI can be shown with and without them.
-- **Strike rate** = bets with profit > 0 ÷ settled bets with profit ≠ 0 (pushes excluded).
+- **Strike rate** = winning bets ÷ (winning + losing bets). A bet wins when its profit is
+  > 0 and loses when its profit is < 0, or when it is a free bet whose bet factor is below
+  1 (lost or ½ lost: it pays 0, profit 0, but it lost). Pushes (void) are excluded
+  (decided).
 - **Average odds** = mean `total_odds` of settled bets.
 - **CLV** per bet = `total_odds ÷ product(closing_odds) − 1`, only for bets where every
   selection has closing odds. Average CLV = mean over those bets; show how many bets it
@@ -389,9 +392,9 @@ same items. Touch targets ≥ 44 px.
   turnover), while the open bet count includes free bets. **Average odds** cover every
   settled bet, free bets included. **CLV** and "beat the close" cover settled bets only
   (as in the mockup: "47 settled bets have no closing odds"); a bet beats the close when
-  its CLV is above 0, so matching it doesn't count. As the spec says, the strike rate
-  leaves out every bet with profit 0, which includes a lost free bet. Owner: should a
-  lost free bet count as a loss in the strike rate? **Breakdowns:** a bet with several
+  its CLV is above 0, so matching it doesn't count. A cash bet whose payout was
+  entered by hand as exactly its stake (profit 0) is neither a win nor a loss in the
+  strike rate, and so is a free bet that won but was paid 0 by hand. **Breakdowns:** a bet with several
   tags counts under each tag, like an accumulator under each sport; bets without a value
   (no tipster, tags, competition, market or teams) form a "none" row, always last; the
   other rows come by number of settled bets, most first, then by name, and a value with

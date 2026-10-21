@@ -4,6 +4,7 @@ namespace Tests\Feature\Statistics;
 
 use App\Domain\BetType;
 use App\Domain\Currency;
+use App\Domain\Decimal;
 use App\Domain\Settlement\SelectionResult;
 use App\Domain\Statistics\BetFigures;
 use App\Domain\Statistics\Dimension;
@@ -36,7 +37,7 @@ class StatisticsQueryTest extends TestCase
     {
         parent::setUp();
 
-        $this->query = new StatisticsQuery;
+        $this->query = app(StatisticsQuery::class);
         $this->user = User::factory()->create();
     }
 
@@ -156,6 +157,19 @@ class StatisticsQueryTest extends TestCase
 
         $this->assertSame($bet->profit, $figures->profit);
         $this->assertSame('2026-10-02 18:00:00', $figures->settledAt?->toDateTimeString());
+        $this->assertSame(Decimal::normalize($bet->total_odds), $figures->factor);
+    }
+
+    public function test_a_lost_free_bet_is_a_loss_and_a_void_one_is_not(): void
+    {
+        Bet::factory()->for($this->user)->freeBet()->settled(SelectionResult::Lost)->create(['stake' => 100]);
+        Bet::factory()->for($this->user)->freeBet()->settled(SelectionResult::Void)->create(['stake' => 200]);
+
+        $figures = $this->query->bets($this->user, new StatisticsFilter);
+        usort($figures, fn (BetFigures $a, BetFigures $b): int => $a->stake <=> $b->stake);
+
+        $this->assertSame([0, 0], [$figures[0]->profit, $figures[1]->profit]);
+        $this->assertSame([true, false], [$figures[0]->isLoss(), $figures[1]->isLoss()]);
     }
 
     private function settledBet(int $stake, string $placedAt, string $settledAt): Bet

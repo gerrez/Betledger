@@ -404,3 +404,20 @@ same items. Touch targets ≥ 44 px.
   days, by week (from Monday) up to 182 days, else by month, with a point for every
   period, empty ones included, from the start of the range (or the first settled bet,
   for "All time") to its end (or the last settled bet).
+- **Statistics page (assumed in 2.13).** `/statistics` opens on the last 90 days (as in
+  the mockup). "30 days" and "90 days" are today and the 29 or 89 days before, "This
+  year" runs from 1 January to today, and "Custom…" shows From and To dates, starting
+  from the range shown until then; either can be left empty (no limit), and dates
+  entered the wrong way round are read the right way round. The range, filters, free
+  bets toggle and breakdown dimension are kept in the URL. Each filter is a dropdown with
+  one value (as in the service); competitions and teams are grouped by sport, since
+  names repeat across sports. Amounts are shown without the currency symbol (the
+  heading names the base currency; KPI tiles show the symbol), ratios with one decimal,
+  "Beat the close" as a whole percentage, and "—" where there is nothing to divide by.
+  The breakdown has tabs for sport, bookmaker, tipster and bet type, and "More" for
+  competition, team, market and tag. Its "Bets" column counts settled bets, with "+n
+  open" below when the row has open bets. The note under the table explains that
+  accumulators count under every value (sport, competition, team, market), or that a bet
+  counts under each of its tags. Odds-range bars are full width at ±25 % ROI, as in the
+  mockup. A user without bets sees "No statistics yet" with a New bet button; a range or
+  filters that match no bets say so (with Clear filters).

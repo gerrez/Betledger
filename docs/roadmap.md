@@ -84,7 +84,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
       bet's own rate; breakdowns (accumulators under every value); odds bands; cumulative
       profit series by day/week/month. Tested against a fixed fixture set with
       hand-checked expected numbers.
-- [ ] **2.13 Statistics page.** Per `Statistics` mockup: date ranges, filter chips, free
+- [x] **2.13 Statistics page.** Per `Statistics` mockup: date ranges, filter chips, free
       bets toggle, KPI tiles, breakdown table with dimension tabs (and the
       accumulator note), odds-range bars, CLV panel. No chart yet.
 - [ ] **2.14 Profit-over-time chart.** Add the cumulative profit chart to the statistics

@@ -61,16 +61,19 @@ final class Money
      */
     public static function format(int $minorUnits, Currency $currency, bool $signed = false): string
     {
+        return self::sign($minorUnits, $signed).$currency->withSymbol(self::formatWithoutSymbol(abs($minorUnits)));
+    }
+
+    /**
+     * Format minor units like format(), but without the currency symbol, for places that
+     * name the currency once for many amounts: 149200 → "1,492.00", -10000 → "−100.00".
+     */
+    public static function formatWithoutSymbol(int $minorUnits, bool $signed = false): string
+    {
         [$whole, $fraction] = explode('.', ltrim(self::fromMinorUnits($minorUnits), '-'));
         $grouped = ltrim(strrev(chunk_split(strrev($whole), 3, ',')), ',');
 
-        $sign = match (true) {
-            $minorUnits < 0 => self::MINUS,
-            $signed && $minorUnits > 0 => '+',
-            default => '',
-        };
-
-        return $sign.$currency->withSymbol("{$grouped}.{$fraction}");
+        return self::sign($minorUnits, $signed)."{$grouped}.{$fraction}";
     }
 
     /**
@@ -97,5 +100,14 @@ final class Money
         }
 
         return Decimal::toInteger(Decimal::multiply((string) $minorUnits, $exchangeRate));
+    }
+
+    private static function sign(int $minorUnits, bool $signed): string
+    {
+        return match (true) {
+            $minorUnits < 0 => self::MINUS,
+            $signed && $minorUnits > 0 => '+',
+            default => '',
+        };
     }
 }

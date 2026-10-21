@@ -10,6 +10,7 @@ use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\BaseCurrency;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
+use App\Livewire\Statistics\Index as StatisticsIndex;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,10 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('bets/{bet}', ShowBet::class)->name('bets.show');
     Route::get('bets/{bet}/edit', EditBet::class)->name('bets.edit');
 
-    Route::view('statistics', 'coming-soon', [
-        'title' => 'Statistics',
-        'description' => 'Profit, ROI, strike rate and closing line value, broken down every way.',
-    ])->name('statistics');
+    Route::get('statistics', StatisticsIndex::class)->name('statistics');
 
     Route::get('bookmakers', BookmakersIndex::class)->name('bookmakers.index');
 

@@ -79,7 +79,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
 
 ### Statistics
 
-- [ ] **2.12 Statistics service (domain).** Filters; totals (turnover, profit, ROI,
+- [x] **2.12 Statistics service (domain).** Filters; totals (turnover, profit, ROI,
       strike rate, average odds, CLV, open stake); conversion to base currency with each
       bet's own rate; breakdowns (accumulators under every value); odds bands; cumulative
       profit series by day/week/month. Tested against a fixed fixture set with

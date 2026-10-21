@@ -89,6 +89,21 @@ class MoneyTest extends TestCase
         $this->assertSame('0.00 kr', Money::format(0, Currency::Dkk, signed: true));
     }
 
+    public function test_formats_amounts_without_the_currency_symbol(): void
+    {
+        $this->assertSame('1,234,567.89', Money::formatWithoutSymbol(123456789));
+        $this->assertSame('+3,486.20', Money::formatWithoutSymbol(348620, signed: true));
+        $this->assertSame('−246.50', Money::formatWithoutSymbol(-24650));
+        $this->assertSame('0.00', Money::formatWithoutSymbol(0, signed: true));
+    }
+
+    public function test_currency_symbols_on_their_own(): void
+    {
+        $this->assertSame('€', Currency::Eur->symbol());
+        $this->assertSame('kr', Currency::Dkk->symbol());
+        $this->assertSame('CHF', Currency::Chf->symbol());
+    }
+
     public function test_accepts_stakes_above_zero_with_up_to_two_decimals(): void
     {
         $this->assertTrue(Money::isValidStake('25'));

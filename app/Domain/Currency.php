@@ -57,4 +57,12 @@ enum Currency: string
             self::Usd => '$'.$amount,
         };
     }
+
+    /**
+     * The currency symbol on its own: "€", "kr", "CHF".
+     */
+    public function symbol(): string
+    {
+        return trim($this->withSymbol(''));
+    }
 }

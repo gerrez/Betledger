@@ -35,12 +35,6 @@ final class ClosingLineValue
      */
     public static function formatPercent(string $clv): string
     {
-        $percent = Decimal::round(Decimal::multiply($clv, '100'), 1);
-
-        return match (Decimal::compare($percent, '0')) {
-            1 => '+'.$percent.'%',
-            -1 => Money::MINUS.ltrim($percent, '-').'%',
-            default => '0.0%',
-        };
+        return Percent::format($clv, signed: true);
     }
 }

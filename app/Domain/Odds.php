@@ -12,9 +12,21 @@ final class Odds
     /** Decimal places of a bet's stored total odds. */
     public const TOTAL_PLACES = 4;
 
+    /** Odds of a selection as entered: up to 7 digits before the point and 3 after it (decimal(10,3)). */
+    private const SELECTION_PATTERN = '/^\d{1,7}(\.\d{1,3})?$/';
+
     public static function isValid(string $odds): bool
     {
         return Decimal::isValid($odds) && Decimal::compare($odds, '1') > 0;
+    }
+
+    /**
+     * Whether the odds can be stored on a selection: greater than 1, with at most three
+     * decimals and seven digits before the point.
+     */
+    public static function isValidSelectionOdds(string $odds): bool
+    {
+        return preg_match(self::SELECTION_PATTERN, $odds) === 1 && self::isValid($odds);
     }
 
     /**

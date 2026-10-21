@@ -266,17 +266,22 @@ same items. Touch targets ≥ 44 px.
   base currency keeps its rate of 1 until the user edits it).
 - **Reactivating bookmakers (assumed in 2.3).** Deactivation is reversible: an inactive
   bookmaker has a Reactivate button. Bookmakers can't be deleted (they will hold bets).
-- **Decimal comma (assumed in 2.3).** Exchange rates must use a decimal point (`7.46`);
-  `7,46` is rejected with a message. Revisit together with odds and stake input in 2.6.
+- **Decimal comma (assumed in 2.3, revised in 2.6).** Phone keyboards in many locales
+  only offer a comma on the decimal keypad, so odds, closing odds, stake and exchange
+  rates (bet form and Bookmakers page) accept one decimal comma (`1,95` = `1.95`).
+  Thousands separators are not accepted (`1,000.50` is rejected), so amounts are never
+  ambiguous.
 - **Deleting list entries (assumed in 2.4).** The Lists page deletes an entry only while
   nothing uses it; otherwise it shows "In use" instead of Delete. A sport counts as in use
   while it has competitions or teams (deleting it would delete them too); from 2.5 on, an
   entry used by a bet or selection is in use. Renaming to a name that already exists in
   the list (or, for competitions and teams, in the same sport) is refused — merging is a
   "Later" feature. Competitions and teams can't be moved to another sport.
-- **Case in list names (assumed in 2.4).** Names are unique as typed, so "Arsenal" and
-  "arsenal" are two entries (on SQLite; MySQL's default collation would treat them as
-  one). Revisit in 2.6, where typing a name should match an existing entry.
+- **Case in list names (assumed in 2.4, revised in 2.6).** The Lists page keeps names
+  unique as typed, but the bet form matches a typed name to an existing entry ignoring
+  case ("arsenal" uses "Arsenal"), so it never creates near-duplicates. Competitions and
+  teams are matched within the selection's sport: "Brazil" in volleyball is a different
+  team from "Brazil" in football.
 - **Owner on selections and pivots (assumed in 2.5).** `selections`, `bet_tag` and
   `selection_team` also store `user_id` (always the bet's owner). Bets and selections
   reference bookmakers, list entries, bets and selections together with the owner
@@ -290,3 +295,19 @@ same items. Touch targets ≥ 44 px.
 - **Base currency with bets (assumed in 2.5).** Once a user has a bet, the Currency page
   shows the base currency without a Save button and explains why; the model refuses the
   change too. Deleting every bet unlocks it again.
+- **Bet form details (assumed in 2.6).** List entries are typed with suggestions from the
+  user's own lists (a plain `<datalist>`, since Flux's combobox is a Pro component); a
+  new name is added to the list when the bet is saved. Teams and tags are added as chips
+  ("Add" or Enter; a name still in the box when saving is added too). The mockup has no
+  event field, but `event_name` is required, so the form has an "Event" field that fills
+  in from the teams ("Arsenal v Chelsea") until the user edits it; a bet without teams
+  (e.g. an outright) needs it typed. The sport is a field in the selection card.
+- **Bet form defaults (assumed in 2.6).** A new bet starts at the bookmaker and sport of
+  the user's latest bet (else the first active bookmaker alphabetically, and no sport),
+  placed now. Times are entered and stored in the app's time zone (UTC); there is no
+  per-user time zone yet, so a user in Denmark sees "now" one or two hours behind.
+  Owner: should users get a time zone setting?
+- **Limits on entry (assumed in 2.6).** Stakes go up to 999,999,999.99 and odds up to
+  9,999,999.999 with at most three decimals (the column's precision), so payouts always
+  fit in an integer. Saving a bet goes to the bets list (a placeholder until 2.8) with a
+  "Bet saved" message.

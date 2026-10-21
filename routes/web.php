@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Bets\Create as CreateBet;
 use App\Livewire\Bookmakers\Index as BookmakersIndex;
 use App\Livewire\Lists\Index as ListsIndex;
 use App\Livewire\Settings\Appearance;
@@ -23,10 +24,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         'description' => 'All your bets, open and settled, with settling right from the list.',
     ])->name('bets.index');
 
-    Route::view('bets/create', 'coming-soon', [
-        'title' => 'New bet',
-        'description' => 'Record a single or an accumulator in a few taps.',
-    ])->name('bets.create');
+    Route::get('bets/create', CreateBet::class)->name('bets.create');
 
     Route::view('statistics', 'coming-soon', [
         'title' => 'Statistics',

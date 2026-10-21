@@ -3,6 +3,7 @@
 namespace App\Livewire\Bookmakers;
 
 use App\Domain\Currency;
+use App\Domain\Decimal;
 use App\Domain\ExchangeRate;
 use App\Models\Bookmaker;
 use App\Models\User;
@@ -69,7 +70,7 @@ class Index extends Component
     public function save(): void
     {
         $this->name = trim($this->name);
-        $this->exchange_rate = trim($this->exchange_rate);
+        $this->exchange_rate = Decimal::fromInput($this->exchange_rate);
 
         if ($this->isBaseCurrency()) {
             $this->exchange_rate = ExchangeRate::SAME_CURRENCY;

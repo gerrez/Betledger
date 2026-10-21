@@ -12,6 +12,12 @@ final class Money
 {
     private const AMOUNT_PATTERN = '/^\d+(\.\d{1,2})?$/';
 
+    /** A stake as entered: up to 999,999,999.99, so payouts at any odds fit in an integer. */
+    private const STAKE_PATTERN = '/^\d{1,9}(\.\d{1,2})?$/';
+
+    /** The minus sign shown in front of negative amounts (U+2212, not a hyphen). */
+    public const MINUS = "\u{2212}";
+
     /**
      * Parse an entered amount such as "100", "100.5" or "100.50" into minor units.
      *
@@ -24,6 +30,35 @@ final class Money
         }
 
         return Decimal::toInteger(Decimal::multiply($amount, '100'));
+    }
+
+    /**
+     * Whether an entered stake is an amount above zero with at most two decimals that
+     * isn't absurdly large.
+     */
+    public static function isValidStake(string $amount): bool
+    {
+        return preg_match(self::STAKE_PATTERN, $amount) === 1 && self::toMinorUnits($amount) > 0;
+    }
+
+    /**
+     * Format minor units for display with thousands separators and the currency symbol:
+     * 149200 DKK → "1,492.00 kr", -10000 EUR → "−€100.00". With `$signed`, positive
+     * amounts get a "+" (profit and loss are never shown by colour alone); zero never
+     * gets a sign.
+     */
+    public static function format(int $minorUnits, Currency $currency, bool $signed = false): string
+    {
+        [$whole, $fraction] = explode('.', ltrim(self::fromMinorUnits($minorUnits), '-'));
+        $grouped = ltrim(strrev(chunk_split(strrev($whole), 3, ',')), ',');
+
+        $sign = match (true) {
+            $minorUnits < 0 => self::MINUS,
+            $signed && $minorUnits > 0 => '+',
+            default => '',
+        };
+
+        return $sign.$currency->withSymbol("{$grouped}.{$fraction}");
     }
 
     /**

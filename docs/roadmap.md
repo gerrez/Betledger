@@ -55,7 +55,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
 
 ### Recording bets
 
-- [ ] **2.6 New bet form: singles.** Per `NewBet` mockup: essentials first, "More details"
+- [x] **2.6 New bet form: singles.** Per `NewBet` mockup: essentials first, "More details"
       folded; inline creation of list entries by typing a new name; currency and rate
       copied from the bookmaker; live payout/profit preview via the 2.2 calculator;
       validation (odds > 1, stake > 0). Tests include: can't attach another user's

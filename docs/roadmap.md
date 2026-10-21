@@ -98,8 +98,63 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
       targets, `inputmode="decimal"` on odds/stake, focus states and labels; fix anything
       the earlier tasks missed.
 
-## Later (after v1)
+## Phase 3 — v1.1 fixes and polish
 
-Not scheduled yet; see "Later" in `docs/spec.md`: bankroll (deposits/withdrawals),
-cash out, each-way, system bets, CSV import/export, automatic exchange rates, merging
-list entries.
+From the owner's review of v1.
+
+- [ ] **3.1 Postgres in CI.** Production runs Postgres, but CI only tests SQLite (2.8
+      shipped a sort that broke on Postgres and was only caught by hand). Add a Postgres
+      job to the CI workflow next to the SQLite one (this task is explicitly allowed to
+      change CI). Make the database-constraint tests in `BetIsolationTest` and
+      `BetSchemaTest` assert that the row is rejected (e.g. `QueryException`) instead of
+      matching SQLite's "FOREIGN KEY constraint failed" text. Update `CLAUDE.md`'s Stack
+      section to say tests run on both.
+- [ ] **3.2 Confirm dialogs and dropdowns.** Replace every `wire:confirm` (browser
+      `confirm()` popup) with one shared confirmation modal in the app's style: title,
+      message, cancel, and a confirm button (danger style for deletes). Replace the native
+      `<select>`s (`filter-select` component, bet form, Bookmakers, base currency) with
+      one custom dropdown component built with Alpine and the theme tokens: keyboard
+      navigation, focus states, 44 px targets on phones, dark mode. Flux free edition
+      only (no Flux Pro, no new package without justification). Feature tests still pass;
+      add tests where confirm behaviour changes.
+- [ ] **3.3 Bet form: 24-hour time and "More details".** The "Placed" and "Starts"
+      fields are `datetime-local`, which shows AM/PM in English (US) browsers and can't
+      be forced to 24-hour. Replace them with a date input plus a 24-hour time input
+      (`HH:MM`, 00–23), stored as before. "More details" currently opens extra fields
+      inside each selection further up the form as well as a section below the button;
+      make the fields open where the user clicked (e.g. a per-selection toggle for
+      selection details and the bet-level details directly below its own toggle).
+      Feature tests for the time parsing and validation.
+- [ ] **3.4 Settle from the edit form.** On the edit page, each selection gets the same
+      result buttons as the bet detail page (won, lost, void, half-won, half-lost, and
+      clear), replacing the read-only result label. Saving applies results through the
+      2.9 settle service, so un-settle/re-settle and the manual-payout rules behave
+      exactly as on the detail page. Tests: results saved from the form, clearing a
+      result un-settles, isolation.
+- [ ] **3.5 Page widths and welcome page.** Home (`overview`) and the Bets list are
+      capped at `max-w-2xl`, while Statistics uses the full width. On desktop, make Home
+      use the same width as Statistics with a layout that fills it (e.g. KPI tiles in
+      one row, open bets beside the profit card); keep the phone layout. Decide whether
+      the Bets list should widen too and note it in the PR. Redirect the public `/` page
+      (still Laravel's welcome page) to the dashboard, or to login for guests.
+
+## Phase 4 — Features
+
+From "Later" in `docs/spec.md`, in priority order. Each needs a short design pass
+(spec section, data model) in its first PR; split into schema/domain and UI PRs when it
+is too big for one review.
+
+- [ ] **4.1 CSV export.** Download all of the user's bets (one row per selection, with
+      the bet's fields repeated) from Settings. Money in major units with the currency
+      code, odds as entered. Isolation test.
+- [ ] **4.2 Bankroll.** Deposits and withdrawals per bookmaker, and balances (deposits −
+      withdrawals + settled profit − open cash stakes). Shown per bookmaker and in total.
+- [ ] **4.3 Cash out.** Full and partial cash out of an open bet, recorded as its own
+      settlement outcome so statistics stay correct. Reversible like any settlement.
+- [ ] **4.4 Merging list entries.** Merge duplicates (e.g. two spellings of a team) on
+      the Lists page; bets move to the kept entry.
+- [ ] **4.5 CSV import.** Import bets in the 4.1 format, with a preview and validation
+      before anything is saved; new list entries are created like in the bet form.
+- [ ] **4.6 Automatic exchange rates.** Fetch rates for bookmakers in other currencies;
+      a bet still copies the rate when saved.
+- [ ] **4.7 Each-way and system bets.**

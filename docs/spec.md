@@ -421,3 +421,12 @@ same items. Touch targets ≥ 44 px.
   counts under each of its tags. Odds-range bars are full width at ±25 % ROI, as in the
   mockup. A user without bets sees "No statistics yet" with a New bet button; a range or
   filters that match no bets say so (with Clear filters).
+- **Profit-over-time chart (assumed in 2.14).** Plain SVG, no chart library. The line
+  starts at 0 before the first period and has one point per period at its cumulative
+  profit, with the area between the line and 0 shaded. The value axis always includes 0
+  and has about four round steps (1, 2 or 5 whole units, then 10, 20, 25 or 50 times a
+  power of ten), labelled in whole units without the symbol. Up to five periods spread
+  from the first to the last are labelled under their points ("13 Oct" by day or week,
+  the Monday for a week; "Oct 2026" by month), three on phones. Without settled bets in
+  the range the card says the chart shows once bets are settled. No tooltips: the chart
+  has a text description for screen readers (periods and the final cumulative profit).

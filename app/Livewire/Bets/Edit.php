@@ -36,14 +36,14 @@ class Edit extends BetForm
         $this->stake = Money::fromMinorUnits($bet->stake);
         $this->exchange_rate = Decimal::normalize($bet->exchange_rate);
         $this->is_free_bet = $bet->is_free_bet;
-        $this->tipster = $bet->tipster?->name ?? '';
+        $this->tipster = $bet->tipster->name ?? '';
         $this->tags = array_values($bet->tags->map(fn (Tag $tag): string => $tag->name)->all());
         $this->notes = $bet->notes ?? '';
         $this->selections = array_values($bet->selections->map(fn (Selection $selection): array => [
             'id' => $selection->id,
             'sport' => $selection->sport->name,
-            'competition' => $selection->competition?->name ?? '',
-            'market' => $selection->market?->name ?? '',
+            'competition' => $selection->competition->name ?? '',
+            'market' => $selection->market->name ?? '',
             'teams' => array_values($selection->teams->map(fn (Team $team): string => $team->name)->all()),
             'team_name' => '',
             'event_name' => $selection->event_name,

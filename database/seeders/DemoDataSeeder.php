@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Bets\SettleBet;
 use App\Domain\BetStatus;
 use App\Domain\BetType;
 use App\Domain\Currency;
@@ -143,9 +144,11 @@ class DemoDataSeeder extends Seeder
         $this->placeBet($unibet, 2500, daysAgo: 4, tipster: $ownModel, selections: [
             $leg('Carlos Alcaraz', 'Jannik Sinner', 'Wimbledon', '1X2', 'Carlos Alcaraz', '1.75', SelectionResult::Lost, 3, closingOdds: '1.70'),
         ]);
-        $this->placeBet($oldBookie, 5000, daysAgo: 40, selections: [
+        // Calculated payout 102.50; the bookmaker paid 100.00, so it was entered by hand.
+        $cappedWin = $this->placeBet($oldBookie, 5000, daysAgo: 40, selections: [
             $leg('Chelsea', 'Liverpool', 'Premier League', 'Over/Under', 'Under 2.5', '2.05', SelectionResult::Won, 39),
         ]);
+        app(SettleBet::class)->overridePayout($cappedWin, 10000);
         $this->placeBet($danskeSpil, 10000, daysAgo: 1, selections: [
             $leg('Liverpool', 'Chelsea', 'Premier League', '1X2', 'Liverpool', '1.65', SelectionResult::Won, 1),
             $leg('Jannik Sinner', 'Carlos Alcaraz', 'US Open', '1X2', 'Jannik Sinner', '2.20', null, -2),

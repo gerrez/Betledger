@@ -68,7 +68,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
 
 ### Settling
 
-- [ ] **2.9 Settle service.** Domain action that applies selection results to a bet:
+- [x] **2.9 Settle service.** Domain action that applies selection results to a bet:
       status, payout, profit, settled_at; un-settle and re-settle; manual payout override
       (`payout_is_manual`), discarded when any result changes. Unit and feature tests.
 - [ ] **2.10 Inline settling.** Result buttons on pending selections in the bets list,

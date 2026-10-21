@@ -341,3 +341,12 @@ same items. Touch targets ≥ 44 px.
   mockup's rounded "5.41". A settled single's banner names its result ("Settled: ½ Won");
   an accumulator's just says "Settled", with payout and profit. Until the bet detail page
   exists (2.11), a card opens the edit form.
+- **Settle service (assumed in 2.9).** Results are set one selection at a time
+  (`App\Domain\Bets\SettleBet`), and "Clear result" clears every selection's result,
+  making the bet open again. A bet that becomes settled is settled at the time of the
+  change; one that stays settled keeps its settlement date, so an accumulator settled
+  as lost by one leg keeps that date when its other legs get results later. Setting the
+  result a selection already has is no change and keeps a manual payout. A manual
+  payout can only be entered on a settled bet and can't be negative (the bet detail
+  form, 2.11, sets an upper limit); it can be discarded to go back to the calculated
+  payout.

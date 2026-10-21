@@ -168,6 +168,21 @@ class SettlementCalculatorTest extends TestCase
         $this->assertSame(-10000, $settlement->profit);
     }
 
+    public function test_accumulator_with_a_pending_leg_before_the_lost_leg_is_settled_as_lost(): void
+    {
+        $legs = [
+            new Leg('1.50'),
+            new Leg('2.00', SelectionResult::Lost),
+        ];
+
+        $settlement = (new SettlementCalculator)->settle(10000, false, $legs);
+
+        $this->assertNotNull($settlement);
+        $this->assertSame('0', $settlement->factor);
+        $this->assertSame(0, $settlement->payout);
+        $this->assertSame(-10000, $settlement->profit);
+    }
+
     public function test_accumulator_with_a_pending_leg_and_no_lost_leg_is_not_settled(): void
     {
         $calculator = new SettlementCalculator;

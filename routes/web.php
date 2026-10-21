@@ -2,6 +2,7 @@
 
 use App\Livewire\Bets\Create as CreateBet;
 use App\Livewire\Bets\Edit as EditBet;
+use App\Livewire\Bets\Index as BetsIndex;
 use App\Livewire\Bookmakers\Index as BookmakersIndex;
 use App\Livewire\Lists\Index as ListsIndex;
 use App\Livewire\Settings\Appearance;
@@ -20,10 +21,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         'description' => 'Your month at a glance: profit, key numbers and open bets.',
     ])->name('dashboard');
 
-    Route::view('bets', 'coming-soon', [
-        'title' => 'Bets',
-        'description' => 'All your bets, open and settled, with settling right from the list.',
-    ])->name('bets.index');
+    Route::get('bets', BetsIndex::class)->name('bets.index');
 
     Route::get('bets/create', CreateBet::class)->name('bets.create');
     Route::get('bets/{bet}/edit', EditBet::class)->name('bets.edit');

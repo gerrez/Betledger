@@ -65,7 +65,8 @@ class DemoDataSeeder extends Seeder
 
     /**
      * The account to test with: bookmakers in several currencies (one inactive), every
-     * list, and bets that are open and settled, singles and accumulators, cash and free.
+     * list, and bets that are open and settled, singles and accumulators, cash and free,
+     * enough for more than one page of the bets list.
      * Some entries are unused (Ice hockey, Both teams to score, Value hunting, boost) so
      * they can be deleted on the Lists page.
      */
@@ -152,6 +153,34 @@ class DemoDataSeeder extends Seeder
         $this->placeBet($unibet, 2000, daysAgo: 0, tags: [$tags['value']], selections: [
             $leg('Arsenal', 'Liverpool', 'Premier League', 'Over/Under', 'Over 2.5', '1.90', null, -3),
         ]);
+
+        // Older settled singles, so the bets list has more than one page.
+        $history = [
+            ['Arsenal', 'Chelsea', 'Premier League', 'Arsenal', '2.25', SelectionResult::Lost],
+            ['Liverpool', 'Real Madrid', 'Champions League', 'Liverpool', '2.60', SelectionResult::Won],
+            ['Carlos Alcaraz', 'Jannik Sinner', 'US Open', 'Jannik Sinner', '1.85', SelectionResult::Won],
+            ['Boston Celtics', 'Los Angeles Lakers', 'NBA', 'Los Angeles Lakers', '2.35', SelectionResult::Lost],
+            ['FC Barcelona', 'Real Madrid', 'La Liga', 'FC Barcelona', '2.05', SelectionResult::Void],
+            ['Chelsea', 'Arsenal', 'Premier League', 'Chelsea', '3.10', SelectionResult::Lost],
+            ['Jannik Sinner', 'Carlos Alcaraz', 'Wimbledon', 'Carlos Alcaraz', '1.95', SelectionResult::Won],
+            ['Liverpool', 'Chelsea', 'Premier League', 'Liverpool', '1.70', SelectionResult::Won],
+            ['Los Angeles Lakers', 'Boston Celtics', 'NBA', 'Boston Celtics', '1.60', SelectionResult::Lost],
+            ['Real Madrid', 'FC Barcelona', 'La Liga', 'Real Madrid', '2.15', SelectionResult::Won],
+            ['Arsenal', 'Liverpool', 'Premier League', 'Liverpool', '2.80', SelectionResult::Lost],
+            ['FC Barcelona', 'Chelsea', 'Champions League', 'FC Barcelona', '1.90', SelectionResult::Won],
+            ['Carlos Alcaraz', 'Jannik Sinner', 'Wimbledon', 'Carlos Alcaraz', '1.75', SelectionResult::Lost],
+            ['Chelsea', 'Liverpool', 'Premier League', 'Chelsea', '2.45', SelectionResult::Won],
+            ['Boston Celtics', 'Los Angeles Lakers', 'NBA', 'Boston Celtics', '1.80', SelectionResult::Won],
+            ['Real Madrid', 'Liverpool', 'Champions League', 'Real Madrid', '2.00', SelectionResult::Lost],
+        ];
+        foreach ($history as $index => [$home, $away, $competition, $pick, $odds, $result]) {
+            $daysAgo = 45 + $index * 6;
+            $bookmaker = $index % 3 === 0 ? $bet365 : $unibet;
+
+            $this->placeBet($bookmaker, 1000 + 500 * ($index % 4), daysAgo: $daysAgo, selections: [
+                $leg($home, $away, $competition, '1X2', $pick, $odds, $result, $daysAgo - 1),
+            ]);
+        }
     }
 
     /**

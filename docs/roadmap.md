@@ -63,7 +63,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
 - [x] **2.7 Accumulators and editing.** Single/Accumulator switch, add/remove selections,
       total odds; the same form edits an existing bet (open bets fully; settled bets
       re-settle via 2.9 rules).
-- [ ] **2.8 Bets list.** Per `Bets` mockup: Open / Settled / All tabs, bookmaker and sport
+- [x] **2.8 Bets list.** Per `Bets` mockup: Open / Settled / All tabs, bookmaker and sport
       filters, sorting, pagination, single and accumulator cards. No settling yet.
 
 ### Settling

@@ -31,7 +31,7 @@ class DemoDataSeederTest extends TestCase
         $this->assertSame(4, $demo->markets()->count());
         $this->assertSame(2, $demo->tipsters()->count());
         $this->assertSame(3, $demo->tags()->count());
-        $this->assertSame(8, $demo->bets()->count());
+        $this->assertSame(24, $demo->bets()->count());
         $this->assertSame(2, $demo->bets()->where('status', BetStatus::Open)->count());
         $this->assertSame(2, $demo->bets()->where('type', BetType::Accumulator)->count());
         $this->assertSame(1, $demo->bets()->where('is_free_bet', true)->count());

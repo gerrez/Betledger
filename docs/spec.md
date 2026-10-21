@@ -328,3 +328,16 @@ same items. Touch targets ≥ 44 px.
   replaced by the calculated one (the form warns about this). Other edits (notes, tags,
   dates, bookmaker, rate, …) leave the settlement, including a manual payout, alone. A
   bet's own bookmaker stays selectable after it is deactivated, marked "(inactive)".
+- **Bets list (assumed in 2.8).** The bookmaker filter lists every bookmaker, inactive
+  ones included; the sport filter shows a bet when any of its selections is in that
+  sport. "Open · n" counts the open bets that pass the filters. Each tab has its own
+  orders, the first being its default: Open — starts soonest (the next pending
+  selection's start; bets without a start time last), newest, oldest placed; Settled —
+  recently settled, newest, oldest placed; All — newest, oldest placed. Changing tab
+  goes back to that tab's default order. 20 bets per page. A card shows the event's start
+  for a single (or "placed …" when it has none) and "placed …" for an accumulator, in
+  the app's time zone ("today 18:30", "Sat 11:05" within six days either way, else
+  "14 Oct 18:30"). Total odds show all four stored decimals ("@ 5.4054"), not the
+  mockup's rounded "5.41". A settled single's banner names its result ("Settled: ½ Won");
+  an accumulator's just says "Settled", with payout and profit. Until the bet detail page
+  exists (2.11), a card opens the edit form.

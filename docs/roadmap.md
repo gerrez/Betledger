@@ -144,17 +144,32 @@ From "Later" in `docs/spec.md`, in priority order. Each needs a short design pas
 (spec section, data model) in its first PR; split into schema/domain and UI PRs when it
 is too big for one review.
 
-- [ ] **4.1 CSV export.** Download all of the user's bets (one row per selection, with
+- [ ] **4.1 Import from Sportmarket.** Upload a CSV exported from a Sportmarket account
+      and turn its rows into bets. **Needs first:** a real export from the owner in
+      `tests/Fixtures/sportmarket/` (a handful of rows covering open, won, lost, void and
+      half results; trimmed or anonymised as the owner sees fit). The column mapping is
+      written into `docs/spec.md` from that file, not guessed. Flow: choose the
+      bookmaker to book the bets on (the user's "Sportmarket" bookmaker, created if
+      missing), upload, preview every row (bet to create, skipped duplicate, or error with
+      the reason), then confirm; nothing is saved before confirming. Rules: re-importing
+      the same file creates no duplicates (keep Sportmarket's bet/order id on the bet);
+      settled rows get their results through the 2.9 settle service and keep the payout
+      the export reports when it differs (manual payout); sports, competitions and teams
+      match existing list entries by name, case-insensitively, before new ones are
+      created. Domain parsing/mapping under `app/Domain/` with unit tests against the
+      fixture; feature tests for upload, preview, confirm, re-import and isolation.
+      Probably two PRs: parser and mapping, then the upload/preview page.
+- [ ] **4.2 CSV export.** Download all of the user's bets (one row per selection, with
       the bet's fields repeated) from Settings. Money in major units with the currency
       code, odds as entered. Isolation test.
-- [ ] **4.2 Bankroll.** Deposits and withdrawals per bookmaker, and balances (deposits −
+- [ ] **4.3 Bankroll.** Deposits and withdrawals per bookmaker, and balances (deposits −
       withdrawals + settled profit − open cash stakes). Shown per bookmaker and in total.
-- [ ] **4.3 Cash out.** Full and partial cash out of an open bet, recorded as its own
+- [ ] **4.4 Cash out.** Full and partial cash out of an open bet, recorded as its own
       settlement outcome so statistics stay correct. Reversible like any settlement.
-- [ ] **4.4 Merging list entries.** Merge duplicates (e.g. two spellings of a team) on
+- [ ] **4.5 Merging list entries.** Merge duplicates (e.g. two spellings of a team) on
       the Lists page; bets move to the kept entry.
-- [ ] **4.5 CSV import.** Import bets in the 4.1 format, with a preview and validation
-      before anything is saved; new list entries are created like in the bet form.
-- [ ] **4.6 Automatic exchange rates.** Fetch rates for bookmakers in other currencies;
+- [ ] **4.6 Import in BetLedger's own format.** Import the 4.2 export format, reusing the
+      4.1 upload/preview/confirm flow.
+- [ ] **4.7 Automatic exchange rates.** Fetch rates for bookmakers in other currencies;
       a bet still copies the rate when saved.
-- [ ] **4.7 Each-way and system bets.**
+- [ ] **4.8 Each-way and system bets.**

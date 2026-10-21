@@ -23,7 +23,7 @@
                         wire:click="$set('status', '{{ $value }}')"
                         aria-selected="{{ $value === $tab->value ? 'true' : 'false' }}"
                         @class([
-                            'h-10 rounded-[11px] text-[15px]',
+                            'h-11 rounded-[11px] text-[15px]',
                             'bg-surface font-semibold text-ink shadow-sm' => $value === $tab->value,
                             'font-medium text-muted hover:text-ink' => $value !== $tab->value,
                         ])

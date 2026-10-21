@@ -38,7 +38,7 @@
                     @if ($isAccumulator) wire:confirm="Keep only the first selection?" @endif
                     aria-pressed="{{ $isAccumulator ? 'false' : 'true' }}"
                     @class([
-                        'h-10 rounded-[11px] text-[15px]',
+                        'h-11 rounded-[11px] text-[15px]',
                         'bg-surface font-semibold text-ink shadow-sm' => ! $isAccumulator,
                         'font-medium text-muted' => $isAccumulator,
                     ])
@@ -48,7 +48,7 @@
                     wire:click="useAccumulator"
                     aria-pressed="{{ $isAccumulator ? 'true' : 'false' }}"
                     @class([
-                        'h-10 rounded-[11px] text-[15px]',
+                        'h-11 rounded-[11px] text-[15px]',
                         'bg-surface font-semibold text-ink shadow-sm' => $isAccumulator,
                         'font-medium text-muted' => ! $isAccumulator,
                     ])
@@ -107,7 +107,7 @@
                                             type="button"
                                             wire:click="removeTeam({{ $index }}, {{ $teamIndex }})"
                                             aria-label="Remove {{ $team }}"
-                                            class="flex size-7 items-center justify-center rounded-full hover:bg-accent/15"
+                                            class="relative flex size-7 items-center justify-center rounded-full after:absolute after:-inset-2 hover:bg-accent/15"
                                         >
                                             <flux:icon.x-mark variant="micro" />
                                         </button>
@@ -299,7 +299,7 @@
                                             type="button"
                                             wire:click="removeTag({{ $tagIndex }})"
                                             aria-label="Remove {{ $tag }}"
-                                            class="flex size-7 items-center justify-center rounded-full hover:bg-accent/15"
+                                            class="relative flex size-7 items-center justify-center rounded-full after:absolute after:-inset-2 hover:bg-accent/15"
                                         >
                                             <flux:icon.x-mark variant="micro" />
                                         </button>

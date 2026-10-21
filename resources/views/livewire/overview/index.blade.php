@@ -81,7 +81,7 @@
                     <a
                         href="{{ route('bets.index') }}"
                         wire:navigate
-                        class="py-2.5 text-sm font-medium text-accent-content hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                        class="flex min-h-11 items-center text-sm font-medium text-accent-content hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     >Settle →</a>
                 @endif
             </div>

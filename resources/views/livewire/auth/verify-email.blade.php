@@ -1,10 +1,10 @@
 <div class="mt-4 flex flex-col gap-6">
-    <div class="text-center text-sm text-gray-600">
+    <div class="text-center text-sm text-muted">
         {{ __('Please verify your email address by clicking on the link we just emailed to you.') }}
     </div>
 
     @if (session('status') == 'verification-link-sent')
-        <div class="font-medium text-center text-sm text-green-600">
+        <div class="font-medium text-center text-sm text-profit">
             {{ __('A new verification link has been sent to the email address you provided during registration.') }}
         </div>
     @endif
@@ -17,7 +17,7 @@
         <button
             wire:click="logout"
             type="submit"
-            class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            class="min-h-11 rounded-md text-sm text-muted underline hover:text-ink"
         >
             {{ __('Log out') }}
         </button>

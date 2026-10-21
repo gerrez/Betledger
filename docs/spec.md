@@ -254,7 +254,14 @@ same items. Touch targets ≥ 44 px.
   values for the card border, the soft accent/profit/loss backgrounds or text on the
   accent colour. Chosen: border `#2A2935`, accent soft `#26233F` (text `#C4BDFA`), profit
   soft `#12261D`, loss soft `#2E1717`, and dark text (`#111118`) on the `#8B7FF0` accent
-  for contrast. Revisit in 2.16.
+  for contrast. Revisited in 2.16: kept. Every text/background pair in both themes is
+  at least WCAG AA (4.5:1), e.g. muted on dark surface 6.8:1, dark text on the dark
+  accent 5.7:1.
+- **Touch targets on desktop (assumed in 2.16).** The ≥ 44 px rule is applied below the
+  desktop breakpoint (1024 px), where the phone layout is used. On desktop, Flux's
+  compact controls (40 px inputs, 32 px small buttons) stay as they are, since they're
+  used with a mouse. Small controls that keep their look on phones (the free-bet switch,
+  checkboxes, the × on team/tag chips) get an invisible 44 px hit area instead.
 - **Rounding negative amounts (assumed in 2.2).** "Round half up" is only ambiguous for
   negative values, which settlement never rounds (payouts are ≥ 0) but base-currency
   conversion of a loss does. Chosen: negatives round half **away from zero** (−2.5 → −3),

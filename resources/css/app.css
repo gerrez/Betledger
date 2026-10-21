@@ -81,9 +81,47 @@
     body {
         font-variant-numeric: tabular-nums;
     }
+
+    /* Keyboard focus for our own buttons and links; Flux components and explicit focus utilities override it. */
+    :where(a[href], button, summary):focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+    }
 }
 
-[data-flux-field] {
+/* Touch targets of at least 44 px below the desktop breakpoint (Flux sizes its controls for a mouse). */
+[data-flux-button],
+[data-flux-navlist-item],
+[data-flux-menu-item],
+input[data-flux-control],
+select[data-flux-control] {
+    @apply max-lg:min-h-11;
+}
+
+[data-flux-radio-group-segmented] {
+    @apply max-lg:h-13;
+}
+
+/* Small controls keep their look but get an invisible 44 px hit area. */
+@media (width < 64rem) {
+    [data-flux-switch]::before,
+    [data-flux-checkbox]::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 2.75rem;
+        height: 2.75rem;
+        translate: -50% -50%;
+    }
+}
+
+[data-flux-checkbox] {
+    @apply relative;
+}
+
+/* Block fields only: inline fields (checkbox, switch) keep Flux's own two-column grid. */
+[data-flux-field]:not(.grid) {
     /* minmax(0, 1fr): wide controls such as native date pickers shrink to half-width columns on phones. */
     @apply grid grid-cols-[minmax(0,1fr)] gap-2;
 }

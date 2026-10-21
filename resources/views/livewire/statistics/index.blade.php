@@ -14,7 +14,7 @@
                         wire:click="useRange('{{ $option->value }}')"
                         aria-pressed="{{ $option === $selectedRange ? 'true' : 'false' }}"
                         @class([
-                            'h-10 rounded-[11px] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                            'h-11 rounded-[11px] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
                             'bg-surface font-semibold text-ink shadow-sm' => $option === $selectedRange,
                             'font-medium text-muted hover:text-ink' => $option !== $selectedRange,
                         ])

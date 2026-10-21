@@ -10,19 +10,19 @@
 
                 @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&! auth()->user()->hasVerifiedEmail())
                     <div>
-                        <p class="mt-2 text-sm text-gray-800">
+                        <p class="mt-2 text-sm">
                             {{ __('Your email address is unverified.') }}
 
                             <button
                                 wire:click.prevent="resendVerificationNotification"
-                                class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                class="rounded-md text-sm text-accent-content underline"
                             >
                                 {{ __('Click here to re-send the verification email.') }}
                             </button>
                         </p>
 
                         @if (session('status') === 'verification-link-sent')
-                            <p class="mt-2 text-sm font-medium text-green-600">
+                            <p class="mt-2 text-sm font-medium text-profit">
                                 {{ __('A new verification link has been sent to your email address.') }}
                             </p>
                         @endif

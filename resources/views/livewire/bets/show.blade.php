@@ -22,7 +22,7 @@
         <flux:callout variant="success" icon="check-circle" :heading="session('status')" />
     @endif
 
-    <section class="flex flex-col gap-2 rounded-[20px] bg-surface p-5 shadow-[0_1px_2px_rgba(22,21,31,0.04),0_6px_20px_rgba(22,21,31,0.05)]">
+    <section class="flex flex-col gap-2 rounded-[20px] bg-surface p-5 shadow-[0_1px_2px_rgba(22,21,31,0.04),0_6px_20px_rgba(22,21,31,0.05)] dark:border dark:border-line">
         <div class="flex flex-wrap gap-2">
             @if ($detail->result !== null)
                 <span @class([
@@ -118,7 +118,7 @@
                     type="button"
                     wire:click="clearResult({{ $selection['id'] }})"
                     @if ($detail->confirmResultChange !== null) wire:confirm="{{ $detail->confirmResultChange }}" @endif
-                    class="h-10 self-start text-sm font-medium text-accent-content hover:underline"
+                    class="h-11 self-start text-sm font-medium text-accent-content hover:underline"
                 >{{ $detail->isAccumulator ? 'Clear result' : 'Clear result (back to open)' }}</button>
             @endif
         </section>
@@ -146,7 +146,7 @@
             @elseif ($detail->result['isManual'])
                 <div class="flex items-center gap-3">
                     <span class="grow text-sm text-muted">Payout entered manually (calculated {{ $detail->result['calculatedPayout'] }})</span>
-                    <flux:button size="sm" wire:click="useCalculatedPayout" class="h-10! shrink-0">Use calculated</flux:button>
+                    <flux:button size="sm" wire:click="useCalculatedPayout" class="h-11! shrink-0">Use calculated</flux:button>
                 </div>
             @else
                 <button

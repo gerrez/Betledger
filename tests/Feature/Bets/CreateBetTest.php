@@ -569,6 +569,132 @@ class CreateBetTest extends TestCase
         $this->assertFalse($otherSport->selections()->exists());
     }
 
+    public function test_an_accumulator_is_saved_with_its_selections_in_order_and_total_odds(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->call('useAccumulator')
+            ->assertSet('selections.1.sport', 'Football')
+            ->set('selections.1.team_name', 'Liverpool')
+            ->call('addTeam', 1)
+            ->set('selections.1.team_name', 'Man City')
+            ->call('addTeam', 1)
+            ->set('selections.1.pick', 'Over 2.5 goals')
+            ->set('selections.1.odds', '2.10')
+            ->set('stake', '200')
+            ->assertSee(['Selection 1', 'Selection 2', 'Total odds (2 selections)', '4.095', '€819.00', '+€619.00'])
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('bets.index'));
+
+        $bet = $user->bets()->with('selections.teams')->sole();
+        $this->assertSame(BetType::Accumulator, $bet->type);
+        $this->assertSame('4.0950', $bet->total_odds);
+        $this->assertSame([1, 2], $bet->selections->pluck('position')->all());
+        $this->assertSame(['Arsenal −0.25', 'Over 2.5 goals'], $bet->selections->pluck('pick')->all());
+        $this->assertSame(['Liverpool', 'Man City'], $bet->selections[1]->teams->pluck('name')->all());
+        $this->assertSame('Liverpool v Man City', $bet->selections[1]->event_name);
+    }
+
+    public function test_selections_can_be_added_and_removed_but_an_accumulator_keeps_two(): void
+    {
+        $user = User::factory()->create();
+        Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $component = Livewire::test(Create::class)
+            ->set('selections.0.pick', 'First')
+            ->call('useAccumulator')
+            ->set('selections.1.pick', 'Second')
+            ->call('removeSelection', 0)
+            ->assertCount('selections', 2)
+            ->call('addSelection')
+            ->set('selections.2.pick', 'Third')
+            ->call('removeSelection', 1)
+            ->assertCount('selections', 2)
+            ->assertSet('selections.0.pick', 'First')
+            ->assertSet('selections.1.pick', 'Third');
+
+        $component->call('useSingle')
+            ->assertCount('selections', 1)
+            ->assertSet('selections.0.pick', 'First')
+            ->assertDontSee('Total odds');
+    }
+
+    public function test_an_accumulator_has_at_most_20_selections(): void
+    {
+        $user = User::factory()->create();
+        Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $component = Livewire::test(Create::class)->call('useAccumulator');
+
+        for ($i = 0; $i < 25; $i++) {
+            $component->call('addSelection');
+        }
+
+        $component->assertCount('selections', 20)->assertDontSee('Add selection');
+    }
+
+    public function test_every_selection_of_an_accumulator_is_validated(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->call('useAccumulator')
+            ->set('selections.1.odds', '1')
+            ->call('save')
+            ->assertHasErrors([
+                'selections.1.event_name' => 'required',
+                'selections.1.pick' => 'required',
+                'selections.1.odds',
+            ])
+            ->assertHasNoErrors(['selections.0.pick', 'selections.0.odds']);
+
+        $this->assertDatabaseCount('bets', 0);
+    }
+
+    public function test_the_total_odds_of_an_accumulator_must_fit(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->set('selections.0.odds', '5000')
+            ->call('useAccumulator')
+            ->set('selections.1.event_name', 'Wimbledon outright')
+            ->set('selections.1.pick', 'Long shot')
+            ->set('selections.1.odds', '2000.001')
+            ->assertSee('Total odds (2 selections)')
+            ->assertDontSee('€')
+            ->call('save')
+            ->assertHasErrors(['selections'])
+            ->assertSee('The total odds can’t be above 9,999,999.999. Remove a selection.');
+
+        $this->assertDatabaseCount('bets', 0);
+    }
+
+    public function test_a_new_bet_cannot_take_over_an_existing_selection(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $existing = Bet::factory()->forBookmaker($bookmaker)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->set('selections.0.id', $existing->selections()->sole()->id)
+            ->call('save')
+            ->assertHasErrors(['selections.0.id']);
+
+        $this->assertSame(1, $user->bets()->count());
+    }
+
     /**
      * Fill in the essentials of a valid single at the bookmaker.
      */

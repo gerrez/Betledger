@@ -60,7 +60,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
       copied from the bookmaker; live payout/profit preview via the 2.2 calculator;
       validation (odds > 1, stake > 0). Tests include: can't attach another user's
       bookmaker, team, tag, etc.
-- [ ] **2.7 Accumulators and editing.** Single/Accumulator switch, add/remove selections,
+- [x] **2.7 Accumulators and editing.** Single/Accumulator switch, add/remove selections,
       total odds; the same form edits an existing bet (open bets fully; settled bets
       re-settle via 2.9 rules).
 - [ ] **2.8 Bets list.** Per `Bets` mockup: Open / Settled / All tabs, bookmaker and sport

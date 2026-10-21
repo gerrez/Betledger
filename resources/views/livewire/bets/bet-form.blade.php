@@ -1,7 +1,7 @@
 <div class="mx-auto max-w-xl">
     <header class="mb-4 flex items-center gap-2">
         <a
-            href="{{ route('dashboard') }}"
+            href="{{ $bet === null ? route('dashboard') : route('bets.index') }}"
             wire:navigate
             aria-label="Close"
             class="flex size-11 shrink-0 items-center justify-center rounded-[14px] border border-line bg-surface text-ink hover:bg-canvas"
@@ -9,7 +9,7 @@
             <flux:icon.x-mark variant="mini" />
         </a>
 
-        <h1 class="flex-1 pr-[52px] text-center text-xl font-semibold">New bet</h1>
+        <h1 class="flex-1 pr-[52px] text-center text-xl font-semibold">{{ $bet === null ? 'New bet' : 'Edit bet' }}</h1>
     </header>
 
     @if ($bookmakers->isEmpty())
@@ -21,10 +21,44 @@
         </section>
     @else
         <form wire:submit="save" class="flex flex-col gap-4">
+            @if ($settlement !== null)
+                <section class="flex flex-col gap-1 rounded-[18px] border border-line bg-surface p-4 text-sm">
+                    <p class="text-[15px] font-medium">Settled · payout {{ $settlement['payout'] }} · profit {{ $settlement['profit'] }}</p>
+                    <p class="text-muted">Selections keep their results. Changing the stake, odds or selections settles the bet again.</p>
+                    @if ($settlement['isManual'])
+                        <p class="mt-1 font-medium text-loss">You entered this payout yourself. Changing the stake, free bet, odds or selections replaces it with the calculated payout.</p>
+                    @endif
+                </section>
+            @endif
+
+            <div role="group" aria-label="Bet type" class="grid grid-cols-2 gap-1 rounded-[14px] bg-line p-1">
+                <button
+                    type="button"
+                    wire:click="useSingle"
+                    @if ($isAccumulator) wire:confirm="Keep only the first selection?" @endif
+                    aria-pressed="{{ $isAccumulator ? 'false' : 'true' }}"
+                    @class([
+                        'h-10 rounded-[11px] text-[15px]',
+                        'bg-surface font-semibold text-ink shadow-sm' => ! $isAccumulator,
+                        'font-medium text-muted' => $isAccumulator,
+                    ])
+                >Single</button>
+                <button
+                    type="button"
+                    wire:click="useAccumulator"
+                    aria-pressed="{{ $isAccumulator ? 'true' : 'false' }}"
+                    @class([
+                        'h-10 rounded-[11px] text-[15px]',
+                        'bg-surface font-semibold text-ink shadow-sm' => $isAccumulator,
+                        'font-medium text-muted' => ! $isAccumulator,
+                    ])
+                >Accumulator</button>
+            </div>
+
             <section class="grid grid-cols-2 gap-3 rounded-[18px] border border-line bg-surface p-4">
                 <flux:select wire:model.live="bookmaker_id" label="Bookmaker">
                     @foreach ($bookmakers as $option)
-                        <flux:select.option :value="$option->id" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }} · {{ $option->currency->value }}</flux:select.option>
+                        <flux:select.option :value="$option->id" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }} · {{ $option->currency->value }}{{ $option->is_active ? '' : ' (inactive)' }}</flux:select.option>
                     @endforeach
                 </flux:select>
 
@@ -32,8 +66,25 @@
             </section>
 
             @foreach ($selections as $index => $selection)
-                <section wire:key="selection-{{ $index }}" class="flex flex-col gap-3 rounded-[18px] border border-line bg-surface p-4">
-                    <h2 class="text-base font-semibold">Selection</h2>
+                <section wire:key="selection-{{ $index }}-of-{{ count($selections) }}" class="flex flex-col gap-3 rounded-[18px] border border-line bg-surface p-4">
+                    <div class="flex min-h-11 items-center gap-2">
+                        <h2 class="flex-1 text-base font-semibold">{{ $isAccumulator ? 'Selection '.($index + 1) : 'Selection' }}</h2>
+
+                        @if ($results[$index] !== null)
+                            <span class="rounded-full border border-line px-2.5 py-1 text-sm font-medium">{{ $results[$index] }}</span>
+                        @endif
+
+                        @if (count($selections) > 2)
+                            <button
+                                type="button"
+                                wire:click="removeSelection({{ $index }})"
+                                aria-label="Remove selection {{ $index + 1 }}"
+                                class="flex size-11 items-center justify-center rounded-xl text-muted hover:bg-canvas hover:text-ink"
+                            >
+                                <flux:icon.trash variant="mini" />
+                            </button>
+                        @endif
+                    </div>
 
                     <flux:input
                         wire:model.blur="selections.{{ $index }}.sport"
@@ -137,6 +188,27 @@
                     @endif
                 </section>
             @endforeach
+
+            @if ($isAccumulator)
+                <div class="flex flex-col gap-3">
+                    @if ($canAddSelection)
+                        <button
+                            type="button"
+                            wire:click="addSelection"
+                            class="flex h-12 items-center justify-center gap-1.5 rounded-[14px] border border-dashed border-zinc-300 text-[15px] font-semibold text-accent-content hover:bg-accent-soft dark:border-zinc-600"
+                        >
+                            <flux:icon.plus variant="mini" /> Add selection
+                        </button>
+                    @endif
+
+                    <div class="flex items-baseline justify-between gap-3 px-1">
+                        <span class="text-sm text-muted">Total odds ({{ count($selections) }} selections)</span>
+                        <span class="text-[17px] font-semibold">{{ $totalOdds ?? '—' }}</span>
+                    </div>
+
+                    <flux:error name="selections" />
+                </div>
+            @endif
 
             <section class="flex flex-col gap-4 rounded-[18px] border border-line bg-surface p-4">
                 <div class="flex flex-col gap-2">
@@ -255,7 +327,7 @@
             @endif
 
             <div class="sticky bottom-[calc(max(20px,env(safe-area-inset-bottom))+4.75rem)] -mx-1 bg-canvas/90 px-1 py-2 backdrop-blur lg:bottom-0">
-                <flux:button type="submit" variant="primary" class="h-12 w-full text-base">Save bet</flux:button>
+                <flux:button type="submit" variant="primary" class="h-12 w-full text-base">{{ $bet === null ? 'Save bet' : 'Save changes' }}</flux:button>
             </div>
         </form>
 

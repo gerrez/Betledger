@@ -12,6 +12,12 @@ final class Odds
     /** Decimal places of a bet's stored total odds. */
     public const TOTAL_PLACES = 4;
 
+    /**
+     * The highest total odds a bet may have: the highest odds a selection can have, so
+     * the payout of the largest stake still fits in an integer.
+     */
+    public const MAX_TOTAL = '9999999.999';
+
     /** Odds of a selection as entered: up to 7 digits before the point and 3 after it (decimal(10,3)). */
     private const SELECTION_PATTERN = '/^\d{1,7}(\.\d{1,3})?$/';
 
@@ -27,6 +33,30 @@ final class Odds
     public static function isValidSelectionOdds(string $odds): bool
     {
         return preg_match(self::SELECTION_PATTERN, $odds) === 1 && self::isValid($odds);
+    }
+
+    /**
+     * Whether a bet's total odds (see total()) are within MAX_TOTAL.
+     */
+    public static function isValidTotal(string $total): bool
+    {
+        return self::isValid($total) && Decimal::compare($total, self::MAX_TOTAL) <= 0;
+    }
+
+    /**
+     * Odds for display: without trailing zeros, but with at least two decimals
+     * ("4.0950" → "4.095", "2.000" → "2.00").
+     */
+    public static function format(string $odds): string
+    {
+        $odds = Decimal::normalize(self::assertValid($odds));
+        $point = strpos($odds, '.');
+
+        if ($point === false) {
+            return $odds.'.00';
+        }
+
+        return str_pad($odds, $point + 3, '0');
     }
 
     /**

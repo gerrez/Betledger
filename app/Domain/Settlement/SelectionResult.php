@@ -14,6 +14,20 @@ enum SelectionResult: string
     case HalfLost = 'half_lost';
 
     /**
+     * The result as shown to the user.
+     */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Won => 'Won',
+            self::Lost => 'Lost',
+            self::Void => 'Void',
+            self::HalfWon => '½ Won',
+            self::HalfLost => '½ Lost',
+        };
+    }
+
+    /**
      * What the selection multiplies the stake by: odds when won, 0 when lost, 1 when
      * void, (odds + 1) / 2 when half won and 0.5 when half lost.
      */

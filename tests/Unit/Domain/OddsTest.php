@@ -65,4 +65,31 @@ class OddsTest extends TestCase
         $this->assertFalse(Odds::isValidSelectionOdds('10000000'));
         $this->assertFalse(Odds::isValidSelectionOdds('1,95'));
     }
+
+    public function test_total_odds_are_at_most_the_highest_selection_odds(): void
+    {
+        $this->assertTrue(Odds::isValidTotal('4.0950'));
+        $this->assertTrue(Odds::isValidTotal('9999999.9990'));
+
+        $this->assertFalse(Odds::isValidTotal('9999999.9991'));
+        $this->assertFalse(Odds::isValidTotal('10000005.0000'));
+        $this->assertFalse(Odds::isValidTotal('1.0000'));
+    }
+
+    public function test_odds_are_formatted_without_trailing_zeros_but_with_two_decimals(): void
+    {
+        $this->assertSame('4.095', Odds::format('4.0950'));
+        $this->assertSame('1.95', Odds::format('1.950'));
+        $this->assertSame('2.70', Odds::format('2.7000'));
+        $this->assertSame('2.00', Odds::format('2.000'));
+        $this->assertSame('3.00', Odds::format('3'));
+        $this->assertSame('1.0201', Odds::format('1.0201'));
+    }
+
+    public function test_formatting_rejects_invalid_odds(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        Odds::format('1.000');
+    }
 }

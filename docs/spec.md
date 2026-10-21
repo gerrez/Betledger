@@ -204,6 +204,61 @@ odds, average CLV, open stake.
    3.01–5.00, 5.01–10.00, 10.01+.
 4. **CLV:** average CLV, share of bets that beat the closing line, and CLV by breakdown.
 
+## Import from Sportmarket
+
+Sportmarket is a betting broker: one **order** is filled by one or more bets at
+different bookies. Its orders export (`Orders` → CSV) has one row per fill. A trimmed,
+anonymised copy of the owner's export is in `tests/Fixtures/sportmarket/orders.csv`
+(17 orders, 48 rows); every case below appears in it.
+
+**Columns:** `Order Id, Order Placed, Order Placer, Bet ID, Competition, Game Date,
+Sport, Home, Away, Bet Type, Bet Status, Bookie, Username, User Currency, Stake (User
+Currency), Price, Order Stake, Order Price, Reconciled P&L (User Currency), In Running,
+Selection, Market, Country, Exchange Role, Event Name`. Find columns by header name, not
+position.
+
+**One BetLedger bet per `Order Id`**, made from that order's rows whose `Bet Status` is
+not `failed` (a failed fill was never placed and has no P&L). Every bet is a single with
+one selection.
+
+| BetLedger | From the order's non-failed rows |
+|---|---|
+| bookmaker | chosen by the user on the import page (one whose currency equals `User Currency`; a bookmaker named "Sportmarket" is pre-selected) |
+| `placed_at` | earliest `Order Placed` (UTC, microseconds dropped) |
+| `stake` | sum of `Stake (User Currency)`, in minor units. Use this, not `Order Stake`, which can be 1 cent off |
+| `currency`, `exchange_rate` | from the bookmaker, like the bet form; a row whose `User Currency` differs is an error |
+| odds | stake-weighted average of `Price`, rounded half up to 3 dp (equals `Order Price`) |
+| sport | `Sport`: `fb`, `fb_ht`, `fb_et` → "Football"; any other code is used as the name |
+| competition | `Competition` |
+| teams, `event_name` | `Home`, `Away`; event "Home v Away" |
+| `event_starts_at` | empty: `Game Date` has no time |
+| market | `Market`: `ahou` "Asian total goals", `ou` "Total goals", `ah` "Asian handicap", `1x2` "Match result", `ml` "Draw no bet", `extot` "Exact total goals"; any other code is used as the name. `fb_ht` adds " – 1st half", `fb_et` " – extra time" |
+| `pick` | `Bet Type` of the fill with the largest stake, as written (e.g. "AGAINST Under 2.0 (Asian)", "Over 2.0 (Asian, 0-0)": the score is the score when the bet was placed in-play) |
+| tags | "In-play" when any fill has `In Running` = `Yes` |
+| `notes` | "Sportmarket order 2384015187 · 6 fills: mbook ×4, molly, fair" |
+
+`Order Placer`, `Username`, `Country`, `Selection`, `Exchange Role` and `Event Name`
+(always empty) are not used. List entries match the user's existing ones by name,
+case-insensitively, before new ones are created.
+
+**Result.** The export has no result column, only P&L. Settled orders get their result
+from the payout Sportmarket reports: payout = stake + sum of `Reconciled P&L`. Compare it
+with the calculated payout of each result (won, lost, void, half-won, half-lost) at the
+bet's odds and stake, and take the nearest. The bet is settled through the settle service
+with that result; when the reported payout differs from the calculated one (rounding of
+the 3-dp odds, Sportmarket's cents, or fills with different results), it is kept as a
+**manual payout**. `settled_at` is the game date at 23:59 UTC (the export has no
+settlement time), but never before `placed_at`. On the owner's full export (588 orders)
+this gives 331 won, 157 lost, 54 void, 30 half-won and 10 half-lost, with no order close
+to two results; 211 bets get a manual payout, at most €1.14 from the calculated one.
+
+**Rows that are skipped**, each listed with its reason in the preview:
+- every row of the order failed;
+- any non-failed row is not `settled` or `void` (the order isn't settled yet; import it
+  again later);
+- the order was imported before (`bets.external_ref` = `sportmarket:<Order Id>`, a new
+  nullable column, unique per user).
+
 ## Screens and visual design
 
 Mockups: `docs/design/project/*.dc.html` (also published as a private canvas for the owner).
@@ -454,3 +509,12 @@ same items. Touch targets ≥ 44 px.
   An accumulator's line says "2 of 3 won" while every result so far is a win, else
   "2 of 3 settled", and has no count before its first result; a free bet says "free
   bet". A user without bets sees "No bets yet" with a New bet button.
+- **Sportmarket import (owner, before 4.1).** One bet per Sportmarket order, built from
+  the order's non-failed rows. Orders that aren't fully settled are skipped and picked up
+  by a later import, so the import never has to update a bet it created. The owner's
+  export had no open orders, so the status Sportmarket uses for them is unknown; any
+  status other than `settled`, `void` or `failed` counts as not settled.
+- **Sportmarket import details (assumed before 4.1).** The game's kick-off time isn't in
+  the export, so `event_starts_at` stays empty and `settled_at` is the game date at
+  23:59 UTC. In-play bets get an "In-play" tag. The market names for Sportmarket's codes
+  are listed in "Import from Sportmarket".

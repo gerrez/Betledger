@@ -144,21 +144,21 @@ From "Later" in `docs/spec.md`, in priority order. Each needs a short design pas
 (spec section, data model) in its first PR; split into schema/domain and UI PRs when it
 is too big for one review.
 
-- [ ] **4.1 Import from Sportmarket.** Upload a CSV exported from a Sportmarket account
-      and turn its rows into bets. **Needs first:** a real export from the owner in
-      `tests/Fixtures/sportmarket/` (a handful of rows covering open, won, lost, void and
-      half results; trimmed or anonymised as the owner sees fit). The column mapping is
-      written into `docs/spec.md` from that file, not guessed. Flow: choose the
-      bookmaker to book the bets on (the user's "Sportmarket" bookmaker, created if
-      missing), upload, preview every row (bet to create, skipped duplicate, or error with
-      the reason), then confirm; nothing is saved before confirming. Rules: re-importing
-      the same file creates no duplicates (keep Sportmarket's bet/order id on the bet);
-      settled rows get their results through the 2.9 settle service and keep the payout
-      the export reports when it differs (manual payout); sports, competitions and teams
-      match existing list entries by name, case-insensitively, before new ones are
-      created. Domain parsing/mapping under `app/Domain/` with unit tests against the
-      fixture; feature tests for upload, preview, confirm, re-import and isolation.
-      Probably two PRs: parser and mapping, then the upload/preview page.
+- [ ] **4.1a Sportmarket import: parser and mapping (domain).** Per "Import from
+      Sportmarket" in `docs/spec.md`: read the orders CSV by header names, group rows by
+      `Order Id`, drop failed fills, and map each order to bet data (stake, averaged
+      odds, list names, pick, tags, notes) plus its result and reported payout, or to a
+      skip/error with its reason. Add the `bets.external_ref` column. No UI. Unit tests
+      against `tests/Fixtures/sportmarket/orders.csv`, one per case listed in the spec
+      (won, lost, half results, push, status void, failed and all-failed orders, several
+      fills with different results, cents-off P&L, `fb_ht`/`fb_et`, each market code).
+- [ ] **4.1b Sportmarket import: page.** An Import page linked from Settings: choose the
+      bookmaker, upload the CSV, preview every order (bet to create, skipped with the
+      reason, or error), then confirm; nothing is saved before confirming. Saving goes
+      through the existing record and settle services in one transaction. Feature tests:
+      upload and confirm the fixture, re-importing it creates nothing, a file with
+      another currency is rejected, and isolation (list entries and `external_ref`
+      duplicates are per user).
 - [ ] **4.2 CSV export.** Download all of the user's bets (one row per selection, with
       the bet's fields repeated) from Settings. Money in major units with the currency
       code, odds as entered. Isolation test.

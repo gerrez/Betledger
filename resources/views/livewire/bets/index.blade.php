@@ -115,15 +115,45 @@
                             </div>
                         @endif
 
+                        @if ($card->lastResult !== null)
+                            <div class="flex items-center gap-3 rounded-xl bg-canvas px-3 py-2.5">
+                                <span class="grow text-sm font-semibold">{{ $card->lastResult }}</span>
+                                <button type="button" wire:click="undo({{ $card->id }})" class="h-11 shrink-0 rounded-[10px] border border-ink/12 bg-surface px-3.5 text-sm font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Undo</button>
+                            </div>
+                        @endif
+
+                        @if ($card->settle !== null)
+                            <div role="group" aria-labelledby="settle-{{ $card->id }}" class="flex flex-col gap-2">
+                                <span id="settle-{{ $card->id }}" class="text-[13px] text-muted">{{ $card->settle['prompt'] }}</span>
+
+                                <div class="grid grid-cols-5 gap-1.5">
+                                    @foreach ($results as $result)
+                                        <button
+                                            type="button"
+                                            wire:key="bet-{{ $card->id }}-result-{{ $result->value }}"
+                                            wire:click="settle({{ $card->settle['selection'] }}, '{{ $result->value }}')"
+                                            class="h-11 rounded-[10px] border border-zinc-300 bg-surface text-[13px] font-semibold text-ink hover:border-accent dark:border-zinc-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                                        >{{ $result->label() }}</button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
                         @if ($card->result !== null)
                             <div @class([
-                                'flex flex-col gap-0.5 rounded-xl px-3 py-2.5',
+                                'flex items-center gap-3 rounded-xl px-3 py-2.5',
                                 'bg-profit-soft text-profit' => $card->result['tone'] === 'profit',
                                 'bg-loss-soft text-loss' => $card->result['tone'] === 'loss',
                                 'bg-canvas text-ink' => $card->result['tone'] === 'even',
                             ])>
-                                <span class="text-sm font-semibold">{{ $card->result['label'] }}</span>
-                                <span class="text-[13px]">Payout {{ $card->result['payout'] }} · profit {{ $card->result['profit'] }}</span>
+                                <div class="flex grow flex-col gap-0.5">
+                                    <span class="text-sm font-semibold">{{ $card->result['label'] }}</span>
+                                    <span class="text-[13px]">Payout {{ $card->result['payout'] }} · profit {{ $card->result['profit'] }}</span>
+                                </div>
+
+                                @if ($card->canUndo)
+                                    <button type="button" wire:click="undo({{ $card->id }})" class="h-11 shrink-0 rounded-[10px] border border-ink/12 bg-surface px-3.5 text-sm font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Undo</button>
+                                @endif
                             </div>
                         @endif
                     </article>

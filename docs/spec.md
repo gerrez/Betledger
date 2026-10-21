@@ -350,3 +350,17 @@ same items. Touch targets ≥ 44 px.
   payout can only be entered on a settled bet and can't be negative (the bet detail
   form, 2.11, sets an upper limit); it can be discarded to go back to the calculated
   payout.
+- **Inline settling (assumed in 2.10).** Open bets in the bets list (Open and All tabs)
+  have result buttons for one pending selection at a time: a single's ("How did it
+  go?"), or an accumulator's pending selection that starts soonest (those without a
+  start time last, then in entry order), "Settle the next selection, …" or "Settle the
+  last selection, …". Settled bets have no buttons, not even an accumulator lost by one
+  leg with others still pending; their remaining results are set on the bet detail page
+  (2.11). The latest result set on each card can be undone: a settled bet's banner has
+  Undo ("Settled: Won" for a single, "Final leg won · bet settled" or "Leg lost · bet
+  settled" for an accumulator), and a result that leaves an accumulator open shows as
+  "Over 2.5 goals: Won" with Undo. Undo makes that selection pending again. Bets keep
+  their place on the page while results are set or undone (a settled bet stays on the
+  Open tab, and the "starts soonest" order doesn't move a card), until the tab, a
+  filter, the order or the page changes; Undo is offered only until then. A result
+  changed elsewhere in the meantime is neither overwritten nor undone.

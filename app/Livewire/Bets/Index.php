@@ -2,19 +2,27 @@
 
 namespace App\Livewire\Bets;
 
+use App\Domain\Bets\SettleBet;
 use App\Domain\BetStatus;
+use App\Domain\Settlement\SelectionResult;
 use App\Models\Bet;
+use App\Models\Selection;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * The bets list: Open / Settled / All tabs, bookmaker and sport filters, sorting.
+ * The bets list: Open / Settled / All tabs, bookmaker and sport filters, sorting, and
+ * result buttons that settle open bets in place, with Undo.
  */
 #[Title('Bets')]
 class Index extends Component
@@ -48,6 +56,25 @@ class Index extends Component
     public string $sport = '';
 
     /**
+     * The latest result set from this page on each bet, which its card offers to undo:
+     * bet id => the selection and the result it was given.
+     *
+     * @var array<int, array{selection: int, result: string}>
+     */
+    #[Locked]
+    public array $undoable = [];
+
+    /**
+     * Ids of the bets on the page when the first result was set from it, in order: the
+     * page keeps showing them there, so a bet that settles (or reopens on Undo) stays in
+     * place instead of leaving the tab or moving in the order.
+     *
+     * @var list<int>
+     */
+    #[Locked]
+    public array $pinned = [];
+
+    /**
      * Every change of tab, filter or order starts again at page 1; a new tab also
      * starts with its own default order.
      */
@@ -64,6 +91,61 @@ class Index extends Component
         $this->resetPage();
     }
 
+    /**
+     * A new page, which every change of tab, filter or order also leads to, shows the
+     * bets as they are now and forgets what could be undone.
+     */
+    public function updatedPaginators(): void
+    {
+        $this->undoable = [];
+        $this->pinned = [];
+    }
+
+    /**
+     * Give a pending selection of an open bet a result, which settles the bet when the
+     * settlement rules say so. A page that is out of date (the selection already has a
+     * result, or its bet is settled) changes nothing.
+     */
+    public function settle(int $selectionId, string $result, SettleBet $settleBet): void
+    {
+        $selection = $this->user()->selections()->with('bet')->findOrFail($selectionId);
+        $outcome = SelectionResult::tryFrom($result);
+
+        Gate::authorize('update', $selection->bet);
+        abort_if($outcome === null, 422);
+
+        if ($selection->result !== null || $selection->bet->isSettled()) {
+            return;
+        }
+
+        if ($this->pinned === []) {
+            $this->pinned = array_values($this->bets()->getCollection()->map(fn (Bet $bet): int => $bet->id)->all());
+        }
+
+        $settleBet->setResult($selection, $outcome);
+        $this->undoable[$selection->bet_id] = ['selection' => $selection->id, 'result' => $outcome->value];
+    }
+
+    /**
+     * Take back the latest result set from this page on the bet, unless it has been
+     * changed elsewhere since.
+     */
+    public function undo(int $betId, SettleBet $settleBet): void
+    {
+        $change = $this->undoable[$betId] ?? null;
+        unset($this->undoable[$betId]);
+
+        $selection = $change === null ? null : $this->user()->selections()->with('bet')->find($change['selection']);
+
+        if ($selection === null || $selection->result?->value !== $change['result']) {
+            return;
+        }
+
+        Gate::authorize('update', $selection->bet);
+
+        $settleBet->setResult($selection, null);
+    }
+
     public function clearFilters(): void
     {
         $this->bookmaker = '';
@@ -75,13 +157,9 @@ class Index extends Component
     {
         $user = $this->user();
         $tab = $this->tab();
-        $sort = $this->sortOption($tab);
         $now = now();
-
-        $bets = $sort
-            ->apply($this->filteredBets($user)->when($tab->status(), fn (Builder $query, BetStatus $status) => $query->where('status', $status)))
-            ->with(['bookmaker', 'selections.competition'])
-            ->paginate(self::PER_PAGE);
+        $bets = $this->bets();
+        $shown = $this->pinned === [] ? $bets->getCollection() : $this->pinnedBets($user);
 
         $openCount = $this->filteredBets($user)->where('status', BetStatus::Open)->count();
         $isFiltered = $this->bookmakerId() !== null || $this->sportId() !== null;
@@ -93,7 +171,8 @@ class Index extends Component
             'tab' => $tab,
             'sorts' => $tab->sorts(),
             'bets' => $bets,
-            'cards' => $bets->getCollection()->map(fn (Bet $bet): BetCard => BetCard::fromBet($bet, $now)),
+            'results' => SelectionResult::cases(),
+            'cards' => $shown->map(fn (Bet $bet): BetCard => BetCard::fromBet($bet, $now, $this->undoableSelection($bet))),
             'hasBets' => $user->bets()->exists(),
             'isFiltered' => $isFiltered,
             'emptyMessage' => match ($tab) {
@@ -104,6 +183,50 @@ class Index extends Component
             'bookmakers' => $user->bookmakers()->orderBy('name')->get(['id', 'name']),
             'sports' => $user->sports()->orderBy('name')->get(['id', 'name']),
         ]);
+    }
+
+    /**
+     * The page of bets for the tab, filters and order.
+     *
+     * @return LengthAwarePaginator<int, Bet>
+     */
+    private function bets(): LengthAwarePaginator
+    {
+        $tab = $this->tab();
+
+        return $this->sortOption($tab)
+            ->apply($this->filteredBets($this->user())->when($tab->status(), fn (Builder $query, BetStatus $status) => $query->where('status', $status)))
+            ->with(['bookmaker', 'selections.competition'])
+            ->paginate(self::PER_PAGE);
+    }
+
+    /**
+     * The pinned bets, in their pinned order.
+     *
+     * @return Collection<int, Bet>
+     */
+    private function pinnedBets(User $user): Collection
+    {
+        $order = array_flip($this->pinned);
+
+        return $user->bets()
+            ->whereIn('id', $this->pinned)
+            ->with(['bookmaker', 'selections.competition'])
+            ->get()
+            ->sortBy(fn (Bet $bet): int => $order[$bet->id])
+            ->values();
+    }
+
+    /**
+     * The bet's selection whose result its card offers to undo, if it still has that result.
+     */
+    private function undoableSelection(Bet $bet): ?Selection
+    {
+        $change = $this->undoable[$bet->id] ?? null;
+
+        return $change === null ? null : $bet->selections->first(
+            fn (Selection $selection): bool => $selection->id === $change['selection'] && $selection->result?->value === $change['result'],
+        );
     }
 
     /**

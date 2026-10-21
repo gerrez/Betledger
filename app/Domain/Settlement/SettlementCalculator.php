@@ -21,10 +21,8 @@ final class SettlementCalculator
     {
         $this->assertHasLegs($legs);
 
-        foreach ($legs as $leg) {
-            if ($leg->result === SelectionResult::Lost) {
-                return true;
-            }
+        if ($this->hasLostLeg($legs)) {
+            return true;
         }
 
         foreach ($legs as $leg) {
@@ -48,13 +46,13 @@ final class SettlementCalculator
             return null;
         }
 
+        if ($this->hasLostLeg($legs)) {
+            return '0';
+        }
+
         $factor = '1';
 
         foreach ($legs as $leg) {
-            if ($leg->result === SelectionResult::Lost) {
-                return '0';
-            }
-
             $factor = Decimal::multiply($factor, (string) $leg->factor());
         }
 
@@ -118,6 +116,22 @@ final class SettlementCalculator
         }
 
         return $isFreeBet ? $payout : $payout - $stake;
+    }
+
+    /**
+     * Any lost selection loses the whole bet, whatever the others' results.
+     *
+     * @param  list<Leg>  $legs
+     */
+    private function hasLostLeg(array $legs): bool
+    {
+        foreach ($legs as $leg) {
+            if ($leg->result === SelectionResult::Lost) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

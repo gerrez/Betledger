@@ -2,12 +2,9 @@
 
 namespace App\Domain\Bets;
 
-use App\Domain\BetStatus;
 use App\Domain\BetType;
 use App\Domain\ExchangeRate;
 use App\Domain\Odds;
-use App\Domain\Settlement\Leg;
-use App\Domain\Settlement\SettlementCalculator;
 use App\Models\Bet;
 use App\Models\Competition;
 use App\Models\Market;
@@ -33,7 +30,7 @@ final class RecordBet
      */
     private const POSITION_OFFSET = 1000;
 
-    public function __construct(private SettlementCalculator $calculator) {}
+    public function __construct(private SettleBet $settleBet) {}
 
     public function handle(User $user, BetData $data): Bet
     {
@@ -92,28 +89,11 @@ final class RecordBet
             $bet->unsetRelation('selections');
 
             if ($this->settlementInputs($bet) !== $settlementInputs) {
-                $this->settle($bet);
+                $this->settleBet->recalculate($bet);
             }
 
             return $bet;
         });
-    }
-
-    /**
-     * Status, payout, profit and settlement date from the selections' results. A bet
-     * that was already settled keeps its settlement date.
-     */
-    private function settle(Bet $bet): void
-    {
-        $legs = $bet->selections->map(fn (Selection $selection): Leg => new Leg($selection->odds, $selection->result))->all();
-        $settlement = $this->calculator->settle($bet->stake, $bet->is_free_bet, array_values($legs));
-
-        $bet->status = $settlement === null ? BetStatus::Open : BetStatus::Settled;
-        $bet->settled_at = $settlement === null ? null : ($bet->settled_at ?? now());
-        $bet->payout = $settlement?->payout;
-        $bet->profit = $settlement?->profit;
-        $bet->payout_is_manual = false;
-        $bet->save();
     }
 
     /**

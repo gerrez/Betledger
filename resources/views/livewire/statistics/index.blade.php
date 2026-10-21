@@ -158,6 +158,58 @@
                 @endforeach
             </div>
 
+            <section class="flex flex-col gap-3.5 rounded-[20px] border border-line bg-surface p-5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-[17px] font-semibold">Profit over time</h2>
+
+                    @if ($profitChart !== null)
+                        <span class="text-[13px] text-muted">{{ $profitChart->caption }}</span>
+                    @endif
+                </div>
+
+                @if ($profitChart === null)
+                    <p class="text-sm text-muted">The chart shows once bets in this range are settled.</p>
+                @else
+                    <div class="flex gap-3">
+                        <div aria-hidden="true" class="flex h-[260px] min-w-11 flex-col justify-between text-right text-xs text-muted">
+                            @foreach ($profitChart->ticks as $tick)
+                                <span wire:key="tick-{{ $loop->index }}" class="leading-none">{{ $tick['value'] }}</span>
+                            @endforeach
+                        </div>
+
+                        <div class="flex min-w-0 grow flex-col gap-2">
+                            <svg width="100%" height="260" viewBox="0 0 {{ $profitChart::WIDTH }} {{ $profitChart::HEIGHT }}" preserveAspectRatio="none" role="img" aria-label="{{ $profitChart->description }}" class="overflow-visible">
+                                @foreach ($profitChart->ticks as $tick)
+                                    <line
+                                        wire:key="grid-{{ $loop->index }}"
+                                        x1="0" y1="{{ $tick['y'] }}" x2="{{ $profitChart::WIDTH }}" y2="{{ $tick['y'] }}"
+                                        vector-effect="non-scaling-stroke"
+                                        @class(['stroke-zinc-300 dark:stroke-zinc-600' => $tick['isZero'], 'stroke-line' => ! $tick['isZero']])
+                                    />
+                                @endforeach
+                                <path d="{{ $profitChart->area }}" class="fill-accent-soft" stroke="none" />
+                                <path d="{{ $profitChart->line }}" fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" class="stroke-accent" />
+                            </svg>
+
+                            <div aria-hidden="true" class="relative h-4 text-xs text-muted">
+                                @foreach ($profitChart->dates as $date)
+                                    <span
+                                        wire:key="date-{{ $loop->index }}"
+                                        style="left: {{ $date['left'] }}"
+                                        @class([
+                                            'absolute top-0 whitespace-nowrap',
+                                            '-translate-x-full' => $date['isLast'],
+                                            '-translate-x-1/2' => ! $date['isLast'],
+                                            'max-sm:hidden' => $date['isMinor'],
+                                        ])
+                                    >{{ $date['label'] }}</span>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </section>
+
             <div class="flex flex-wrap items-start gap-5">
                 <section class="flex min-w-0 flex-[3_1_520px] flex-col gap-3.5 rounded-[20px] border border-line bg-surface p-5">
                     <div class="flex flex-wrap items-center justify-between gap-2.5">

@@ -161,6 +161,23 @@ class StatisticsPageTest extends TestCase
             ->assertSee('1 of 1 bet with closing odds beat the closing line. 1 settled bet has no closing odds.');
     }
 
+    public function test_the_profit_chart_groups_by_day_week_or_month_with_the_range(): void
+    {
+        $this->seedBets();
+        $this->actingAs($this->user);
+
+        Livewire::test(Index::class)
+            ->assertSeeInOrder(['Profit over time', 'Cumulative, by week settled', 'Cumulative profit over 14 weeks, ending at +€51.50', '20 Jul', '19 Oct', 'Breakdown'])
+            ->call('useRange', '30d')
+            ->assertSee(['Cumulative, by day settled', 'Cumulative profit over 30 days, ending at +€51.50', '22 Sep', '21 Oct'])
+            ->call('useRange', 'year')
+            ->assertSee(['Cumulative, by month settled', 'Cumulative profit over 10 months, ending at +€71.50', 'Jan 2026', 'Oct 2026'])
+            ->call('useRange', 'custom')
+            ->set('from', '2026-10-13')
+            ->assertSee('The chart shows once bets in this range are settled.')
+            ->assertDontSee('Cumulative profit over');
+    }
+
     public function test_users_only_see_their_own_bets_and_lists(): void
     {
         $this->seedBets();

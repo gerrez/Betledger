@@ -24,7 +24,8 @@ use Livewire\Component;
 
 /**
  * The statistics page: date range, filters and the free bets toggle, KPI tiles, the
- * breakdown table by dimension, odds ranges and closing line value.
+ * profit-over-time chart, the breakdown table by dimension, odds ranges and closing line
+ * value.
  */
 #[Title('Statistics')]
 class Index extends Component
@@ -149,6 +150,7 @@ class Index extends Component
             'includesFreeBets' => $this->includesFreeBets(),
             'totals' => $totals,
             'kpis' => $this->kpis($totals, $currency),
+            'profitChart' => ProfitChart::fromSeries($calculator->profitOverTime($bets, ...$this->days()), $currency),
             'clvSummary' => $this->clvSummary($totals),
             'breakdownBy' => $dimension,
             'mainDimensions' => self::MAIN_DIMENSIONS,

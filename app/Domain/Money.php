@@ -15,6 +15,9 @@ final class Money
     /** A stake as entered: up to 999,999,999.99, so payouts at any odds fit in an integer. */
     private const STAKE_PATTERN = '/^\d{1,9}(\.\d{1,2})?$/';
 
+    /** A payout entered by hand: zero up to 999,999,999,999.99, so profit always fits in an integer. */
+    private const PAYOUT_PATTERN = '/^\d{1,12}(\.\d{1,2})?$/';
+
     /** The minus sign shown in front of negative amounts (U+2212, not a hyphen). */
     public const MINUS = "\u{2212}";
 
@@ -39,6 +42,15 @@ final class Money
     public static function isValidStake(string $amount): bool
     {
         return preg_match(self::STAKE_PATTERN, $amount) === 1 && self::toMinorUnits($amount) > 0;
+    }
+
+    /**
+     * Whether an entered payout (the amount a bookmaker actually paid) is zero or more,
+     * with at most two decimals, and not absurdly large.
+     */
+    public static function isValidPayout(string $amount): bool
+    {
+        return preg_match(self::PAYOUT_PATTERN, $amount) === 1;
     }
 
     /**

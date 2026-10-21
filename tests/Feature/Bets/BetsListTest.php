@@ -81,7 +81,7 @@ class BetsListTest extends TestCase
 
         Livewire::test(Index::class)
             ->assertSeeInOrder([
-                route('bets.edit', $bet),
+                route('bets.show', $bet),
                 'Arsenal v Chelsea',
                 'Premier League · Danske Spil · today 18:30',
                 '1,500.00 kr',
@@ -227,14 +227,14 @@ class BetsListTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(Index::class)
-            ->assertDontSee(route('bets.edit', $oldest))
+            ->assertDontSee(route('bets.show', $oldest))
             ->call('nextPage')
-            ->assertSee(route('bets.edit', $oldest))
+            ->assertSee(route('bets.show', $oldest))
             ->set('status', 'all')
-            ->assertDontSee(route('bets.edit', $oldest))
+            ->assertDontSee(route('bets.show', $oldest))
             ->call('nextPage')
             ->set('sort', 'oldest')
-            ->assertSee(route('bets.edit', $oldest));
+            ->assertSee(route('bets.show', $oldest));
     }
 
     public function test_the_message_from_saving_a_bet_is_shown(): void
@@ -261,7 +261,7 @@ class BetsListTest extends TestCase
         Livewire::test(Index::class)
             ->set('status', 'all')
             ->assertSee(['My bookie', 'My event', 'Open · 1'])
-            ->assertDontSee(['Their bookie', 'Their sport', 'Their event', route('bets.edit', $theirBet)])
+            ->assertDontSee(['Their bookie', 'Their sport', 'Their event', route('bets.show', $theirBet)])
             ->set('bookmaker', (string) $otherBookmaker->id)
             ->assertSee('No bets match these filters')
             ->assertDontSee('Their event')

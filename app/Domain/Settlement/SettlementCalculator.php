@@ -4,6 +4,7 @@ namespace App\Domain\Settlement;
 
 use App\Domain\Decimal;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * Settlement rules from docs/spec.md: selection factors, the bet factor, when a bet is
@@ -77,6 +78,22 @@ final class SettlementCalculator
         $payout = $this->payout($stake, $factor, $isFreeBet);
 
         return new Settlement($factor, $payout, $this->profit($stake, $payout, $isFreeBet));
+    }
+
+    /**
+     * What an open bet pays if every pending selection wins, given the results its
+     * other selections already have.
+     *
+     * @param  int  $stake  minor units
+     * @param  list<Leg>  $legs
+     */
+    public function ifPendingWin(int $stake, bool $isFreeBet, array $legs): Settlement
+    {
+        $this->assertHasLegs($legs);
+
+        $legs = array_map(fn (Leg $leg): Leg => $leg->isPending() ? new Leg($leg->odds, SelectionResult::Won) : $leg, $legs);
+
+        return $this->settle($stake, $isFreeBet, $legs) ?? throw new LogicException('A bet whose selections all have results is settled.');
     }
 
     /**

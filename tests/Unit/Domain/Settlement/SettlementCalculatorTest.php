@@ -240,6 +240,27 @@ class SettlementCalculatorTest extends TestCase
         $this->assertSame(20500, $calculator->profit(10000, 20500, true));
     }
 
+    public function test_an_open_bet_pays_as_if_its_pending_selections_win(): void
+    {
+        $calculator = new SettlementCalculator;
+
+        $single = $calculator->ifPendingWin(20000, false, [new Leg('1.95')]);
+        $this->assertSame(39000, $single->payout);
+        $this->assertSame(19000, $single->profit);
+
+        $accumulator = $calculator->ifPendingWin(10000, false, [
+            new Leg('1.50', SelectionResult::Won),
+            new Leg('2.00', SelectionResult::Void),
+            new Leg('1.80'),
+        ]);
+        $this->assertSame(27000, $accumulator->payout);
+        $this->assertSame(17000, $accumulator->profit);
+
+        $freeBet = $calculator->ifPendingWin(10000, true, [new Leg('1.95', SelectionResult::HalfWon), new Leg('2.00')]);
+        $this->assertSame(19500, $freeBet->payout);
+        $this->assertSame(19500, $freeBet->profit);
+    }
+
     public function test_rejects_a_bet_without_selections(): void
     {
         $this->expectException(InvalidArgumentException::class);

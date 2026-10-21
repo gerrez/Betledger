@@ -12,7 +12,7 @@
 
                 <nav aria-label="Main" class="flex flex-col gap-1">
                     <x-nav.sidebar-item :href="route('dashboard')" :current="request()->routeIs('dashboard')">Overview</x-nav.sidebar-item>
-                    <x-nav.sidebar-item :href="route('bets.index')" :current="request()->routeIs('bets.index')">Bets</x-nav.sidebar-item>
+                    <x-nav.sidebar-item :href="route('bets.index')" :current="request()->routeIs('bets.index', 'bets.show', 'bets.edit')">Bets</x-nav.sidebar-item>
                     <x-nav.sidebar-item :href="route('statistics')" :current="request()->routeIs('statistics')">Statistics</x-nav.sidebar-item>
                     <x-nav.sidebar-item :href="route('bookmakers.index')" :current="request()->routeIs('bookmakers.*')">Bookmakers</x-nav.sidebar-item>
                     <x-nav.sidebar-item :href="route('lists.index')" :current="request()->routeIs('lists.*')">Lists</x-nav.sidebar-item>
@@ -86,7 +86,7 @@
             class="fixed inset-x-0 bottom-0 z-10 flex items-center justify-between border-t border-line bg-surface px-4 pt-2 pb-[max(20px,env(safe-area-inset-bottom))] lg:hidden"
         >
             <x-nav.tab-item :href="route('dashboard')" icon="home" :current="request()->routeIs('dashboard')">Home</x-nav.tab-item>
-            <x-nav.tab-item :href="route('bets.index')" icon="list-bullet" :current="request()->routeIs('bets.index')">Bets</x-nav.tab-item>
+            <x-nav.tab-item :href="route('bets.index')" icon="list-bullet" :current="request()->routeIs('bets.index', 'bets.show', 'bets.edit')">Bets</x-nav.tab-item>
 
             <a
                 href="{{ route('bets.create') }}"

@@ -311,3 +311,20 @@ same items. Touch targets ≥ 44 px.
   9,999,999.999 with at most three decimals (the column's precision), so payouts always
   fit in an integer. Saving a bet goes to the bets list (a placeholder until 2.8) with a
   "Bet saved" message.
+- **Accumulators in the bet form (assumed in 2.7).** Switching to Accumulator adds a
+  second selection (in the sport of the first); switching back to Single keeps only the
+  first selection, after a confirmation. An accumulator keeps at least two selections
+  (Remove appears from three on) and has at most 20. Its total odds may not exceed
+  9,999,999.999, the limit for a single selection, so payouts still fit in an integer.
+- **Editing bets (assumed in 2.7).** Every bet, open or settled, is edited with the same
+  form at `/bets/{id}/edit` (linked from the bets list and bet detail pages once they
+  exist, 2.8/2.11); saving goes to the bets list with "Bet updated". The form doesn't
+  change results: each kept selection keeps its result, a removed selection takes its
+  result with it, and an added selection is pending. When the stake, the free bet flag
+  or the selections' odds or results change, the bet is settled again by the settlement
+  rules: it can go from settled to open (e.g. a pending selection was added) or from open
+  to settled (e.g. the last pending selection was removed; `settled_at` is then the time
+  of the edit), a bet that stays settled keeps its `settled_at`, and a manual payout is
+  replaced by the calculated one (the form warns about this). Other edits (notes, tags,
+  dates, bookmaker, rate, …) leave the settlement, including a manual payout, alone. A
+  bet's own bookmaker stays selectable after it is deactivated, marked "(inactive)".

@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Bets\Create as CreateBet;
+use App\Livewire\Bets\Edit as EditBet;
 use App\Livewire\Bookmakers\Index as BookmakersIndex;
 use App\Livewire\Lists\Index as ListsIndex;
 use App\Livewire\Settings\Appearance;
@@ -25,6 +26,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     ])->name('bets.index');
 
     Route::get('bets/create', CreateBet::class)->name('bets.create');
+    Route::get('bets/{bet}/edit', EditBet::class)->name('bets.edit');
 
     Route::view('statistics', 'coming-soon', [
         'title' => 'Statistics',

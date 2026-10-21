@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Statistics;
 
+use App\Domain\BetStatus;
 use App\Domain\BetType;
 use App\Domain\Currency;
 use App\Domain\Decimal;
@@ -75,6 +76,18 @@ class StatisticsQueryTest extends TestCase
         $this->assertSame([100, 200, 500], $this->stakes(new StatisticsFilter(CarbonImmutable::parse('2026-10-01'), CarbonImmutable::parse('2026-10-21'))));
         $this->assertSame([100, 200, 300, 500], $this->stakes(new StatisticsFilter(from: CarbonImmutable::parse('2026-10-01'))));
         $this->assertSame([400, 600], $this->stakes(new StatisticsFilter(to: CarbonImmutable::parse('2026-09-30'))));
+    }
+
+    public function test_the_status_filter_keeps_open_or_settled_bets(): void
+    {
+        $this->settledBet(100, placedAt: '2026-09-20 12:00', settledAt: '2026-10-01 00:00');
+        $this->settledBet(200, placedAt: '2026-10-10 12:00', settledAt: '2026-10-21 23:59');
+        Bet::factory()->for($this->user)->create(['stake' => 500, 'placed_at' => '2026-10-21 23:00']);
+        Bet::factory()->for($this->user)->create(['stake' => 600, 'placed_at' => '2026-09-30 22:00']);
+
+        $this->assertSame([500, 600], $this->stakes(new StatisticsFilter(status: BetStatus::Open)));
+        $this->assertSame([100, 200], $this->stakes(new StatisticsFilter(status: BetStatus::Settled)));
+        $this->assertSame([200], $this->stakes(new StatisticsFilter(CarbonImmutable::parse('2026-10-02'), status: BetStatus::Settled)));
     }
 
     public function test_bet_filters(): void

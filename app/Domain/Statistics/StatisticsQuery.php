@@ -41,6 +41,7 @@ final class StatisticsQuery
         $hasSelection = fn (string $column, ?int $id) => fn (Builder $query) => $query->whereHas('selections', fn (Builder $selections) => $selections->where($column, $id));
 
         return $user->bets()->getQuery()
+            ->when($filter->status !== null, fn (Builder $query) => $query->where('status', $filter->status))
             ->when($filter->from !== null || $filter->to !== null, fn (Builder $query) => $query->where(fn (Builder $dates) => $dates
                 ->where(fn (Builder $settled) => $this->between($settled->where('status', BetStatus::Settled), 'settled_at', $filter->from, $filter->to))
                 ->orWhere(fn (Builder $open) => $this->between($open->where('status', BetStatus::Open), 'placed_at', $filter->from, $filter->to))))

@@ -33,6 +33,8 @@ final class StatisticsCalculator
             profit: $profit,
             roi: $this->ratio($profit, $turnover),
             strikeRate: $this->ratio($winners, $winners + $losers),
+            winningBets: $winners,
+            losingBets: $losers,
             averageOdds: $this->mean(array_map(fn (BetFigures $bet): string => $bet->totalOdds, $settled)),
             averageClv: $this->mean($clvs),
             clvBets: count($clvs),

@@ -89,7 +89,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
       accumulator note), odds-range bars, CLV panel. No chart yet.
 - [x] **2.14 Profit-over-time chart.** Add the cumulative profit chart to the statistics
       page (pick a small chart library and justify it in the PR, or plain SVG).
-- [ ] **2.15 Home overview.** Per `Main` mockup: month selector, month profit card with
+- [x] **2.15 Home overview.** Per `Main` mockup: month selector, month profit card with
       sparkline, KPI tiles, open bets preview linking to the bets list.
 
 ### Polish

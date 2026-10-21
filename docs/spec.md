@@ -430,3 +430,20 @@ same items. Touch targets ≥ 44 px.
   the Monday for a week; "Oct 2026" by month), three on phones. Without settled bets in
   the range the card says the chart shows once bets are settled. No tooltips: the chart
   has a text description for screen readers (periods and the final cumulative profit).
+- **Home overview (assumed in 2.15).** The home page stays at `/dashboard`, where logging
+  in leads. The month selector lists every month from the user's first bet (placed or
+  settled) to the current one, newest first; the month is kept in the URL, and an
+  unknown or future month shows the current one. The profit card, its ROI badge and the
+  strike rate, average odds and closing line tiles cover the bets **settled in that
+  month** (free bets included, in the base currency as on the statistics page; the
+  current month up to today). "Open stake" and the open bets preview always show the bets
+  open **now**, whichever month is chosen (the mockup's "3 bets pending" and "Open bets ·
+  3" agree). The sparkline is the month's cumulative profit by day, drawn like the
+  statistics chart without axes, and is left out when nothing was settled that month.
+  Numbers are formatted as on the statistics page, so the mockup's "55%" shows as
+  "55.0%", and ROI keeps its sign ("ROI +6.2%"). The preview lists the three open bets
+  that start soonest (the bets list's Open order), each opening its bet detail page;
+  "Settle →", and "All n open bets" when there are more than three, go to the bets list.
+  An accumulator's line says "2 of 3 won" while every result so far is a win, else
+  "2 of 3 settled", and has no count before its first result; a free bet says "free
+  bet". A user without bets sees "No bets yet" with a New bet button.

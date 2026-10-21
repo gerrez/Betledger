@@ -20,6 +20,10 @@ final readonly class Totals
         public ?string $roi,
         /** Winning bets ÷ winning and losing bets (see BetFigures::isWin() and isLoss()); void bets don't count. */
         public ?string $strikeRate,
+        /** Settled bets that count as a win in the strike rate. */
+        public int $winningBets,
+        /** Settled bets that count as a loss in the strike rate. */
+        public int $losingBets,
         /** Mean total odds of settled bets. */
         public ?string $averageOdds,
         /** Mean CLV of the settled bets with closing odds on every selection. */

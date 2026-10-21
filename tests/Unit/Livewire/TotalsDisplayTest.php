@@ -81,6 +81,8 @@ class TotalsDisplayTest extends TestCase
             profit: $profit,
             roi: $roi,
             strikeRate: $strikeRate,
+            winningBets: 0,
+            losingBets: 0,
             averageOdds: $averageOdds,
             averageClv: $averageClv,
             clvBets: 0,

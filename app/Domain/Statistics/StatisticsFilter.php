@@ -2,6 +2,7 @@
 
 namespace App\Domain\Statistics;
 
+use App\Domain\BetStatus;
 use App\Domain\BetType;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
@@ -10,7 +11,7 @@ use InvalidArgumentException;
  * Which bets statistics cover. Dates are whole days, both included: settled bets count by
  * their settlement date, open bets by the date they were placed. Selection-level filters
  * (sport, competition, team, market) match a bet when any of its selections matches.
- * Null means no filter.
+ * A status limits the bets to open or settled ones. Null means no filter.
  */
 final readonly class StatisticsFilter
 {
@@ -30,6 +31,7 @@ final readonly class StatisticsFilter
         public ?int $tagId = null,
         public ?BetType $type = null,
         public bool $includeFreeBets = true,
+        public ?BetStatus $status = null,
     ) {
         $this->from = $from?->startOfDay();
         $this->to = $to?->startOfDay();

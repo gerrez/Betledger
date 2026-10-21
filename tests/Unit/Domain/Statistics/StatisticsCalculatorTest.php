@@ -69,6 +69,8 @@ class StatisticsCalculatorTest extends TestCase
             profit: 7024,
             roi: '0.4867299563',
             strikeRate: '0.6250000000',
+            winningBets: 5,
+            losingBets: 3,
             averageOdds: '3.5833333333',
             averageClv: '0.0347444385',
             clvBets: 5,
@@ -80,7 +82,7 @@ class StatisticsCalculatorTest extends TestCase
 
     public function test_totals_of_no_bets_have_no_ratios(): void
     {
-        $this->assertEquals(new Totals(0, 0, 0, 0, null, null, null, null, 0, 0, null, 0), $this->calculator->totals([]));
+        $this->assertEquals(new Totals(0, 0, 0, 0, null, null, 0, 0, null, null, 0, 0, null, 0), $this->calculator->totals([]));
     }
 
     public function test_free_bets_add_profit_but_no_turnover(): void

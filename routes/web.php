@@ -6,6 +6,7 @@ use App\Livewire\Bets\Index as BetsIndex;
 use App\Livewire\Bets\Show as ShowBet;
 use App\Livewire\Bookmakers\Index as BookmakersIndex;
 use App\Livewire\Lists\Index as ListsIndex;
+use App\Livewire\Overview\Index as Overview;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\BaseCurrency;
 use App\Livewire\Settings\Password;
@@ -18,10 +19,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::view('dashboard', 'coming-soon', [
-        'title' => 'Overview',
-        'description' => 'Your month at a glance: profit, key numbers and open bets.',
-    ])->name('dashboard');
+    Route::get('dashboard', Overview::class)->name('dashboard');
 
     Route::get('bets', BetsIndex::class)->name('bets.index');
 

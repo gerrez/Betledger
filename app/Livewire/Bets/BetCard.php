@@ -8,6 +8,7 @@ use App\Domain\Settlement\SelectionResult;
 use App\Models\Bet;
 use App\Models\Selection;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * What a bet's card in the bets list shows, as display strings. Expects the bet's
@@ -18,6 +19,9 @@ final readonly class BetCard
     /**
      * @param  list<array{pick: string, event: string, odds: string, status: string, tone: 'won'|'lost'|'void'|'pending'}>  $legs
      * @param  array{label: string, payout: string, profit: string, tone: 'profit'|'loss'|'even'}|null  $result  null while the bet is open
+     * @param  array{selection: int, prompt: string}|null  $settle  the pending selection an open bet offers result buttons for
+     * @param  string|null  $lastResult  the undoable result of a selection that left the bet open
+     * @param  bool  $canUndo  whether the card offers to undo the latest result set from the bets list
      */
     private function __construct(
         public int $id,
@@ -29,9 +33,15 @@ final readonly class BetCard
         public bool $isAccumulator,
         public array $legs,
         public ?array $result,
+        public ?array $settle,
+        public ?string $lastResult,
+        public bool $canUndo,
     ) {}
 
-    public static function fromBet(Bet $bet, CarbonInterface $now): self
+    /**
+     * @param  Selection|null  $undoable  the bet's selection whose result the card offers to undo
+     */
+    public static function fromBet(Bet $bet, CarbonInterface $now, ?Selection $undoable = null): self
     {
         $selections = $bet->selections;
         $first = $selections->firstOrFail();
@@ -56,7 +66,10 @@ final readonly class BetCard
             isFreeBet: $bet->is_free_bet,
             isAccumulator: $isAccumulator,
             legs: array_values($selections->map(fn (Selection $selection): array => self::leg($selection, $now))->all()),
-            result: self::result($bet),
+            result: self::result($bet, $undoable),
+            settle: self::settle($bet),
+            lastResult: $undoable !== null && ! $bet->isSettled() ? $undoable->pick.': '.$undoable->result?->label() : null,
+            canUndo: $undoable !== null,
         );
     }
 
@@ -107,22 +120,78 @@ final readonly class BetCard
     /**
      * @return array{label: string, payout: string, profit: string, tone: 'profit'|'loss'|'even'}|null
      */
-    private static function result(Bet $bet): ?array
+    private static function result(Bet $bet, ?Selection $undoable): ?array
     {
         if (! $bet->isSettled() || $bet->payout === null || $bet->profit === null) {
             return null;
         }
 
-        $singleResult = $bet->selections->count() === 1 ? $bet->selections->firstOrFail()->result : null;
-
         return [
-            'label' => $singleResult === null ? 'Settled' : 'Settled: '.$singleResult->label(),
+            'label' => self::settledLabel($bet->selections, $undoable?->result),
             'payout' => Money::format($bet->payout, $bet->currency),
             'profit' => Money::format($bet->profit, $bet->currency, signed: true),
             'tone' => match (true) {
                 $bet->profit > 0 => 'profit',
                 $bet->profit < 0 => 'loss',
                 default => 'even',
+            },
+        ];
+    }
+
+    /**
+     * "Settled: Won" for a single; for an accumulator "Settled", or which result just
+     * settled it when that can be undone.
+     *
+     * @param  Collection<int, Selection>  $selections
+     */
+    private static function settledLabel(Collection $selections, ?SelectionResult $undoable): string
+    {
+        if ($selections->count() === 1) {
+            $result = $selections->firstOrFail()->result;
+
+            return $result === null ? 'Settled' : 'Settled: '.$result->label();
+        }
+
+        if ($undoable === null) {
+            return 'Settled';
+        }
+
+        $leg = $selections->contains(fn (Selection $selection): bool => $selection->result === null) ? 'Leg' : 'Final leg';
+
+        return $leg.' '.mb_strtolower($undoable->label()).' · bet settled';
+    }
+
+    /**
+     * The selection an open bet offers result buttons for: the pending one that starts
+     * soonest (those without a start time last, then in entry order).
+     *
+     * @return array{selection: int, prompt: string}|null
+     */
+    private static function settle(Bet $bet): ?array
+    {
+        if ($bet->isSettled()) {
+            return null;
+        }
+
+        $pending = $bet->selections
+            ->filter(fn (Selection $selection): bool => $selection->result === null)
+            ->sortBy([
+                fn (Selection $a, Selection $b): int => ($a->event_starts_at === null) <=> ($b->event_starts_at === null),
+                fn (Selection $a, Selection $b): int => $a->event_starts_at <=> $b->event_starts_at,
+                fn (Selection $a, Selection $b): int => $a->position <=> $b->position,
+            ]);
+        $next = $pending->first();
+
+        if ($next === null) {
+            return null;
+        }
+
+        return [
+            'selection' => $next->id,
+            'prompt' => match (true) {
+                $bet->selections->count() === 1 => 'How did it go?',
+                $pending->count() === 1 => "Settle the last selection, {$next->pick}:",
+                default => "Settle the next selection, {$next->pick}:",
             },
         ];
     }

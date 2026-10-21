@@ -103,4 +103,15 @@ class MoneyTest extends TestCase
         $this->assertFalse(Money::isValidStake('1000000000'));
         $this->assertFalse(Money::isValidStake(''));
     }
+
+    public function test_validates_payouts_entered_by_hand(): void
+    {
+        foreach (['0', '0.5', '389.50', '999999999999.99'] as $payout) {
+            $this->assertTrue(Money::isValidPayout($payout), $payout);
+        }
+
+        foreach (['', '-5', '389.505', '1,000.00', '1000000000000', '1e3', '389.'] as $payout) {
+            $this->assertFalse(Money::isValidPayout($payout), $payout);
+        }
+    }
 }

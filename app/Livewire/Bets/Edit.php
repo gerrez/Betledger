@@ -65,7 +65,7 @@ class Edit extends BetForm
 
         session()->flash('status', 'Bet updated.');
 
-        $this->redirectRoute('bets.index', navigate: true);
+        $this->redirectRoute('bets.show', $this->bet, navigate: true);
     }
 
     protected function editedBet(): Bet

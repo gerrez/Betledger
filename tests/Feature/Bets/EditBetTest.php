@@ -129,7 +129,7 @@ class EditBetTest extends TestCase
             ->set('notes', 'Changed my mind.')
             ->call('save')
             ->assertHasNoErrors()
-            ->assertRedirect(route('bets.index'));
+            ->assertRedirect(route('bets.show', $bet));
 
         $bet->refresh();
         $this->assertSame($danskeSpil->id, $bet->bookmaker_id);

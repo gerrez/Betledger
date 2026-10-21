@@ -65,7 +65,7 @@
             @else
                 @foreach ($cards as $card)
                     <article wire:key="bet-{{ $card->id }}" class="flex flex-col gap-3 rounded-[18px] border border-line bg-surface p-4">
-                        <a href="{{ route('bets.edit', $card->id) }}" wire:navigate class="flex items-start gap-3 rounded-lg text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                        <a href="{{ route('bets.show', $card->id) }}" wire:navigate class="flex items-start gap-3 rounded-lg text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
                             <div class="flex min-w-0 grow flex-col gap-0.5">
                                 <span class="text-base font-semibold">{{ $card->title }}</span>
                                 <span class="text-[13px] text-muted">{{ $card->meta }}</span>

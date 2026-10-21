@@ -127,7 +127,7 @@ class DemoDataSeeder extends Seeder
             'teams' => [$teams[$home], $teams[$away]],
         ];
 
-        $this->placeBet($unibet, 2000, daysAgo: 12, tipster: $ownModel, tags: [$tags['value']], selections: [
+        $this->placeBet($unibet, 2000, daysAgo: 12, tipster: $ownModel, tags: [$tags['value']], notes: 'Saka back in training; line moved from 2.20.', selections: [
             $leg('Arsenal', 'Chelsea', 'Premier League', '1X2', 'Arsenal', '2.10', SelectionResult::Won, 11, closingOdds: '1.95'),
         ]);
         $this->placeBet($bet365, 1500, daysAgo: 9, selections: [
@@ -221,7 +221,7 @@ class DemoDataSeeder extends Seeder
      * @param  list<Tag>  $tags
      * @param  list<array<string, mixed>>  $selections  selection attributes plus `teams` (list<Team>)
      */
-    private function placeBet(Bookmaker $bookmaker, int $stake, int $daysAgo, array $selections, bool $isFreeBet = false, ?Tipster $tipster = null, array $tags = []): Bet
+    private function placeBet(Bookmaker $bookmaker, int $stake, int $daysAgo, array $selections, bool $isFreeBet = false, ?Tipster $tipster = null, array $tags = [], ?string $notes = null): Bet
     {
         $bet = new Bet([
             'bookmaker_id' => $bookmaker->id,
@@ -233,6 +233,7 @@ class DemoDataSeeder extends Seeder
             'exchange_rate' => $bookmaker->exchange_rate,
             'is_free_bet' => $isFreeBet,
             'total_odds' => Odds::total(array_column($selections, 'odds')),
+            'notes' => $notes,
         ]);
         $bet->user()->associate($bookmaker->user_id);
         $bet->save();

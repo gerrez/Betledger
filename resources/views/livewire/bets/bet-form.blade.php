@@ -1,7 +1,7 @@
 <div class="mx-auto max-w-xl">
     <header class="mb-4 flex items-center gap-2">
         <a
-            href="{{ $bet === null ? route('dashboard') : route('bets.index') }}"
+            href="{{ $bet === null ? route('dashboard') : route('bets.show', $bet) }}"
             wire:navigate
             aria-label="Close"
             class="flex size-11 shrink-0 items-center justify-center rounded-[14px] border border-line bg-surface text-ink hover:bg-canvas"

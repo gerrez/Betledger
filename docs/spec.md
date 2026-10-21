@@ -318,10 +318,10 @@ same items. Touch targets ≥ 44 px.
   9,999,999.999, the limit for a single selection, so payouts still fit in an integer.
 - **Editing bets (assumed in 2.7).** Every bet, open or settled, is edited with the same
   form at `/bets/{id}/edit` (linked from the bets list and bet detail pages once they
-  exist, 2.8/2.11); saving goes to the bets list with "Bet updated". The form doesn't
-  change results: each kept selection keeps its result, a removed selection takes its
-  result with it, and an added selection is pending. When the stake, the free bet flag
-  or the selections' odds or results change, the bet is settled again by the settlement
+  exist, 2.8/2.11); saving goes to the bet detail page (the bets list until 2.11) with
+  "Bet updated". The form doesn't change results: each kept selection keeps its
+  result, a removed selection takes its result with it, and an added selection is
+  pending. When the stake, the free bet flag or the selections' odds or results change, the bet is settled again by the settlement
   rules: it can go from settled to open (e.g. a pending selection was added) or from open
   to settled (e.g. the last pending selection was removed; `settled_at` is then the time
   of the edit), a bet that stays settled keeps its `settled_at`, and a manual payout is
@@ -339,8 +339,8 @@ same items. Touch targets ≥ 44 px.
   the app's time zone ("today 18:30", "Sat 11:05" within six days either way, else
   "14 Oct 18:30"). Total odds show all four stored decimals ("@ 5.4054"), not the
   mockup's rounded "5.41". A settled single's banner names its result ("Settled: ½ Won");
-  an accumulator's just says "Settled", with payout and profit. Until the bet detail page
-  exists (2.11), a card opens the edit form.
+  an accumulator's just says "Settled", with payout and profit. A card opens the bet
+  detail page (the edit form until 2.11).
 - **Settle service (assumed in 2.9).** Results are set one selection at a time
   (`App\Domain\Bets\SettleBet`), and "Clear result" clears every selection's result,
   making the bet open again. A bet that becomes settled is settled at the time of the
@@ -364,3 +364,19 @@ same items. Touch targets ≥ 44 px.
   Open tab, and the "starts soonest" order doesn't move a card), until the tab, a
   filter, the order or the page changes; Undo is offered only until then. A result
   changed elsewhere in the meantime is neither overwritten nor undone.
+- **Bet detail page (assumed in 2.11).** `/bets/{id}`. Every selection has result buttons
+  (also on a settled bet, so an accumulator lost by one leg can get its other results)
+  and, once it has a result, a "Clear result" button that makes that selection pending
+  again ("Clear result (back to open)" on a single). The result card's badge is the
+  single's result, "Settled" for an accumulator, or "Open"; the mockup shows no open bet,
+  so an open bet shows what it pays if every pending selection wins (results already set
+  count). Profit is also shown in the base currency (with the bet's own rate) when the
+  bet is in another currency. CLV is shown per selection with closing odds ("Beat /
+  Missed / Matched the close", one decimal), and for an accumulator also as a "CLV" fact
+  when every selection has closing odds. The amount actually paid can be 0 up to
+  999,999,999,999.99 (two decimals, decimal comma accepted), also more than the
+  calculated payout (boosts). While the payout was entered by hand, every result change
+  asks for confirmation first. Deleting asks for confirmation and goes to the bets list
+  with "Bet deleted.". The edit form's close button and saving now go back to the bet
+  detail page (not the bets list, as in 2.7). The Bets tab stays highlighted on the
+  detail and edit pages.

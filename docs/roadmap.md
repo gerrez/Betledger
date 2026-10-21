@@ -73,7 +73,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
       (`payout_is_manual`), discarded when any result changes. Unit and feature tests.
 - [x] **2.10 Inline settling.** Result buttons on pending selections in the bets list,
       result banner with Undo (per `Bets` mockup).
-- [ ] **2.11 Bet detail page.** Per `BetDetail` mockup: result, profit in bet and base
+- [x] **2.11 Bet detail page.** Per `BetDetail` mockup: result, profit in bet and base
       currency, CLV, result buttons, clear result, manual payout override with warning,
       facts, delete with confirmation.
 

@@ -94,7 +94,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
 
 ### Polish
 
-- [ ] **2.16 Dark mode and phone pass.** Dark theme across all pages; check 44 px touch
+- [x] **2.16 Dark mode and phone pass.** Dark theme across all pages; check 44 px touch
       targets, `inputmode="decimal"` on odds/stake, focus states and labels; fix anything
       the earlier tasks missed.
 

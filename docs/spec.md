@@ -321,8 +321,7 @@ same items. Touch targets ≥ 44 px.
   exist, 2.8/2.11); saving goes to the bet detail page (the bets list until 2.11) with
   "Bet updated". The form doesn't change results: each kept selection keeps its
   result, a removed selection takes its result with it, and an added selection is
-  pending. When the stake, the free bet flag
-  or the selections' odds or results change, the bet is settled again by the settlement
+  pending. When the stake, the free bet flag or the selections' odds or results change, the bet is settled again by the settlement
   rules: it can go from settled to open (e.g. a pending selection was added) or from open
   to settled (e.g. the last pending selection was removed; `settled_at` is then the time
   of the edit), a bet that stays settled keeps its `settled_at`, and a manual payout is

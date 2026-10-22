@@ -35,7 +35,7 @@
                 <button
                     type="button"
                     wire:click="useSingle"
-                    @if ($isAccumulator) wire:confirm="Keep only the first selection?" @endif
+                    @if ($isAccumulator) data-confirm="Only the first selection is kept; the others are removed." data-confirm-title="Switch to a single?" data-confirm-button="Keep first selection" @endif
                     aria-pressed="{{ $isAccumulator ? 'false' : 'true' }}"
                     @class([
                         'h-11 rounded-[11px] text-[15px]',
@@ -56,11 +56,11 @@
             </div>
 
             <section class="grid grid-cols-2 gap-3 rounded-[18px] border border-line bg-surface p-4">
-                <flux:select wire:model.live="bookmaker_id" label="Bookmaker">
+                <x-select wire:model.live="bookmaker_id" label="Bookmaker">
                     @foreach ($bookmakers as $option)
-                        <flux:select.option :value="$option->id" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }} · {{ $option->currency->value }}{{ $option->is_active ? '' : ' (inactive)' }}</flux:select.option>
+                        <x-select.option :value="$option->id" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }} · {{ $option->currency->value }}{{ $option->is_active ? '' : ' (inactive)' }}</x-select.option>
                     @endforeach
-                </flux:select>
+                </x-select>
 
                 <flux:input wire:model="placed_at" type="datetime-local" label="Placed" required />
             </section>

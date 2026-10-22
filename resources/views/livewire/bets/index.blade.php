@@ -32,26 +32,26 @@
             </div>
 
             <div class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-0.5 lg:mx-0 lg:flex-wrap lg:px-0">
-                <x-filter-select wire:model.live="bookmaker" label="Bookmaker">
-                    <option value="">All bookmakers</option>
+                <x-select variant="pill" wire:model.live="bookmaker" label="Bookmaker">
+                    <x-select.option value="">All bookmakers</x-select.option>
                     @foreach ($bookmakers as $option)
-                        <option value="{{ $option->id }}" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }}</option>
+                        <x-select.option value="{{ $option->id }}" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }}</x-select.option>
                     @endforeach
-                </x-filter-select>
+                </x-select>
 
-                <x-filter-select wire:model.live="sport" label="Sport">
-                    <option value="">All sports</option>
+                <x-select variant="pill" wire:model.live="sport" label="Sport">
+                    <x-select.option value="">All sports</x-select.option>
                     @foreach ($sports as $option)
-                        <option value="{{ $option->id }}" wire:key="sport-{{ $option->id }}">{{ $option->name }}</option>
+                        <x-select.option value="{{ $option->id }}" wire:key="sport-{{ $option->id }}">{{ $option->name }}</x-select.option>
                     @endforeach
-                </x-filter-select>
+                </x-select>
 
-                <x-filter-select wire:model.live="sort" label="Order">
+                <x-select variant="pill" wire:model.live="sort" label="Order">
                     @foreach ($sorts as $option)
                         {{-- The tab's default order is the empty value, so a new tab shows it selected. --}}
-                        <option value="{{ $loop->first ? '' : $option->value }}" wire:key="sort-{{ $tab->value }}-{{ $option->value }}">{{ $option->label() }}</option>
+                        <x-select.option value="{{ $loop->first ? '' : $option->value }}" wire:key="sort-{{ $tab->value }}-{{ $option->value }}">{{ $option->label() }}</x-select.option>
                     @endforeach
-                </x-filter-select>
+                </x-select>
             </div>
 
             @if ($cards->isEmpty())

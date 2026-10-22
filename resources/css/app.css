@@ -93,8 +93,7 @@
 [data-flux-button],
 [data-flux-navlist-item],
 [data-flux-menu-item],
-input[data-flux-control],
-select[data-flux-control] {
+input[data-flux-control] {
     @apply max-lg:min-h-11;
 }
 
@@ -131,8 +130,7 @@ select[data-flux-control] {
 }
 
 input:focus[data-flux-control],
-textarea:focus[data-flux-control],
-select:focus[data-flux-control] {
+textarea:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
 

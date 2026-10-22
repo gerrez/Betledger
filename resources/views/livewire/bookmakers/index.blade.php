@@ -54,11 +54,11 @@
 
             <flux:input wire:model="name" label="Name" required autocomplete="off" />
 
-            <flux:select wire:model.live="currency" label="Currency">
+            <x-select wire:model.live="currency" label="Currency">
                 @foreach ($currencies as $option)
-                    <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
+                    <x-select.option :value="$option->value">{{ $option->label() }}</x-select.option>
                 @endforeach
-            </flux:select>
+            </x-select>
 
             @if ($currency === $baseCurrency->value)
                 <flux:input

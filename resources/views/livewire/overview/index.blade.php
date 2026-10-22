@@ -6,11 +6,11 @@
         </div>
 
         @if ($hasBets)
-            <x-filter-select wire:model.live="month" label="Month" class="font-medium">
+            <x-select variant="pill" wire:model.live="month" label="Month" class="font-medium">
                 @foreach ($months as $option)
-                    <option value="{{ $option['value'] }}" wire:key="month-{{ $option['value'] }}">{{ $option['label'] }}</option>
+                    <x-select.option value="{{ $option['value'] }}" wire:key="month-{{ $option['value'] }}">{{ $option['label'] }}</x-select.option>
                 @endforeach
-            </x-filter-select>
+            </x-select>
         @endif
     </div>
 

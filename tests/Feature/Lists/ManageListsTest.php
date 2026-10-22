@@ -212,6 +212,20 @@ class ManageListsTest extends TestCase
         $this->assertModelMissing($entry);
     }
 
+    public function test_deleting_asks_for_confirmation_first(): void
+    {
+        $user = User::factory()->create();
+        Sport::factory()->for($user)->create(['name' => 'Darts']);
+        $this->actingAs($user);
+
+        Livewire::test(Index::class)->assertSeeHtml([
+            'wire:click="delete(',
+            'data-confirm="This can’t be undone."',
+            'data-confirm-title="Delete “Darts”?"',
+            'data-confirm-danger',
+        ]);
+    }
+
     public function test_a_sport_in_use_cannot_be_deleted(): void
     {
         $user = User::factory()->create();

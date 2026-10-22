@@ -3,11 +3,11 @@
 
     <x-settings.layout heading="Currency" subheading="Statistics are shown in your base currency. Bets in other currencies are converted with the exchange rate saved on each bet.">
         <form wire:submit="updateBaseCurrency" class="my-6 w-full space-y-6">
-            <flux:select wire:model="base_currency" label="Base currency" :disabled="! $canChange">
+            <x-select wire:model="base_currency" label="Base currency" :disabled="! $canChange">
                 @foreach ($currencies as $currency)
-                    <flux:select.option :value="$currency->value">{{ $currency->label() }}</flux:select.option>
+                    <x-select.option :value="$currency->value">{{ $currency->label() }}</x-select.option>
                 @endforeach
-            </flux:select>
+            </x-select>
 
             @if ($canChange)
                 <flux:text>

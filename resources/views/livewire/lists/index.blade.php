@@ -51,7 +51,10 @@
                                             variant="ghost"
                                             class="w-[4.5rem]"
                                             wire:click="delete({{ $entry->id }})"
-                                            wire:confirm="Delete “{{ $entry->name }}”? This can’t be undone."
+                                            data-confirm="This can’t be undone."
+                                            data-confirm-title="Delete “{{ $entry->name }}”?"
+                                            data-confirm-button="Delete"
+                                            data-confirm-danger
                                         >Delete</flux:button>
                                     @endif
                                 </div>

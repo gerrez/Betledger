@@ -50,7 +50,8 @@ class AppShellTest extends TestCase
             ->assertSee(route('bets.index'))
             ->assertSee(route('bets.create'))
             ->assertSee(route('statistics'))
-            ->assertSee(route('settings.profile'));
+            ->assertSee(route('settings.profile'))
+            ->assertSee('data-modal="confirm-action"', escape: false);
     }
 
     public function test_the_current_page_is_marked_in_the_navigation(): void

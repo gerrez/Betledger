@@ -265,12 +265,11 @@ class SportmarketImportTest extends TestCase
             ['Order Id' => '3', 'Reconciled P&L (User Currency)' => ''],
             ['Order Id' => '4', 'Order Placed' => '21/10/2026 20:26'],
             ['Order Id' => '5', 'Game Date' => '2026-02-30'],
-            ['Order Id' => '6', 'Reconciled P&L (User Currency)' => '-100.01'],
-            ['Order Id' => '7', 'Home' => '', 'Away' => ''],
-            ['Order Id' => '8', 'Bet Type' => ''],
-            ['Order Id' => '9', 'Stake (User Currency)' => '0.00', 'Reconciled P&L (User Currency)' => '0.00'],
-            ['Order Id' => '10', 'Sport' => ''],
-            ['Order Id' => '11'],
+            ['Order Id' => '6', 'Home' => '', 'Away' => ''],
+            ['Order Id' => '7', 'Bet Type' => ''],
+            ['Order Id' => '8', 'Stake (User Currency)' => '0.00', 'Reconciled P&L (User Currency)' => '0.00'],
+            ['Order Id' => '9', 'Sport' => ''],
+            ['Order Id' => '10'],
         ]), Currency::Eur);
 
         $this->assertSame([
@@ -279,13 +278,30 @@ class SportmarketImportTest extends TestCase
             'Line 4: the Reconciled P&L (User Currency) "" is not an amount.',
             'Line 5: the Order Placed "21/10/2026 20:26" is not a date and time.',
             'Line 6: the Game Date "2026-02-30" is not a date.',
-            'The order lost more than its stake.',
-            'Line 8: the order has no Home or Away team.',
-            'Line 9: the order has no Bet Type.',
+            'Line 7: the order has no Home or Away team.',
+            'Line 8: the order has no Bet Type.',
             'The order\'s stake (0.00) can\'t be recorded: it must be above 0 and below 1,000,000,000.',
-            'Line 11: the order has no Sport.',
-        ], array_map(fn (ImportedOrder $order): ?string => $order->reason, array_slice($orders, 0, 10)));
-        $this->assertSame(OrderOutcome::Import, $orders[10]->outcome);
+            'Line 10: the order has no Sport.',
+        ], array_map(fn (ImportedOrder $order): ?string => $order->reason, array_slice($orders, 0, 9)));
+        $this->assertSame(OrderOutcome::Import, $orders[9]->outcome);
+    }
+
+    public function test_a_loss_larger_than_the_stake_is_recorded_as_lost_with_a_warning(): void
+    {
+        $bet = $this->onlyBet($this->csv([['Reconciled P&L (User Currency)' => '-100.01']]));
+
+        $warning = 'Sportmarket reported a P&L of −100.01 on a stake of 100.00; recorded as lost.';
+
+        $this->assertSame(SelectionResult::Lost, $bet->result);
+        $this->assertSame(0, $bet->payout);
+        $this->assertNull($bet->manualPayout);
+        $this->assertSame($warning, $bet->warning);
+        $this->assertSame('Sportmarket order 1000 · 1 fill: fair · '.$warning, $bet->notes);
+    }
+
+    public function test_an_order_as_reported_has_no_warning(): void
+    {
+        $this->assertNull($this->fixtureBet('2383987225')->warning);
     }
 
     public function test_unknown_sport_and_market_codes_are_used_as_names(): void

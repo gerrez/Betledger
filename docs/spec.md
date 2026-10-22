@@ -252,6 +252,9 @@ the 3-dp odds, Sportmarket's cents, or fills with different results), it is kept
 settlement time), but never before `placed_at`. On the owner's full export (588 orders)
 this gives 331 won, 157 lost, 54 void, 30 half-won and 10 half-lost, with no order close
 to two results; 211 bets get a manual payout, at most €1.14 from the calculated one.
+An order whose reported loss is larger than its stake (payout below 0, which a bet
+can't have) is imported as **lost** with payout 0, and its notes and the preview say
+"Sportmarket reported a P&L of −150.02 on a stake of 150.00; recorded as lost."
 
 **Rows that are skipped**, each listed with its reason in the preview:
 - every row of the order failed;
@@ -570,3 +573,21 @@ same items. Touch targets ≥ 44 px.
   for that order only, naming the line, and the other orders are still imported. A
   missing Market or Competition leaves it empty; a missing Home or Away uses the other
   team as the event; no teams, Sport or Bet Type is an error.
+- **Sportmarket import page (assumed in 4.1b).** Settings → Import (`/settings/import`)
+  offers the user's active bookmakers (the one named "Sportmarket", ignoring case, is
+  pre-selected, else the first by name); without one it points to the Bookmakers page.
+  The upload must be a `.csv` file of at most 10 MB. "Preview" lists errors first, then
+  the bets to import (event, pick @ odds, placed, stake, result and profit, "payout as
+  reported" when it is kept as a manual payout), then skipped orders, each with its
+  reason. Changing the bookmaker or file leaves the preview. "Import n bets" reads the
+  file again (so an order imported in the meantime is skipped, not duplicated), saves
+  every bet in one transaction, and goes to the Settled tab of the bets list with
+  "Imported n bets."; orders with errors are left out. A file with nothing to import
+  (everything skipped or an error, e.g. a file in another currency than the bookmaker)
+  has no Import button. Imported bets get the bookmaker's current rate, as in the bet
+  form. There is no undo for a whole import: imported bets are deleted one by one like
+  any other bet.
+- **Losses larger than the stake (owner, in 4.1b).** Some orders in the owner's export
+  report a P&L below −stake. Until the owner knows why, they are imported as lost with
+  payout 0 (profit −stake) instead of being refused, and the reported P&L is kept in the
+  notes. Owner: what causes these, and should the extra loss count in the profit?

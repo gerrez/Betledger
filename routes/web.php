@@ -9,6 +9,7 @@ use App\Livewire\Lists\Index as ListsIndex;
 use App\Livewire\Overview\Index as Overview;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\BaseCurrency;
+use App\Livewire\Settings\Import;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
 use App\Livewire\Statistics\Index as StatisticsIndex;
@@ -33,6 +34,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('bookmakers', BookmakersIndex::class)->name('bookmakers.index');
 
     Route::get('lists', ListsIndex::class)->name('lists.index');
+
+    Route::get('settings/import', Import::class)->name('settings.import');
 });
 
 Route::middleware(['auth'])->group(function () {

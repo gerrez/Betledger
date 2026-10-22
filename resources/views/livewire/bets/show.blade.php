@@ -96,20 +96,12 @@
 
             <div role="group" aria-label="Result of {{ $selection['pick'] }}" class="grid grid-cols-5 gap-1.5">
                 @foreach ($selection['buttons'] as $button)
-                    <button
-                        type="button"
+                    <x-result-button
+                        :button="$button"
                         wire:key="selection-{{ $selection['id'] }}-result-{{ $button['result'] }}"
                         wire:click="setResult({{ $selection['id'] }}, '{{ $button['result'] }}')"
-                        @if ($detail->confirmResultChange !== null && ! $button['isPressed']) data-confirm="{{ $detail->confirmResultChange }}" data-confirm-title="Replace your payout?" data-confirm-button="Change result" @endif
-                        aria-pressed="{{ $button['isPressed'] ? 'true' : 'false' }}"
-                        @class([
-                            'h-11 rounded-[10px] border text-[13px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-                            'border-profit-fill bg-profit-soft font-bold text-profit' => $button['isPressed'] && $button['tone'] === 'won',
-                            'border-loss-fill bg-loss-soft font-bold text-loss' => $button['isPressed'] && $button['tone'] === 'lost',
-                            'border-zinc-400 bg-canvas font-bold text-ink' => $button['isPressed'] && $button['tone'] === 'void',
-                            'border-zinc-300 bg-surface font-semibold text-ink hover:border-accent dark:border-zinc-600' => ! $button['isPressed'],
-                        ])
-                    >{{ $button['label'] }}</button>
+                        :confirm="$detail->confirmResultChange"
+                    />
                 @endforeach
             </div>
 

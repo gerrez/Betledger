@@ -98,6 +98,7 @@ class EditBetTest extends TestCase
                 'pick' => 'Arsenal −0.25',
                 'odds' => '1.95',
                 'closing_odds' => '1.90',
+                'result' => '',
                 'show_details' => true,
             ]])
             ->assertSee(['Edit bet', 'Save changes'])
@@ -343,6 +344,158 @@ class EditBetTest extends TestCase
         $this->assertSame(22000, $bet->payout);
         $this->assertSame(12000, $bet->profit);
         $this->assertFalse($bet->payout_is_manual);
+    }
+
+    public function test_a_result_set_in_the_form_settles_the_bet_when_it_is_saved(): void
+    {
+        $this->travelTo('2026-10-21 12:00:00');
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $bet = Bet::factory()->forBookmaker($bookmaker)->single('2.10')->create(['stake' => 10000]);
+        $this->actingAs($user);
+
+        $component = Livewire::test(Edit::class, ['bet' => $bet])
+            ->assertSee(['Result', 'Payout if it wins', '€210.00'])
+            ->assertDontSee('Clear result')
+            ->call('setSelectionResult', 0, 'half_lost')
+            ->assertSet('selections.0.result', 'half_lost')
+            ->assertSeeHtml('aria-pressed="true"')
+            ->assertSee(['Clear result', 'Payout', '€50.00', '−€50.00'])
+            ->assertDontSee('Payout if it wins');
+
+        $this->assertSame(BetStatus::Open, $bet->refresh()->status);
+
+        $component->call('save')->assertHasNoErrors()->assertRedirect(route('bets.show', $bet));
+
+        $bet->refresh();
+        $this->assertSame(BetStatus::Settled, $bet->status);
+        $this->assertSame(5000, $bet->payout);
+        $this->assertSame(-5000, $bet->profit);
+        $this->assertSame('2026-10-21 12:00:00', $bet->settled_at?->toDateTimeString());
+        $this->assertSame(SelectionResult::HalfLost, $bet->selections()->sole()->result);
+    }
+
+    public function test_clearing_a_result_in_the_form_reopens_the_bet(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $bet = Bet::factory()->forBookmaker($bookmaker)->single('2.10')->settled()->create();
+        $this->actingAs($user);
+
+        Livewire::test(Edit::class, ['bet' => $bet])
+            ->assertSet('selections.0.result', 'won')
+            ->call('clearSelectionResult', 0)
+            ->assertSet('selections.0.result', '')
+            ->assertSee('Payout if it wins')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $bet->refresh();
+        $this->assertSame(BetStatus::Open, $bet->status);
+        $this->assertNull($bet->payout);
+        $this->assertNull($bet->profit);
+        $this->assertNull($bet->settled_at);
+        $this->assertNull($bet->selections()->sole()->result);
+    }
+
+    public function test_every_selection_of_an_accumulator_can_get_a_result_including_new_ones(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $bet = Bet::factory()->forBookmaker($bookmaker)
+            ->accumulator(['1.50', '2.00'])
+            ->withResults(SelectionResult::Won, null)
+            ->create(['stake' => 10000]);
+        $this->actingAs($user);
+
+        Livewire::test(Edit::class, ['bet' => $bet])
+            ->call('addSelection')
+            ->set('selections.2.event_name', 'Liverpool v Man City')
+            ->set('selections.2.pick', 'Over 2.5 goals')
+            ->set('selections.2.odds', '1.80')
+            ->call('setSelectionResult', 1, 'half_won')
+            ->assertSee(['Payout if every open selection wins', '€405.00'])
+            ->call('setSelectionResult', 2, 'void')
+            ->assertSee('€225.00')
+            ->assertDontSee('Payout if')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $bet->refresh();
+        $this->assertSame(BetStatus::Settled, $bet->status);
+        $this->assertSame(22500, $bet->payout);
+        $this->assertSame(12500, $bet->profit);
+        $this->assertSame(
+            [SelectionResult::Won, SelectionResult::HalfWon, SelectionResult::Void],
+            $bet->selections->pluck('result')->all(),
+        );
+    }
+
+    public function test_a_manual_payout_is_only_replaced_when_a_result_changes(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $bet = Bet::factory()->forBookmaker($bookmaker)->single('2.10')->settled()->create(['stake' => 10000]);
+        $bet->forceFill(['payout' => 20500, 'profit' => 10500, 'payout_is_manual' => true])->save();
+        $settledAt = $bet->settled_at?->toDateTimeString();
+        $this->actingAs($user);
+
+        Livewire::test(Edit::class, ['bet' => $bet])
+            ->assertSee('Changing the stake, free bet, odds, results or selections replaces it')
+            ->call('setSelectionResult', 0, 'won')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertTrue($bet->refresh()->payout_is_manual);
+        $this->assertSame(20500, $bet->payout);
+
+        Livewire::test(Edit::class, ['bet' => $bet])
+            ->call('setSelectionResult', 0, 'void')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $bet->refresh();
+        $this->assertFalse($bet->payout_is_manual);
+        $this->assertSame(10000, $bet->payout);
+        $this->assertSame(0, $bet->profit);
+        $this->assertSame($settledAt, $bet->settled_at?->toDateTimeString());
+    }
+
+    public function test_only_the_five_results_can_be_chosen(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $bet = Bet::factory()->forBookmaker($bookmaker)->single()->create();
+        $this->actingAs($user);
+
+        Livewire::test(Edit::class, ['bet' => $bet])
+            ->call('setSelectionResult', 0, 'push')
+            ->assertStatus(422);
+
+        Livewire::test(Edit::class, ['bet' => $bet])
+            ->set('selections.0.result', 'push')
+            ->call('save')
+            ->assertHasErrors(['selections.0.result']);
+
+        $this->assertNull($bet->selections()->sole()->result);
+        $this->assertSame(BetStatus::Open, $bet->refresh()->status);
+    }
+
+    public function test_another_user_cannot_settle_the_bet_through_the_form(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $bet = Bet::factory()->forBookmaker($bookmaker)->single()->create();
+        $this->actingAs($user);
+
+        $component = Livewire::test(Edit::class, ['bet' => $bet])->call('setSelectionResult', 0, 'won');
+
+        $this->actingAs(User::factory()->create());
+
+        $component->call('save')->assertForbidden();
+
+        $this->assertNull($bet->selections()->sole()->result);
+        $this->assertSame(BetStatus::Open, $bet->refresh()->status);
     }
 
     public function test_the_bets_own_bookmaker_stays_available_after_it_is_deactivated(): void

@@ -302,6 +302,33 @@ class CreateBetTest extends TestCase
             ->assertDontSee('€390.00');
     }
 
+    public function test_the_new_bet_form_has_no_result_buttons(): void
+    {
+        $user = User::factory()->create();
+        Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        Livewire::test(Create::class)->assertDontSeeHtml('setSelectionResult');
+    }
+
+    public function test_a_result_sent_with_a_new_bet_settles_it(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->set('selections.0.result', 'lost')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $bet = $user->bets()->sole();
+        $this->assertSame(BetStatus::Settled, $bet->status);
+        $this->assertSame(0, $bet->payout);
+        $this->assertSame(-20000, $bet->profit);
+        $this->assertNotNull($bet->settled_at);
+    }
+
     public function test_the_preview_waits_for_valid_stake_and_odds(): void
     {
         $user = User::factory()->create();

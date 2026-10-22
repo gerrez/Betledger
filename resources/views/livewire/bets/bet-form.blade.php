@@ -24,9 +24,9 @@
             @if ($settlement !== null)
                 <section class="flex flex-col gap-1 rounded-[18px] border border-line bg-surface p-4 text-sm">
                     <p class="text-[15px] font-medium">Settled · payout {{ $settlement['payout'] }} · profit {{ $settlement['profit'] }}</p>
-                    <p class="text-muted">Selections keep their results. Changing the stake, odds or selections settles the bet again.</p>
+                    <p class="text-muted">Changing the stake, odds, results or selections settles the bet again when you save.</p>
                     @if ($settlement['isManual'])
-                        <p class="mt-1 font-medium text-loss">You entered this payout yourself. Changing the stake, free bet, odds or selections replaces it with the calculated payout.</p>
+                        <p class="mt-1 font-medium text-loss">You entered this payout yourself. Changing the stake, free bet, odds, results or selections replaces it with the calculated payout.</p>
                     @endif
                 </section>
             @endif
@@ -82,10 +82,6 @@
                 <section wire:key="selection-{{ $index }}-of-{{ count($selections) }}" class="flex flex-col gap-3 rounded-[18px] border border-line bg-surface p-4">
                     <div class="flex min-h-11 items-center gap-2">
                         <h2 class="flex-1 text-base font-semibold">{{ $isAccumulator ? 'Selection '.($index + 1) : 'Selection' }}</h2>
-
-                        @if ($results[$index] !== null)
-                            <span class="rounded-full border border-line px-2.5 py-1 text-sm font-medium">{{ $results[$index] }}</span>
-                        @endif
 
                         @if (count($selections) > 2)
                             <button
@@ -181,6 +177,34 @@
                             placeholder="HH:MM"
                         />
                     </div>
+
+                    @if ($bet !== null)
+                        <div class="flex flex-col gap-2">
+                            <div class="flex min-h-6 items-center justify-between gap-3">
+                                <span class="text-sm font-medium" id="result-label-{{ $index }}">Result</span>
+
+                                @if ($selection['result'] !== '')
+                                    <button
+                                        type="button"
+                                        wire:click="clearSelectionResult({{ $index }})"
+                                        class="relative text-sm font-medium text-accent-content after:absolute after:-inset-x-2 after:-inset-y-3 hover:underline"
+                                    >Clear result</button>
+                                @endif
+                            </div>
+
+                            <div role="group" aria-labelledby="result-label-{{ $index }}" class="grid grid-cols-5 gap-1.5">
+                                @foreach ($resultButtons[$index] as $button)
+                                    <x-result-button
+                                        :button="$button"
+                                        wire:key="selection-{{ $index }}-result-{{ $button['result'] }}"
+                                        wire:click="setSelectionResult({{ $index }}, '{{ $button['result'] }}')"
+                                    />
+                                @endforeach
+                            </div>
+
+                            <flux:error name="selections.{{ $index }}.result" />
+                        </div>
+                    @endif
 
                     <button
                         type="button"
@@ -278,7 +302,7 @@
 
             <section class="flex flex-col gap-2 rounded-[18px] bg-accent-soft p-4 text-accent-soft-content" aria-live="polite">
                 <div class="flex items-baseline justify-between gap-3">
-                    <span class="text-sm font-medium">Payout if it wins</span>
+                    <span class="text-sm font-medium">{{ $preview['label'] ?? 'Payout if it wins' }}</span>
                     <span class="text-xl font-semibold">{{ $preview['payout'] ?? '—' }}</span>
                 </div>
                 <div class="flex items-baseline justify-between gap-3">

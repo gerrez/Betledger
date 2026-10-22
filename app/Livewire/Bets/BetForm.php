@@ -8,6 +8,8 @@ use App\Domain\Decimal;
 use App\Domain\ExchangeRate;
 use App\Domain\Money;
 use App\Domain\Odds;
+use App\Domain\Settlement\Leg;
+use App\Domain\Settlement\SelectionResult;
 use App\Domain\Settlement\SettlementCalculator;
 use App\Domain\TimeOfDay;
 use App\Models\Bet;
@@ -67,10 +69,11 @@ abstract class BetForm extends Component
     /**
      * The bet's selections: a single has one, an accumulator two or more. `id` is the
      * saved selection being edited (null for a new one). `team_name` is a team being
-     * typed, added to `teams` with Enter or "Add". `show_details` shows the selection's
-     * own details (competition, market, closing odds).
+     * typed, added to `teams` with Enter or "Add". `result` is a SelectionResult value,
+     * or empty while pending. `show_details` shows the selection's own details
+     * (competition, market, closing odds).
      *
-     * @var list<array{id: int|null, sport: string, competition: string, market: string, teams: list<string>, team_name: string, event_name: string, event_starts_date: string, event_starts_time: string, pick: string, odds: string, closing_odds: string, show_details: bool}>
+     * @var list<array{id: int|null, sport: string, competition: string, market: string, teams: list<string>, team_name: string, event_name: string, event_starts_date: string, event_starts_time: string, pick: string, odds: string, closing_odds: string, result: string, show_details: bool}>
      */
     public array $selections = [];
 
@@ -138,6 +141,28 @@ abstract class BetForm extends Component
         }
     }
 
+    /**
+     * Give a selection a result, applied to the bet when the form is saved.
+     */
+    public function setSelectionResult(int $index, string $result): void
+    {
+        abort_if(SelectionResult::tryFrom($result) === null, 422);
+
+        if (isset($this->selections[$index])) {
+            $this->selections[$index]['result'] = $result;
+        }
+    }
+
+    /**
+     * Make a selection pending again when the form is saved.
+     */
+    public function clearSelectionResult(int $index): void
+    {
+        if (isset($this->selections[$index])) {
+            $this->selections[$index]['result'] = '';
+        }
+    }
+
     public function addTeam(int $index): void
     {
         if (! isset($this->selections[$index])) {
@@ -202,7 +227,7 @@ abstract class BetForm extends Component
             'canAddSelection' => count($this->selections) < self::MAX_SELECTIONS,
             'totalOdds' => $totalOdds === null ? null : Odds::format($totalOdds),
             'preview' => $this->preview(),
-            'results' => $this->savedResults(),
+            'resultButtons' => array_map(fn (array $selection): array => BetDetail::resultButtons(SelectionResult::tryFrom($selection['result'])), $this->selections),
             'settlement' => $this->savedSettlement(),
             'suggestions' => [
                 'sports' => $sports->pluck('name'),
@@ -316,6 +341,7 @@ abstract class BetForm extends Component
             'selections.*.pick' => ['required', 'string', 'max:255'],
             'selections.*.odds' => ['required', 'string', $odds],
             'selections.*.closing_odds' => ['nullable', 'string', $odds],
+            'selections.*.result' => ['nullable', Rule::enum(SelectionResult::class)],
         ];
     }
 
@@ -339,6 +365,7 @@ abstract class BetForm extends Component
             'selections.*.event_starts_date.required_with' => 'Enter the date too, or clear the time.',
             'selections.*.event_starts_date.date_format' => 'Enter a valid date.',
             'selections.*.event_starts_time.required_with' => 'Enter the time too, or clear the date.',
+            'selections.*.result' => 'Choose one of the results, or clear it.',
         ];
     }
 
@@ -401,6 +428,7 @@ abstract class BetForm extends Component
                 odds: $selection['odds'],
                 closingOdds: $this->nullIfBlank($selection['closing_odds']),
                 id: $selection['id'],
+                result: SelectionResult::tryFrom($selection['result']),
             ), $this->selections),
         );
     }
@@ -420,9 +448,10 @@ abstract class BetForm extends Component
     }
 
     /**
-     * Payout and profit if every selection wins, or null until stake and odds are valid.
+     * Payout and profit by the results chosen in the form: as settled once they settle
+     * the bet, else if every pending selection wins. Null until stake and odds are valid.
      *
-     * @return array{payout: string, profit: string}|null
+     * @return array{label: string, payout: string, profit: string}|null
      */
     private function preview(): ?array
     {
@@ -436,11 +465,19 @@ abstract class BetForm extends Component
 
         $calculator = new SettlementCalculator;
         $stakeMinorUnits = Money::toMinorUnits($stake);
-        $payout = $calculator->payout($stakeMinorUnits, $totalOdds, $this->is_free_bet);
+        $legs = array_map(fn (array $selection): Leg => new Leg(Decimal::fromInput($selection['odds']), SelectionResult::tryFrom($selection['result'])), $this->selections);
+        $hasResults = in_array(false, array_map(fn (Leg $leg): bool => $leg->isPending(), $legs), true);
+        $settlement = $calculator->settle($stakeMinorUnits, $this->is_free_bet, $legs);
+        $outcome = $settlement ?? $calculator->ifPendingWin($stakeMinorUnits, $this->is_free_bet, $legs);
 
         return [
-            'payout' => Money::format($payout, $bookmaker->currency),
-            'profit' => Money::format($calculator->profit($stakeMinorUnits, $payout, $this->is_free_bet), $bookmaker->currency, signed: true),
+            'label' => match (true) {
+                $settlement !== null => 'Payout',
+                $hasResults => 'Payout if every open selection wins',
+                default => 'Payout if it wins',
+            },
+            'payout' => Money::format($outcome->payout, $bookmaker->currency),
+            'profit' => Money::format($outcome->profit, $bookmaker->currency, signed: true),
         ];
     }
 
@@ -478,22 +515,6 @@ abstract class BetForm extends Component
             'profit' => Money::format($bet->profit, $bet->currency, signed: true),
             'isManual' => $bet->payout_is_manual,
         ];
-    }
-
-    /**
-     * For each selection in the form, the saved result it keeps ("Won", …), or null for
-     * a pending or new selection.
-     *
-     * @return list<string|null>
-     */
-    private function savedResults(): array
-    {
-        $saved = $this->editedBet()?->selections()->get()->keyBy('id');
-
-        return array_map(
-            fn (array $selection): ?string => $saved?->get($selection['id'] ?? 0)?->result?->label(),
-            $this->selections,
-        );
     }
 
     /**
@@ -582,7 +603,7 @@ abstract class BetForm extends Component
     }
 
     /**
-     * @return array{id: int|null, sport: string, competition: string, market: string, teams: list<string>, team_name: string, event_name: string, event_starts_date: string, event_starts_time: string, pick: string, odds: string, closing_odds: string, show_details: bool}
+     * @return array{id: int|null, sport: string, competition: string, market: string, teams: list<string>, team_name: string, event_name: string, event_starts_date: string, event_starts_time: string, pick: string, odds: string, closing_odds: string, result: string, show_details: bool}
      */
     protected function emptySelection(string $sport): array
     {
@@ -599,6 +620,7 @@ abstract class BetForm extends Component
             'pick' => '',
             'odds' => '',
             'closing_odds' => '',
+            'result' => '',
             'show_details' => false,
         ];
     }

@@ -387,9 +387,9 @@ same items. Touch targets ≥ 44 px.
 - **Editing bets (assumed in 2.7).** Every bet, open or settled, is edited with the same
   form at `/bets/{id}/edit` (linked from the bets list and bet detail pages once they
   exist, 2.8/2.11); saving goes to the bet detail page (the bets list until 2.11) with
-  "Bet updated". The form doesn't change results: each kept selection keeps its
-  result, a removed selection takes its result with it, and an added selection is
-  pending. When the stake, the free bet flag or the selections' odds or results change, the bet is settled again by the settlement
+  "Bet updated". The form doesn't change results (until 3.4, see "Settling from the
+  edit form"): each kept selection keeps its result, a removed selection takes its
+  result with it, and an added selection is pending. When the stake, the free bet flag or the selections' odds or results change, the bet is settled again by the settlement
   rules: it can go from settled to open (e.g. a pending selection was added) or from open
   to settled (e.g. the last pending selection was removed; `settled_at` is then the time
   of the edit), a bet that stays settled keeps its `settled_at`, and a manual payout is
@@ -525,6 +525,18 @@ same items. Touch targets ≥ 44 px.
   Editing a bet opens a selection's details when it has any of them, and the bet's
   details when it has a tipster, tags or notes. A failed field opens the details that
   hold it.
+- **Settling from the edit form (assumed in 3.4).** Every selection in the edit form,
+  added ones included, has the detail page's result buttons and, once it has a result,
+  "Clear result". A result chosen in the form is saved with the rest of the form, not
+  on the click, so Cancel (the close button) leaves the bet as it was. Saving settles
+  the bet through the settle service like the other changes in "Editing bets": a bet
+  that becomes settled is settled at the time of saving, one that stays settled keeps
+  its settlement date, and choosing the result a selection already has is no change and
+  keeps a manual payout. While the payout was entered by hand, the form's warning lists
+  results among the changes that replace it; there is no extra confirmation, as for the
+  form's other changes. The payout preview follows the chosen results: "Payout" once
+  they settle the bet, "Payout if every open selection wins" while some are set, else
+  "Payout if it wins". The New bet form has no result buttons.
 - **Sportmarket import (owner, before 4.1).** One bet per Sportmarket order, built from
   the order's non-failed rows. Orders that aren't fully settled are skipped and picked up
   by a later import, so the import never has to update a bet it created. The owner's

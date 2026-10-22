@@ -125,7 +125,7 @@ From the owner's review of v1.
       make the fields open where the user clicked (e.g. a per-selection toggle for
       selection details and the bet-level details directly below its own toggle).
       Feature tests for the time parsing and validation.
-- [ ] **3.4 Settle from the edit form.** On the edit page, each selection gets the same
+- [x] **3.4 Settle from the edit form.** On the edit page, each selection gets the same
       result buttons as the bet detail page (won, lost, void, half-won, half-lost, and
       clear), replacing the read-only result label. Saving applies results through the
       2.9 settle service, so un-settle/re-settle and the manual-payout rules behave

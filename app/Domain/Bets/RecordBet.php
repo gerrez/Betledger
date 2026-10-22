@@ -48,13 +48,17 @@ final class RecordBet
                 $selection->teams()->attach($this->teamIds($user, $selectionData, $sport));
             }
 
+            if ($this->hasResults($data)) {
+                $this->settleBet->recalculate($bet);
+            }
+
             return $bet;
         });
     }
 
     /**
-     * Replace a bet's details and selections with the edited ones. Selections that are
-     * kept (by id) keep their result; the others are removed, and new ones are pending.
+     * Replace a bet's details and selections with the edited ones, results included.
+     * Selections that are kept (by id) are updated in place; the others are removed.
      * When the stake, the free bet flag or the selections' odds or results change, the
      * bet is settled again by the settlement rules: it may become open or settled, and a
      * payout the user entered by hand is replaced by the calculated one.
@@ -150,7 +154,22 @@ final class RecordBet
             'pick' => $data->pick,
             'odds' => $data->odds,
             'closing_odds' => $data->closingOdds,
+            'result' => $data->result,
         ];
+    }
+
+    /**
+     * Whether any selection was entered with a result.
+     */
+    private function hasResults(BetData $data): bool
+    {
+        foreach ($data->selections as $selection) {
+            if ($selection->result !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

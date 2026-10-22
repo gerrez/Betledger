@@ -15,8 +15,8 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 
 /**
- * The bet form for an existing bet. Selections keep their results; saving a settled bet
- * settles it again when its stake, odds or selections change.
+ * The bet form for an existing bet, with result buttons per selection. Saving settles
+ * the bet again when its stake, odds, results or selections change.
  */
 #[Title('Edit bet')]
 class Edit extends BetForm
@@ -53,6 +53,7 @@ class Edit extends BetForm
             'pick' => $selection->pick,
             'odds' => Odds::format($selection->odds),
             'closing_odds' => $selection->closing_odds === null ? '' : Odds::format($selection->closing_odds),
+            'result' => $selection->result->value ?? '',
             'show_details' => $selection->competition_id !== null || $selection->market_id !== null || $selection->closing_odds !== null,
         ])->all());
 

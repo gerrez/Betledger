@@ -2,12 +2,14 @@
 
 namespace App\Domain\Bets;
 
+use App\Domain\Settlement\SelectionResult;
 use Carbon\CarbonInterface;
 
 /**
  * A validated selection as entered in the bet form. Sport, competition, market and
  * teams are names; competition and teams are looked up within the sport. When editing a
- * bet, `id` is the selection it replaces (null for a new one), so its result is kept.
+ * bet, `id` is the selection it replaces (null for a new one). `result` is null while
+ * the selection is pending.
  */
 final readonly class SelectionData
 {
@@ -25,5 +27,6 @@ final readonly class SelectionData
         public string $odds,
         public ?string $closingOdds,
         public ?int $id = null,
+        public ?SelectionResult $result = null,
     ) {}
 }

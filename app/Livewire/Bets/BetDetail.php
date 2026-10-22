@@ -76,6 +76,25 @@ final readonly class BetDetail
     }
 
     /**
+     * A selection's result buttons, one per result, with the one it has pressed.
+     *
+     * @return list<array{result: string, label: string, isPressed: bool, tone: 'won'|'lost'|'void'}>
+     */
+    public static function resultButtons(?SelectionResult $current): array
+    {
+        return array_map(fn (SelectionResult $result): array => [
+            'result' => $result->value,
+            'label' => $result->label(),
+            'isPressed' => $current === $result,
+            'tone' => match ($result) {
+                SelectionResult::Won, SelectionResult::HalfWon => 'won',
+                SelectionResult::Lost, SelectionResult::HalfLost => 'lost',
+                SelectionResult::Void => 'void',
+            },
+        ], SelectionResult::cases());
+    }
+
+    /**
      * @param  list<Leg>  $legs
      * @return array{label: string, profit: string, profitInBase: string|null, payout: string, isManual: bool, calculatedPayout: string, tone: 'profit'|'loss'|'even'}|null
      */
@@ -135,16 +154,7 @@ final readonly class BetDetail
             'startsAt' => $selection->event_starts_at === null ? null : self::formatDateTime($selection->event_starts_at),
             'odds' => Odds::format($selection->odds),
             'hasResult' => $selection->result !== null,
-            'buttons' => array_map(fn (SelectionResult $result): array => [
-                'result' => $result->value,
-                'label' => $result->label(),
-                'isPressed' => $selection->result === $result,
-                'tone' => match ($result) {
-                    SelectionResult::Won, SelectionResult::HalfWon => 'won',
-                    SelectionResult::Lost, SelectionResult::HalfLost => 'lost',
-                    SelectionResult::Void => 'void',
-                },
-            ], SelectionResult::cases()),
+            'buttons' => self::resultButtons($selection->result),
             'closingOdds' => $selection->closing_odds === null ? null : Odds::format($selection->closing_odds),
             'clv' => $clv === null ? null : [
                 'label' => match (self::clvTone($clv)) {

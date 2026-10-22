@@ -117,7 +117,7 @@ From the owner's review of v1.
       navigation, focus states, 44 px targets on phones, dark mode. Flux free edition
       only (no Flux Pro, no new package without justification). Feature tests still pass;
       add tests where confirm behaviour changes.
-- [ ] **3.3 Bet form: 24-hour time and "More details".** The "Placed" and "Starts"
+- [x] **3.3 Bet form: 24-hour time and "More details".** The "Placed" and "Starts"
       fields are `datetime-local`, which shows AM/PM in English (US) browsers and can't
       be forced to 24-hour. Replace them with a date input plus a 24-hour time input
       (`HH:MM`, 00–23), stored as before. "More details" currently opens extra fields

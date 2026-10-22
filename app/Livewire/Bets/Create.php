@@ -23,7 +23,8 @@ class Create extends BetForm
 
         $bookmaker = $bookmakers->firstWhere('id', $latestBet?->bookmaker_id) ?? $bookmakers->first();
 
-        $this->placed_at = now()->format(self::DATETIME_LOCAL);
+        $this->placed_date = now()->format(self::DATE);
+        $this->placed_time = now()->format(self::TIME);
         $this->selectBookmaker($bookmaker);
         $this->selections = [$this->emptySelection($latestBet?->selections->first()?->sport->name ?? '')];
     }

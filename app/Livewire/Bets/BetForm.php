@@ -9,6 +9,7 @@ use App\Domain\ExchangeRate;
 use App\Domain\Money;
 use App\Domain\Odds;
 use App\Domain\Settlement\SettlementCalculator;
+use App\Domain\TimeOfDay;
 use App\Models\Bet;
 use App\Models\Bookmaker;
 use App\Models\Sport;
@@ -32,11 +33,17 @@ abstract class BetForm extends Component
     /** The most selections an accumulator may have. */
     public const MAX_SELECTIONS = 20;
 
-    protected const DATETIME_LOCAL = 'Y-m-d\TH:i';
+    /** The format of the date fields, as `<input type="date">` sends it. */
+    protected const DATE = 'Y-m-d';
+
+    /** The format of the 24-hour time fields. */
+    protected const TIME = 'H:i';
 
     public string $bookmaker_id = '';
 
-    public string $placed_at = '';
+    public string $placed_date = '';
+
+    public string $placed_time = '';
 
     public string $stake = '';
 
@@ -54,14 +61,16 @@ abstract class BetForm extends Component
 
     public string $notes = '';
 
+    /** Whether the bet's own details (tipster, rate, tags, notes) are shown. */
     public bool $showDetails = false;
 
     /**
      * The bet's selections: a single has one, an accumulator two or more. `id` is the
      * saved selection being edited (null for a new one). `team_name` is a team being
-     * typed, added to `teams` with Enter or "Add".
+     * typed, added to `teams` with Enter or "Add". `show_details` shows the selection's
+     * own details (competition, market, closing odds).
      *
-     * @var list<array{id: int|null, sport: string, competition: string, market: string, teams: list<string>, team_name: string, event_name: string, event_starts_at: string, pick: string, odds: string, closing_odds: string}>
+     * @var list<array{id: int|null, sport: string, competition: string, market: string, teams: list<string>, team_name: string, event_name: string, event_starts_date: string, event_starts_time: string, pick: string, odds: string, closing_odds: string, show_details: bool}>
      */
     public array $selections = [];
 
@@ -120,6 +129,13 @@ abstract class BetForm extends Component
 
         unset($this->selections[$index]);
         $this->selections = array_values($this->selections);
+    }
+
+    public function toggleSelectionDetails(int $index): void
+    {
+        if (isset($this->selections[$index])) {
+            $this->selections[$index]['show_details'] = ! $this->selections[$index]['show_details'];
+        }
     }
 
     public function addTeam(int $index): void
@@ -213,12 +229,12 @@ abstract class BetForm extends Component
             $this->selections[$index]['event_name'] = trim($this->selections[$index]['event_name']) ?: $this->eventNameFor($this->selections[$index]['teams']);
         }
 
-        $this->normalizeNumbers();
+        $this->normalizeInput();
 
         try {
             $this->validate($this->rules(), $this->messages());
         } catch (ValidationException $exception) {
-            $this->showDetails = $this->showDetails || $this->hasDetailErrors($exception);
+            $this->showDetailsWithErrors($exception);
 
             throw $exception;
         }
@@ -237,6 +253,12 @@ abstract class BetForm extends Component
             }
         };
 
+        $time = function (string $attribute, mixed $value, Closure $fail): void {
+            if (! is_string($value) || TimeOfDay::fromInput($value) === null) {
+                $fail('Enter a 24-hour time, like 18:30.');
+            }
+        };
+
         return [
             'bookmaker_id' => [
                 'required',
@@ -244,7 +266,8 @@ abstract class BetForm extends Component
                     ->where('user_id', $this->user()->id)
                     ->where(fn ($query) => $query->where('is_active', true)->orWhere('id', $this->editedBet()?->bookmaker_id)),
             ],
-            'placed_at' => ['required', 'date'],
+            'placed_date' => ['required', 'date_format:'.self::DATE],
+            'placed_time' => ['required', 'string', $time],
             'stake' => [
                 'required',
                 'string',
@@ -288,7 +311,8 @@ abstract class BetForm extends Component
             'selections.*.teams' => ['array'],
             'selections.*.teams.*' => ['string', 'max:255'],
             'selections.*.event_name' => ['required', 'string', 'max:255'],
-            'selections.*.event_starts_at' => ['nullable', 'date'],
+            'selections.*.event_starts_date' => ['nullable', 'required_with:selections.*.event_starts_time', 'date_format:'.self::DATE],
+            'selections.*.event_starts_time' => ['nullable', 'required_with:selections.*.event_starts_date', 'string', $time],
             'selections.*.pick' => ['required', 'string', 'max:255'],
             'selections.*.odds' => ['required', 'string', $odds],
             'selections.*.closing_odds' => ['nullable', 'string', $odds],
@@ -303,34 +327,44 @@ abstract class BetForm extends Component
         return [
             'bookmaker_id.required' => 'Choose the bookmaker.',
             'bookmaker_id.exists' => 'Choose one of your bookmakers.',
+            'placed_date.required' => 'Enter the date.',
+            'placed_date.date_format' => 'Enter a valid date.',
+            'placed_time.required' => 'Enter the time.',
             'selections.max' => 'An accumulator can have at most '.self::MAX_SELECTIONS.' selections.',
             'selections.*.id' => 'This selection is not part of the bet. Reload the page and try again.',
             'selections.*.sport.required' => 'Enter the sport.',
             'selections.*.event_name.required' => 'Enter the event, or add the teams taking part.',
             'selections.*.pick.required' => 'Enter what you backed.',
             'selections.*.odds.required' => 'Enter the odds.',
+            'selections.*.event_starts_date.required_with' => 'Enter the date too, or clear the time.',
+            'selections.*.event_starts_date.date_format' => 'Enter a valid date.',
+            'selections.*.event_starts_time.required_with' => 'Enter the time too, or clear the date.',
         ];
     }
 
     /**
-     * Whether a field under "More details" failed, so the details must be shown.
+     * Show the details, the bet's or a selection's, that hold a field that failed.
      */
-    private function hasDetailErrors(ValidationException $exception): bool
+    private function showDetailsWithErrors(ValidationException $exception): void
     {
         foreach (array_keys($exception->errors()) as $key) {
-            if (preg_match('/^(tipster|tags|notes|exchange_rate|selections\.\d+\.(competition|market|closing_odds))(\.|$)/', $key) === 1) {
-                return true;
+            if (preg_match('/^(tipster|tags|notes|exchange_rate)(\.|$)/', $key) === 1) {
+                $this->showDetails = true;
+            }
+
+            if (preg_match('/^selections\.(\d+)\.(competition|market|closing_odds)(\.|$)/', $key, $matches) === 1 && isset($this->selections[(int) $matches[1]])) {
+                $this->selections[(int) $matches[1]]['show_details'] = true;
             }
         }
-
-        return false;
     }
 
     /**
-     * Trim the typed numbers and accept a decimal comma ("1,95").
+     * Trim the typed numbers and accept a decimal comma ("1,95"); write valid times as
+     * "HH:MM" ("1830" → "18:30").
      */
-    private function normalizeNumbers(): void
+    private function normalizeInput(): void
     {
+        $this->placed_time = TimeOfDay::fromInput($this->placed_time) ?? trim($this->placed_time);
         $this->stake = Decimal::fromInput($this->stake);
         $this->exchange_rate = Decimal::fromInput($this->exchange_rate);
 
@@ -341,6 +375,7 @@ abstract class BetForm extends Component
         foreach (array_keys($this->selections) as $index) {
             $this->selections[$index]['odds'] = Decimal::fromInput($this->selections[$index]['odds']);
             $this->selections[$index]['closing_odds'] = Decimal::fromInput($this->selections[$index]['closing_odds']);
+            $this->selections[$index]['event_starts_time'] = TimeOfDay::fromInput($this->selections[$index]['event_starts_time']) ?? trim($this->selections[$index]['event_starts_time']);
         }
     }
 
@@ -348,7 +383,7 @@ abstract class BetForm extends Component
     {
         return new BetData(
             bookmakerId: (int) $this->bookmaker_id,
-            placedAt: Carbon::parse($this->placed_at),
+            placedAt: Carbon::parse($this->placed_date.' '.$this->placed_time),
             stake: Money::toMinorUnits($this->stake),
             exchangeRate: $this->exchange_rate,
             isFreeBet: $this->is_free_bet,
@@ -361,7 +396,7 @@ abstract class BetForm extends Component
                 market: $this->nullIfBlank($selection['market']),
                 teams: $selection['teams'],
                 eventName: $selection['event_name'],
-                eventStartsAt: $selection['event_starts_at'] === '' ? null : Carbon::parse($selection['event_starts_at']),
+                eventStartsAt: $selection['event_starts_date'] === '' ? null : Carbon::parse($selection['event_starts_date'].' '.$selection['event_starts_time']),
                 pick: trim($selection['pick']),
                 odds: $selection['odds'],
                 closingOdds: $this->nullIfBlank($selection['closing_odds']),
@@ -547,7 +582,7 @@ abstract class BetForm extends Component
     }
 
     /**
-     * @return array{id: int|null, sport: string, competition: string, market: string, teams: list<string>, team_name: string, event_name: string, event_starts_at: string, pick: string, odds: string, closing_odds: string}
+     * @return array{id: int|null, sport: string, competition: string, market: string, teams: list<string>, team_name: string, event_name: string, event_starts_date: string, event_starts_time: string, pick: string, odds: string, closing_odds: string, show_details: bool}
      */
     protected function emptySelection(string $sport): array
     {
@@ -559,10 +594,12 @@ abstract class BetForm extends Component
             'teams' => [],
             'team_name' => '',
             'event_name' => '',
-            'event_starts_at' => '',
+            'event_starts_date' => '',
+            'event_starts_time' => '',
             'pick' => '',
             'odds' => '',
             'closing_odds' => '',
+            'show_details' => false,
         ];
     }
 

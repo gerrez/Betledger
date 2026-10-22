@@ -131,7 +131,7 @@ From the owner's review of v1.
       2.9 settle service, so un-settle/re-settle and the manual-payout rules behave
       exactly as on the detail page. Tests: results saved from the form, clearing a
       result un-settles, isolation.
-- [ ] **3.5 Page widths and welcome page.** Home (`overview`) and the Bets list are
+- [x] **3.5 Page widths and welcome page.** Home (`overview`) and the Bets list are
       capped at `max-w-2xl`, while Statistics uses the full width. On desktop, make Home
       use the same width as Statistics with a layout that fills it (e.g. KPI tiles in
       one row, open bets beside the profit card); keep the phone layout. Decide whether

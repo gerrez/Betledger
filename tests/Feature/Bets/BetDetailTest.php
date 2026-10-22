@@ -207,10 +207,10 @@ class BetDetailTest extends TestCase
         $bet = $this->single(odds: '1.95', stake: 20000, result: SelectionResult::Won);
         $page = $this->page($bet)->call('editPayout')->set('payout', '389.50')->call('savePayout');
 
-        $page->assertSeeHtml('wire:confirm="You entered this payout (€389.50) yourself. Changing a result replaces it with the calculated payout."');
+        $page->assertSeeHtml('data-confirm="You entered this payout (€389.50) yourself. Changing a result replaces it with the calculated payout."');
 
         $page->call('setResult', $bet->selections()->firstOrFail()->id, 'half_won')
-            ->assertDontSeeHtml('wire:confirm="You entered');
+            ->assertDontSeeHtml('data-confirm="You entered');
         $bet->refresh();
         $this->assertFalse($bet->payout_is_manual);
         $this->assertSame(29500, $bet->payout);
@@ -269,7 +269,7 @@ class BetDetailTest extends TestCase
         $bet = Bet::factory()->forBookmaker($this->bookmaker)->accumulator()->create();
 
         $this->page($bet)
-            ->assertSeeHtml('wire:confirm="Delete this bet? This can’t be undone."')
+            ->assertSeeHtml(['data-confirm-title="Delete this bet?"', 'data-confirm-danger'])
             ->call('delete')
             ->assertRedirect(route('bets.index'));
 

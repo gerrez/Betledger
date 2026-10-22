@@ -40,69 +40,69 @@
         @endif
 
         <div class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-0.5 lg:mx-0 lg:flex-wrap lg:px-0">
-            <x-filter-select wire:model.live="bookmaker" label="Bookmaker">
-                <option value="">All bookmakers</option>
+            <x-select variant="pill" wire:model.live="bookmaker" label="Bookmaker">
+                <x-select.option value="">All bookmakers</x-select.option>
                 @foreach ($bookmakers as $option)
-                    <option value="{{ $option->id }}" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }}</option>
+                    <x-select.option value="{{ $option->id }}" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }}</x-select.option>
                 @endforeach
-            </x-filter-select>
+            </x-select>
 
-            <x-filter-select wire:model.live="sport" label="Sport">
-                <option value="">All sports</option>
+            <x-select variant="pill" wire:model.live="sport" label="Sport">
+                <x-select.option value="">All sports</x-select.option>
                 @foreach ($sports as $option)
-                    <option value="{{ $option->id }}" wire:key="sport-{{ $option->id }}">{{ $option->name }}</option>
+                    <x-select.option value="{{ $option->id }}" wire:key="sport-{{ $option->id }}">{{ $option->name }}</x-select.option>
                 @endforeach
-            </x-filter-select>
+            </x-select>
 
-            <x-filter-select wire:model.live="competition" label="Competition">
-                <option value="">All competitions</option>
+            <x-select variant="pill" wire:model.live="competition" label="Competition">
+                <x-select.option value="">All competitions</x-select.option>
                 @foreach ($competitions as $sportName => $options)
-                    <optgroup label="{{ $sportName }}" wire:key="competition-group-{{ $loop->index }}">
+                    <x-select.group heading="{{ $sportName }}" wire:key="competition-group-{{ $loop->index }}">
                         @foreach ($options as $option)
-                            <option value="{{ $option->id }}" wire:key="competition-{{ $option->id }}">{{ $option->name }}</option>
+                            <x-select.option value="{{ $option->id }}" wire:key="competition-{{ $option->id }}">{{ $option->name }}</x-select.option>
                         @endforeach
-                    </optgroup>
+                    </x-select.group>
                 @endforeach
-            </x-filter-select>
+            </x-select>
 
-            <x-filter-select wire:model.live="team" label="Team">
-                <option value="">All teams</option>
+            <x-select variant="pill" wire:model.live="team" label="Team">
+                <x-select.option value="">All teams</x-select.option>
                 @foreach ($teams as $sportName => $options)
-                    <optgroup label="{{ $sportName }}" wire:key="team-group-{{ $loop->index }}">
+                    <x-select.group heading="{{ $sportName }}" wire:key="team-group-{{ $loop->index }}">
                         @foreach ($options as $option)
-                            <option value="{{ $option->id }}" wire:key="team-{{ $option->id }}">{{ $option->name }}</option>
+                            <x-select.option value="{{ $option->id }}" wire:key="team-{{ $option->id }}">{{ $option->name }}</x-select.option>
                         @endforeach
-                    </optgroup>
+                    </x-select.group>
                 @endforeach
-            </x-filter-select>
+            </x-select>
 
-            <x-filter-select wire:model.live="market" label="Market">
-                <option value="">All markets</option>
+            <x-select variant="pill" wire:model.live="market" label="Market">
+                <x-select.option value="">All markets</x-select.option>
                 @foreach ($markets as $option)
-                    <option value="{{ $option->id }}" wire:key="market-{{ $option->id }}">{{ $option->name }}</option>
+                    <x-select.option value="{{ $option->id }}" wire:key="market-{{ $option->id }}">{{ $option->name }}</x-select.option>
                 @endforeach
-            </x-filter-select>
+            </x-select>
 
-            <x-filter-select wire:model.live="tipster" label="Tipster">
-                <option value="">All tipsters</option>
+            <x-select variant="pill" wire:model.live="tipster" label="Tipster">
+                <x-select.option value="">All tipsters</x-select.option>
                 @foreach ($tipsters as $option)
-                    <option value="{{ $option->id }}" wire:key="tipster-{{ $option->id }}">{{ $option->name }}</option>
+                    <x-select.option value="{{ $option->id }}" wire:key="tipster-{{ $option->id }}">{{ $option->name }}</x-select.option>
                 @endforeach
-            </x-filter-select>
+            </x-select>
 
-            <x-filter-select wire:model.live="tag" label="Tag">
-                <option value="">All tags</option>
+            <x-select variant="pill" wire:model.live="tag" label="Tag">
+                <x-select.option value="">All tags</x-select.option>
                 @foreach ($tags as $option)
-                    <option value="{{ $option->id }}" wire:key="tag-{{ $option->id }}">{{ $option->name }}</option>
+                    <x-select.option value="{{ $option->id }}" wire:key="tag-{{ $option->id }}">{{ $option->name }}</x-select.option>
                 @endforeach
-            </x-filter-select>
+            </x-select>
 
-            <x-filter-select wire:model.live="type" label="Bet type">
-                <option value="">All bet types</option>
+            <x-select variant="pill" wire:model.live="type" label="Bet type">
+                <x-select.option value="">All bet types</x-select.option>
                 @foreach ($types as $value => $label)
-                    <option value="{{ $value }}" wire:key="type-{{ $value }}">{{ $label }}</option>
+                    <x-select.option value="{{ $value }}" wire:key="type-{{ $value }}">{{ $label }}</x-select.option>
                 @endforeach
-            </x-filter-select>
+            </x-select>
 
             <button
                 type="button"

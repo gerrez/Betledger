@@ -624,6 +624,18 @@ class CreateBetTest extends TestCase
             ->assertDontSee('Total odds');
     }
 
+    public function test_switching_back_to_a_single_asks_for_confirmation_only_from_an_accumulator(): void
+    {
+        $user = User::factory()->create();
+        Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        Livewire::test(Create::class)
+            ->assertDontSeeHtml('data-confirm-title="Switch to a single?"')
+            ->call('useAccumulator')
+            ->assertSeeHtml('data-confirm-title="Switch to a single?"');
+    }
+
     public function test_an_accumulator_has_at_most_20_selections(): void
     {
         $user = User::factory()->create();

@@ -100,7 +100,7 @@
                         type="button"
                         wire:key="selection-{{ $selection['id'] }}-result-{{ $button['result'] }}"
                         wire:click="setResult({{ $selection['id'] }}, '{{ $button['result'] }}')"
-                        @if ($detail->confirmResultChange !== null && ! $button['isPressed']) wire:confirm="{{ $detail->confirmResultChange }}" @endif
+                        @if ($detail->confirmResultChange !== null && ! $button['isPressed']) data-confirm="{{ $detail->confirmResultChange }}" data-confirm-title="Replace your payout?" data-confirm-button="Change result" @endif
                         aria-pressed="{{ $button['isPressed'] ? 'true' : 'false' }}"
                         @class([
                             'h-11 rounded-[10px] border text-[13px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
@@ -117,7 +117,7 @@
                 <button
                     type="button"
                     wire:click="clearResult({{ $selection['id'] }})"
-                    @if ($detail->confirmResultChange !== null) wire:confirm="{{ $detail->confirmResultChange }}" @endif
+                    @if ($detail->confirmResultChange !== null) data-confirm="{{ $detail->confirmResultChange }}" data-confirm-title="Replace your payout?" data-confirm-button="Clear result" @endif
                     class="h-11 self-start text-sm font-medium text-accent-content hover:underline"
                 >{{ $detail->isAccumulator ? 'Clear result' : 'Clear result (back to open)' }}</button>
             @endif
@@ -188,7 +188,10 @@
     <button
         type="button"
         wire:click="delete"
-        wire:confirm="Delete this bet? This can’t be undone."
+        data-confirm="Its selections and result are deleted too. This can’t be undone."
+        data-confirm-title="Delete this bet?"
+        data-confirm-button="Delete bet"
+        data-confirm-danger
         class="h-12 rounded-xl border border-loss/30 bg-surface text-[15px] font-medium text-loss hover:bg-loss-soft"
     >Delete bet</button>
 </div>

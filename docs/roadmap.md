@@ -109,7 +109,7 @@ From the owner's review of v1.
       `BetSchemaTest` assert that the row is rejected (e.g. `QueryException`) instead of
       matching SQLite's "FOREIGN KEY constraint failed" text. Update `CLAUDE.md`'s Stack
       section to say tests run on both.
-- [ ] **3.2 Confirm dialogs and dropdowns.** Replace every `wire:confirm` (browser
+- [x] **3.2 Confirm dialogs and dropdowns.** Replace every `wire:confirm` (browser
       `confirm()` popup) with one shared confirmation modal in the app's style: title,
       message, cancel, and a confirm button (danger style for deletes). Replace the native
       `<select>`s (`filter-select` component, bet form, Bookmakers, base currency) with

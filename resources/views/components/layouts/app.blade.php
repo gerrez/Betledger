@@ -102,6 +102,8 @@
             <x-nav.tab-item :href="route('settings.profile')" icon="cog-6-tooth" :current="request()->routeIs('settings.*', 'bookmakers.*', 'lists.*')">Settings</x-nav.tab-item>
         </nav>
 
+        <x-confirm-dialog />
+
         @fluxScripts
     </body>
 </html>

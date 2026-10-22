@@ -22,7 +22,10 @@ user data belongs to a user, and no user may ever see or change another user's d
   (`config/livewire.php` makes `php artisan make:livewire` generate this format). Pass
   data to the view from `render()`.
 - Flux UI (free edition only — no Flux Pro components), Tailwind CSS 4, Vite
-- SQLite for local dev and tests (tests use an in-memory database, see `phpunit.xml`)
+- SQLite for local dev and tests (tests use an in-memory database, see `phpunit.xml`);
+  production runs Postgres, so CI runs the test suite on both (the `tests-postgres` job
+  sets `DB_CONNECTION=pgsql`). Write queries and test assertions that hold on both,
+  e.g. `$this->expectConstraintViolation()` rather than matching a driver's error text
 - PHPUnit (class-based tests, not Pest), Laravel Pint, Larastan (PHPStan level 6)
 - Auth comes from the Livewire starter kit (login, register, password reset, email
   verification, profile settings). Build on it; don't replace it.

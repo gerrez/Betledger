@@ -16,7 +16,6 @@ use App\Models\Tag;
 use App\Models\Team;
 use App\Models\Tipster;
 use App\Models\User;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -207,8 +206,7 @@ class BetSchemaTest extends TestCase
         $tag = Tag::factory()->for($bet->user)->create();
         $bet->tags()->attach($tag);
 
-        $this->expectException(QueryException::class);
-        $this->expectExceptionMessage('FOREIGN KEY constraint failed');
+        $this->expectConstraintViolation();
 
         $tag->delete();
     }

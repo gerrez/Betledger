@@ -300,6 +300,9 @@ same items. Touch targets ≥ 44 px.
 
 <!-- Owner decisions still pending, plus assumptions Claude sessions had to make. -->
 
+- **Postgres version in CI (assumed in 3.1).** The docs don't say which Postgres version
+  production runs. CI uses the `postgres:17` image; change it in `.github/workflows/ci.yml`
+  if production is on another major version.
 - **Bookmakers and Lists on phones (assumed in 2.1).** The phone tab bar has five slots
   (Home, Bets, New bet, Stats, Settings) and the mockups don't show where Bookmakers and
   Lists go on phones. They are linked from the Settings page on phones (and from the

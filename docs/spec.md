@@ -315,6 +315,14 @@ same items. Touch targets ≥ 44 px.
   for contrast. Revisited in 2.16: kept. Every text/background pair in both themes is
   at least WCAG AA (4.5:1), e.g. muted on dark surface 6.8:1, dark text on the dark
   accent 5.7:1.
+- **Page widths on desktop (assumed in 3.5).** Home and Statistics use the full content
+  width (up to 1120 px). On desktop, Home shows the KPI tiles in one row above the profit
+  card and the open bets side by side; phones keep the stacked layout. The Bets list
+  stays a single column capped at 672 px (`max-w-2xl`): its cards put the title and the
+  amounts on opposite edges, which drift apart and get harder to scan when stretched,
+  and a multi-column grid would break the list's top-to-bottom sort order. The bet form
+  and bet detail stay narrow and centred. The public `/` page redirects to Home, or to
+  the login page for guests.
 - **Touch targets on desktop (assumed in 2.16).** The ≥ 44 px rule is applied below the
   desktop breakpoint (1024 px), where the phone layout is used. On desktop, Flux's
   compact controls (40 px inputs, 32 px small buttons) stay as they are, since they're

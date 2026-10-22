@@ -12,10 +12,11 @@ use App\Livewire\Settings\BaseCurrency;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
 use App\Livewire\Statistics\Index as StatisticsIndex;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route(Auth::check() ? 'dashboard' : 'login');
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {

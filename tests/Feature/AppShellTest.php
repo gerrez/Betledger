@@ -38,6 +38,18 @@ class AppShellTest extends TestCase
         $this->get(route($routeName))->assertRedirect(route('login'));
     }
 
+    public function test_the_root_url_sends_guests_to_the_login_page(): void
+    {
+        $this->get('/')->assertRedirect(route('login'));
+    }
+
+    public function test_the_root_url_sends_signed_in_users_to_the_overview(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->get('/')->assertRedirect(route('dashboard'));
+    }
+
     #[DataProvider('appRoutes')]
     public function test_authenticated_users_see_the_page_with_the_app_navigation(string $routeName): void
     {

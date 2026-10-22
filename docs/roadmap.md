@@ -102,7 +102,7 @@ sections of `docs/spec.md`, and the named mockup in `docs/design/project/`.
 
 From the owner's review of v1.
 
-- [ ] **3.1 Postgres in CI.** Production runs Postgres, but CI only tests SQLite (2.8
+- [x] **3.1 Postgres in CI.** Production runs Postgres, but CI only tests SQLite (2.8
       shipped a sort that broke on Postgres and was only caught by hand). Add a Postgres
       job to the CI workflow next to the SQLite one (this task is explicitly allowed to
       change CI). Make the database-constraint tests in `BetIsolationTest` and

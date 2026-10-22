@@ -11,7 +11,6 @@ use App\Models\Tag;
 use App\Models\Team;
 use App\Models\Tipster;
 use App\Models\User;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -50,8 +49,7 @@ class BetIsolationTest extends TestCase
         $user = User::factory()->create();
         $someoneElses = Bookmaker::factory()->create();
 
-        $this->expectException(QueryException::class);
-        $this->expectExceptionMessage('FOREIGN KEY constraint failed');
+        $this->expectConstraintViolation();
 
         Bet::factory()->for($user)->create(['bookmaker_id' => $someoneElses->id]);
     }
@@ -60,8 +58,7 @@ class BetIsolationTest extends TestCase
     {
         $bet = Bet::factory()->create();
 
-        $this->expectException(QueryException::class);
-        $this->expectExceptionMessage('FOREIGN KEY constraint failed');
+        $this->expectConstraintViolation();
 
         $bet->update(['tipster_id' => Tipster::factory()->create()->id]);
     }
@@ -70,8 +67,7 @@ class BetIsolationTest extends TestCase
     {
         $bet = Bet::factory()->create();
 
-        $this->expectException(QueryException::class);
-        $this->expectExceptionMessage('FOREIGN KEY constraint failed');
+        $this->expectConstraintViolation();
 
         $bet->tags()->attach(Tag::factory()->create());
     }
@@ -81,8 +77,7 @@ class BetIsolationTest extends TestCase
         $bet = Bet::factory()->create();
         $selection = Bet::factory()->create()->selections[0];
 
-        $this->expectException(QueryException::class);
-        $this->expectExceptionMessage('FOREIGN KEY constraint failed');
+        $this->expectConstraintViolation();
 
         $selection->forceFill(['bet_id' => $bet->id, 'position' => 2])->save();
     }
@@ -108,8 +103,7 @@ class BetIsolationTest extends TestCase
         $selection = Bet::factory()->create()->selections[0];
         $someoneElses = $model::factory()->create();
 
-        $this->expectException(QueryException::class);
-        $this->expectExceptionMessage('FOREIGN KEY constraint failed');
+        $this->expectConstraintViolation();
 
         $selection->update([$column => $someoneElses->id]);
     }
@@ -118,8 +112,7 @@ class BetIsolationTest extends TestCase
     {
         $selection = Bet::factory()->create()->selections[0];
 
-        $this->expectException(QueryException::class);
-        $this->expectExceptionMessage('FOREIGN KEY constraint failed');
+        $this->expectConstraintViolation();
 
         $selection->teams()->attach(Team::factory()->create());
     }

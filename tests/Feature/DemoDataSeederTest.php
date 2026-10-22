@@ -23,7 +23,7 @@ class DemoDataSeederTest extends TestCase
 
         $demo = User::query()->where('email', DemoDataSeeder::DEMO_EMAIL)->sole();
         $this->assertNotNull($demo->email_verified_at);
-        $this->assertSame(4, $demo->bookmakers()->count());
+        $this->assertSame(5, $demo->bookmakers()->count());
         $this->assertSame(1, $demo->bookmakers()->where('is_active', false)->count());
         $this->assertSame(4, $demo->sports()->count());
         $this->assertSame(6, $demo->competitions()->count());

@@ -29,6 +29,7 @@ class AppShellTest extends TestCase
             'settings currency' => ['settings.currency'],
             'settings password' => ['settings.password'],
             'settings appearance' => ['settings.appearance'],
+            'settings import' => ['settings.import'],
         ];
     }
 

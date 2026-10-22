@@ -77,6 +77,8 @@ class DemoDataSeeder extends Seeder
         $bet365 = $user->bookmakers()->create(['name' => 'Bet365', 'currency' => Currency::Gbp, 'exchange_rate' => '1.17']);
         $danskeSpil = $user->bookmakers()->create(['name' => 'Danske Spil', 'currency' => Currency::Dkk, 'exchange_rate' => '0.1341']);
         $oldBookie = $user->bookmakers()->create(['name' => 'Old Bookie', 'currency' => Currency::Eur, 'exchange_rate' => '1', 'is_active' => false]);
+        // No bets: Settings → Import fills it from tests/Fixtures/sportmarket/orders.csv.
+        $user->bookmakers()->create(['name' => 'Sportmarket', 'currency' => Currency::Eur, 'exchange_rate' => '1']);
 
         $football = $user->sports()->create(['name' => 'Football']);
         $tennis = $user->sports()->create(['name' => 'Tennis']);

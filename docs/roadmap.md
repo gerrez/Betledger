@@ -152,7 +152,7 @@ is too big for one review.
       against `tests/Fixtures/sportmarket/orders.csv`, one per case listed in the spec
       (won, lost, half results, push, status void, failed and all-failed orders, several
       fills with different results, cents-off P&L, `fb_ht`/`fb_et`, each market code).
-- [ ] **4.1b Sportmarket import: page.** An Import page linked from Settings: choose the
+- [x] **4.1b Sportmarket import: page.** An Import page linked from Settings: choose the
       bookmaker, upload the CSV, preview every order (bet to create, skipped with the
       reason, or error), then confirm; nothing is saved before confirming. Saving goes
       through the existing record and settle services in one transaction. Feature tests:

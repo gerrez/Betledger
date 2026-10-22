@@ -10,9 +10,10 @@ use Carbon\CarbonImmutable;
 /**
  * The settled single a Sportmarket order becomes. List entries (sport, competition,
  * market, teams, tags) are names, as in the bet form. `payout` is what Sportmarket
- * reports (stake + P&L) and `manualPayout` is that same amount when it differs from the
+ * reports (stake + P&L, but never below 0) and `manualPayout` is that same amount when it differs from the
  * payout calculated for `result`, else null. Amounts are minor units of the order's
- * currency.
+ * currency. `warning` tells the user when the bet differs from what Sportmarket reported
+ * (a loss larger than the stake is recorded as lost); it is also in the notes.
  */
 final readonly class ImportedBet
 {
@@ -37,6 +38,7 @@ final readonly class ImportedBet
         public int $payout,
         public ?int $manualPayout,
         public CarbonImmutable $settledAt,
+        public ?string $warning = null,
     ) {}
 
     /**

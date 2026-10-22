@@ -185,7 +185,7 @@ class Import extends Component
     }
 
     /**
-     * @return array{event: string, pick: string, placed: string, stake: string, result: string, profit: string, tone: string, isManual: bool}
+     * @return array{event: string, pick: string, placed: string, stake: string, result: string, profit: string, tone: string, isManual: bool, warning: string|null}
      */
     private function previewRow(ImportedBet $bet, Currency $currency): array
     {
@@ -204,6 +204,7 @@ class Import extends Component
                 default => 'none',
             },
             'isManual' => $bet->manualPayout !== null,
+            'warning' => $bet->warning,
         ];
     }
 

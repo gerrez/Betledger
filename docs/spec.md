@@ -252,6 +252,9 @@ the 3-dp odds, Sportmarket's cents, or fills with different results), it is kept
 settlement time), but never before `placed_at`. On the owner's full export (588 orders)
 this gives 331 won, 157 lost, 54 void, 30 half-won and 10 half-lost, with no order close
 to two results; 211 bets get a manual payout, at most €1.14 from the calculated one.
+An order whose reported loss is larger than its stake (payout below 0, which a bet
+can't have) is imported as **lost** with payout 0, and its notes and the preview say
+"Sportmarket reported a P&L of −150.02 on a stake of 150.00; recorded as lost."
 
 **Rows that are skipped**, each listed with its reason in the preview:
 - every row of the order failed;
@@ -584,3 +587,7 @@ same items. Touch targets ≥ 44 px.
   has no Import button. Imported bets get the bookmaker's current rate, as in the bet
   form. There is no undo for a whole import: imported bets are deleted one by one like
   any other bet.
+- **Losses larger than the stake (owner, in 4.1b).** Some orders in the owner's export
+  report a P&L below −stake. Until the owner knows why, they are imported as lost with
+  payout 0 (profit −stake) instead of being refused, and the reported P&L is kept in the
+  notes. Owner: what causes these, and should the extra loss count in the profit?

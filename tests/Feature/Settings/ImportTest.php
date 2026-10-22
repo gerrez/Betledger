@@ -125,6 +125,30 @@ class ImportTest extends TestCase
         $this->assertSame(SelectionResult::Won, $bet->selections()->sole()->result);
     }
 
+    public function test_a_loss_larger_than_the_stake_is_imported_as_lost(): void
+    {
+        $user = User::factory()->create();
+        $sportmarket = Bookmaker::factory()->for($user)->create();
+        $fixture = (string) file_get_contents(self::FIXTURE);
+        $contents = (string) preg_replace('/^(2383987225,.*),-150\.00,/m', '$1,-150.02,', $fixture);
+        $warning = 'Sportmarket reported a P&L of −150.02 on a stake of 150.00; recorded as lost.';
+
+        $this->assertNotSame($fixture, $contents);
+
+        $this->preview($user, $sportmarket, $contents)
+            ->assertSee('17 orders: 16 to import, 1 skipped, 0 errors.')
+            ->assertSee($warning)
+            ->call('import');
+
+        $bet = $user->bets()->where('external_ref', 'sportmarket:2383987225')->sole();
+
+        $this->assertSame(SelectionResult::Lost, $bet->selections()->sole()->result);
+        $this->assertSame(0, $bet->payout);
+        $this->assertSame(-15000, $bet->profit);
+        $this->assertFalse($bet->payout_is_manual);
+        $this->assertStringEndsWith(' · '.$warning, (string) $bet->notes);
+    }
+
     public function test_bets_in_another_currency_than_the_base_get_the_bookmakers_rate(): void
     {
         $user = User::factory()->create(['base_currency' => Currency::Dkk]);

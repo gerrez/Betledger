@@ -50,6 +50,10 @@
                                         <p class="text-sm font-medium">{{ $bet['event'] }}</p>
                                         <p class="mt-0.5 text-sm text-muted tabular-nums">{{ $bet['pick'] }}</p>
                                         <p class="mt-0.5 text-xs text-muted tabular-nums">{{ $bet['placed'] }} · stake {{ $bet['stake'] }}</p>
+
+                                        @if ($bet['warning'] !== null)
+                                            <p class="mt-1 text-xs text-loss tabular-nums">{{ $bet['warning'] }}</p>
+                                        @endif
                                     </div>
 
                                     <div class="shrink-0 text-end tabular-nums">

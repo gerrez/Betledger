@@ -145,11 +145,9 @@ final class SportmarketImport
         }
 
         $odds = $this->averageOdds($fills, $stakes, $stake);
-        $payout = $stake + array_sum(array_map(fn (OrderRow $fill): int => $this->profitAndLoss($fill), $fills));
-
-        if ($payout < 0) {
-            throw new InvalidOrder('The order lost more than its stake.');
-        }
+        $profitAndLoss = array_sum(array_map(fn (OrderRow $fill): int => $this->profitAndLoss($fill), $fills));
+        $warning = $profitAndLoss < -$stake ? $this->excessLossWarning($stake, $profitAndLoss) : null;
+        $payout = max(0, $stake + $profitAndLoss);
 
         $result = $this->nearestResult($stake, $odds, $payout);
         $calculatedPayout = $this->calculatedPayout($stake, $odds, $result);
@@ -175,12 +173,23 @@ final class SportmarketImport
             eventName: implode(' v ', $teams),
             pick: $main->betType !== '' ? $main->betType : throw new InvalidOrder("Line {$main->line}: the order has no Bet Type."),
             tags: $this->hasFillInRunning($fills) ? [self::IN_PLAY_TAG] : [],
-            notes: $this->notes($orderId, $fills, $stakes),
+            notes: $this->notes($orderId, $fills, $stakes).($warning === null ? '' : " · {$warning}"),
             result: $result,
             payout: $payout,
             manualPayout: $payout === $calculatedPayout ? null : $payout,
             settledAt: $settledAt->max($placedAt),
+            warning: $warning,
         );
+    }
+
+    /**
+     * A payout can't be negative, so an order whose reported loss is larger than its
+     * stake is recorded as lost (payout 0) and says what Sportmarket reported.
+     */
+    private function excessLossWarning(int $stake, int $profitAndLoss): string
+    {
+        return 'Sportmarket reported a P&L of '.Money::formatWithoutSymbol($profitAndLoss)
+            .' on a stake of '.Money::formatWithoutSymbol($stake).'; recorded as lost.';
     }
 
     /**

@@ -144,7 +144,7 @@ From "Later" in `docs/spec.md`, in priority order. Each needs a short design pas
 (spec section, data model) in its first PR; split into schema/domain and UI PRs when it
 is too big for one review.
 
-- [ ] **4.1a Sportmarket import: parser and mapping (domain).** Per "Import from
+- [x] **4.1a Sportmarket import: parser and mapping (domain).** Per "Import from
       Sportmarket" in `docs/spec.md`: read the orders CSV by header names, group rows by
       `Order Id`, drop failed fills, and map each order to bet data (stake, averaged
       odds, list names, pick, tags, notes) plus its result and reported payout, or to a

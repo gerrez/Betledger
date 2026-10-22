@@ -210,4 +210,17 @@ class BetSchemaTest extends TestCase
 
         $tag->delete();
     }
+
+    public function test_an_external_ref_is_unique_per_user(): void
+    {
+        $bet = Bet::factory()->create(['external_ref' => 'sportmarket:2384015187']);
+        Bet::factory()->create(['external_ref' => 'sportmarket:2384015187']); // another user's
+        Bet::factory()->forBookmaker($bet->bookmaker)->count(2)->create(); // bets entered by hand have none
+
+        $this->assertSame('sportmarket:2384015187', $bet->refresh()->external_ref);
+
+        $this->expectConstraintViolation();
+
+        Bet::factory()->forBookmaker($bet->bookmaker)->create(['external_ref' => 'sportmarket:2384015187']);
+    }
 }

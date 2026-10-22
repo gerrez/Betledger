@@ -103,6 +103,7 @@ data has a `user_id` (directly, or via its parent bet) and is scoped by policies
 | `payout_is_manual` | bool | true when the user replaced the calculated payout with the amount actually paid |
 | `profit` | bigint, nullable | `payout − stake` (free bets: `payout`) |
 | `notes` | text, nullable | |
+| `external_ref` | string, nullable | where an imported bet came from, e.g. `sportmarket:2384015187`; unique per user, so an import never creates a bet twice |
 | timestamps | | |
 
 `bet_tag` pivot: `bet_id`, `tag_id`, `user_id` (the bet's owner).
@@ -554,3 +555,18 @@ same items. Touch targets ≥ 44 px.
   the export, so `event_starts_at` stays empty and `settled_at` is the game date at
   23:59 UTC. In-play bets get an "In-play" tag. The market names for Sportmarket's codes
   are listed in "Import from Sportmarket".
+- **Sportmarket import mapping (assumed in 4.1a).** `App\Domain\Import\Sportmarket`
+  reads the export and maps each order; nothing is saved (that's 4.1b). The fill with
+  the largest stake (the first of them on a tie) gives the bet its pick, and also its
+  market, competition, sport and teams, since fills of one order can be on different
+  markets (`ou` and `ahou` in order 2384015187). `placed_at`, the In-play tag and the
+  currency check only look at fills that didn't fail. The notes list the bookies by
+  number of fills, then by stake, most first ("mbook ×4, molly, fair"); a single fill
+  says "1 fill: pin88". When the reported payout is exactly as near to two results, the
+  first of won, lost, void, half-won, half-lost is taken (none is in the owner's
+  export). A file that isn't an orders export (missing columns, a row with the wrong
+  number of columns or without an Order Id) is refused as a whole; an order in another
+  currency, or with a value that can't be read (an amount, price or date), is an error
+  for that order only, naming the line, and the other orders are still imported. A
+  missing Market or Competition leaves it empty; a missing Home or Away uses the other
+  team as the event; no teams, Sport or Bet Type is an error.

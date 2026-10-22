@@ -35,6 +35,7 @@ use Illuminate\Support\Carbon;
  * @property bool $payout_is_manual
  * @property int|null $profit minor units
  * @property string|null $notes
+ * @property string|null $external_ref where an imported bet came from ("sportmarket:<Order Id>"), unique per user
  * @property-read User $user
  * @property-read Bookmaker $bookmaker
  * @property-read Tipster|null $tipster
@@ -74,6 +75,7 @@ class Bet extends Model
         'is_free_bet',
         'total_odds',
         'notes',
+        'external_ref',
     ];
 
     /**

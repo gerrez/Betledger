@@ -76,7 +76,8 @@ class EditBetTest extends TestCase
 
         Livewire::test(Edit::class, ['bet' => $bet])
             ->assertSet('bookmaker_id', (string) $bookmaker->id)
-            ->assertSet('placed_at', '2026-10-14T17:42')
+            ->assertSet('placed_date', '2026-10-14')
+            ->assertSet('placed_time', '17:42')
             ->assertSet('stake', '200.50')
             ->assertSet('exchange_rate', '0.13')
             ->assertSet('is_free_bet', true)
@@ -92,10 +93,12 @@ class EditBetTest extends TestCase
                 'teams' => ['Arsenal', 'Chelsea'],
                 'team_name' => '',
                 'event_name' => 'Arsenal v Chelsea',
-                'event_starts_at' => '2026-10-14T18:30',
+                'event_starts_date' => '2026-10-14',
+                'event_starts_time' => '18:30',
                 'pick' => 'Arsenal −0.25',
                 'odds' => '1.95',
                 'closing_odds' => '1.90',
+                'show_details' => true,
             ]])
             ->assertSee(['Edit bet', 'Save changes'])
             ->assertDontSee('Settled');

@@ -512,6 +512,19 @@ same items. Touch targets ≥ 44 px.
   An accumulator's line says "2 of 3 won" while every result so far is a win, else
   "2 of 3 settled", and has no count before its first result; a free bet says "free
   bet". A user without bets sees "No bets yet" with a New bet button.
+- **Dates and times in the bet form (assumed in 3.3).** "Placed" and "Starts" are a
+  date input plus a 24-hour time typed as text (`HH:MM`), since a browser time input
+  shows AM/PM in some locales. The date picker still shows the browser's date format
+  (e.g. mm/dd/yyyy in English (US)); only the time is forced to 24 hours. Phone number
+  pads often have no colon, so the time also accepts a point or comma ("18.30") or no
+  separator ("1830", "905" = 09:05) and is written back as "18:30". A start needs both a
+  date and a time, or neither: a date-only start would have to invent a time.
+- **"More details" in the bet form (assumed in 3.3).** Each selection has its own toggle
+  for competition, market and closing odds, at the bottom of its card, and the bet's
+  toggle (tipster, exchange rate, tags, notes) only opens the bet's details below it.
+  Editing a bet opens a selection's details when it has any of them, and the bet's
+  details when it has a tipster, tags or notes. A failed field opens the details that
+  hold it.
 - **Sportmarket import (owner, before 4.1).** One bet per Sportmarket order, built from
   the order's non-failed rows. Orders that aren't fully settled are skipped and picked up
   by a later import, so the import never has to update a bet it created. The owner's

@@ -72,6 +72,7 @@ class CreateBetTest extends TestCase
         Livewire::test(Create::class)
             ->set('selections.0.sport', 'Football')
             ->set('showDetails', true)
+            ->call('toggleSelectionDetails', 0)
             ->assertSee(['Football', 'Arsenal', 'Asian handicap'])
             ->assertDontSee(['Other Users Sport', 'Other Users Team', 'Other Users Market', 'Other Users Tag', 'Other Users Tipster']);
     }
@@ -87,7 +88,8 @@ class CreateBetTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(Create::class)
-            ->assertSet('placed_at', '2026-10-14T17:42')
+            ->assertSet('placed_date', '2026-10-14')
+            ->assertSet('placed_time', '17:42')
             ->assertSet('bookmaker_id', (string) $danskeSpil->id)
             ->assertSet('exchange_rate', '0.1341')
             ->assertSet('selections.0.sport', 'Tennis');
@@ -100,8 +102,10 @@ class CreateBetTest extends TestCase
         $this->actingAs($user);
 
         $this->fillSingle(Livewire::test(Create::class), $bookmaker)
-            ->set('placed_at', '2026-10-14T17:42')
-            ->set('selections.0.event_starts_at', '2026-10-14T18:30')
+            ->set('placed_date', '2026-10-14')
+            ->set('placed_time', '17:42')
+            ->set('selections.0.event_starts_date', '2026-10-14')
+            ->set('selections.0.event_starts_time', '18:30')
             ->set('selections.0.competition', 'Premier League')
             ->set('selections.0.market', 'Asian handicap')
             ->set('selections.0.closing_odds', '1.90')
@@ -399,10 +403,12 @@ class CreateBetTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(Create::class)
-            ->set('placed_at', '')
+            ->set('placed_date', '')
+            ->set('placed_time', '')
             ->call('save')
             ->assertHasErrors([
-                'placed_at' => 'required',
+                'placed_date' => 'required',
+                'placed_time' => 'required',
                 'stake' => 'required',
                 'selections.0.sport' => 'required',
                 'selections.0.event_name' => 'required',
@@ -455,7 +461,146 @@ class CreateBetTest extends TestCase
             ->set('selections.0.closing_odds', '1')
             ->call('save')
             ->assertHasErrors(['selections.0.closing_odds'])
-            ->assertSet('showDetails', true);
+            ->assertSet('selections.0.show_details', true)
+            ->assertSet('showDetails', false);
+
+        $this->assertDatabaseCount('bets', 0);
+    }
+
+    public function test_each_more_details_toggle_opens_its_own_fields(): void
+    {
+        $user = User::factory()->create();
+        Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $component = Livewire::test(Create::class)
+            ->call('useAccumulator')
+            ->assertDontSeeHtml(['wire:model="selections.0.competition"', 'wire:model="selections.1.competition"', 'wire:model="tipster"']);
+
+        $component->call('toggleSelectionDetails', 1)
+            ->assertSet('selections.1.show_details', true)
+            ->assertSeeHtml(['wire:model="selections.1.competition"', 'wire:model="selections.1.closing_odds"'])
+            ->assertDontSeeHtml(['wire:model="selections.0.competition"', 'wire:model="tipster"']);
+
+        $component->set('showDetails', true)
+            ->assertSeeHtml('wire:model="tipster"')
+            ->assertDontSeeHtml('wire:model="selections.0.competition"');
+
+        $component->call('toggleSelectionDetails', 1)
+            ->assertSet('selections.1.show_details', false)
+            ->assertDontSeeHtml('wire:model="selections.1.competition"');
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function validTimes(): array
+    {
+        return [
+            'colon' => ['18:30', '18:30'],
+            'point' => ['18.30', '18:30'],
+            'comma' => ['18,30', '18:30'],
+            'no separator' => ['1830', '18:30'],
+            'one-digit hour' => ['9:05', '09:05'],
+            'one-digit hour without separator' => ['905', '09:05'],
+            'midnight' => ['00:00', '00:00'],
+            'last minute of the day' => [' 23:59 ', '23:59'],
+        ];
+    }
+
+    #[DataProvider('validTimes')]
+    public function test_times_are_typed_in_24_hour_format(string $typed, string $time): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->set('placed_date', '2026-10-14')
+            ->set('placed_time', $typed)
+            ->set('selections.0.event_starts_date', '2026-10-15')
+            ->set('selections.0.event_starts_time', $typed)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('placed_time', $time)
+            ->assertSet('selections.0.event_starts_time', $time);
+
+        $bet = $user->bets()->sole();
+        $this->assertSame("2026-10-14 {$time}:00", $bet->placed_at->toDateTimeString());
+        $this->assertSame("2026-10-15 {$time}:00", $bet->selections()->sole()->event_starts_at?->toDateTimeString());
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function invalidTimes(): array
+    {
+        return [
+            'hour 24' => ['24:00'],
+            'minute 60' => ['18:60'],
+            'one-digit minutes' => ['18:3'],
+            'am/pm' => ['6:30 PM'],
+            'words' => ['6pm'],
+            'seconds' => ['18:30:00'],
+        ];
+    }
+
+    #[DataProvider('invalidTimes')]
+    public function test_a_time_must_be_a_24_hour_time(string $typed): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->set('placed_time', $typed)
+            ->set('selections.0.event_starts_date', '2026-10-15')
+            ->set('selections.0.event_starts_time', $typed)
+            ->call('save')
+            ->assertHasErrors(['placed_time', 'selections.0.event_starts_time'])
+            ->assertSee('Enter a 24-hour time, like 18:30.');
+
+        $this->assertDatabaseCount('bets', 0);
+    }
+
+    public function test_dates_must_be_valid(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->set('placed_date', '2026-02-30')
+            ->set('selections.0.event_starts_date', '14/10/2026')
+            ->set('selections.0.event_starts_time', '18:30')
+            ->call('save')
+            ->assertHasErrors(['placed_date' => 'date_format', 'selections.0.event_starts_date' => 'date_format'])
+            ->assertSee('Enter a valid date.');
+
+        $this->assertDatabaseCount('bets', 0);
+    }
+
+    public function test_a_start_needs_both_a_date_and_a_time(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->call('useAccumulator')
+            ->set('selections.0.event_starts_date', '2026-10-15')
+            ->set('selections.1.sport', 'Football')
+            ->set('selections.1.event_name', 'Liverpool v Everton')
+            ->set('selections.1.pick', 'Liverpool')
+            ->set('selections.1.odds', '1.50')
+            ->set('selections.1.event_starts_time', '18:30')
+            ->call('save')
+            ->assertHasErrors([
+                'selections.0.event_starts_time' => 'required_with',
+                'selections.1.event_starts_date' => 'required_with',
+            ])
+            ->assertHasNoErrors(['selections.0.event_starts_date', 'selections.1.event_starts_time'])
+            ->assertSee(['Enter the time too, or clear the date.', 'Enter the date too, or clear the time.']);
 
         $this->assertDatabaseCount('bets', 0);
     }

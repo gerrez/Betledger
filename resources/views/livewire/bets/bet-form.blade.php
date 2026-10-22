@@ -55,14 +55,27 @@
                 >Accumulator</button>
             </div>
 
-            <section class="grid grid-cols-2 gap-3 rounded-[18px] border border-line bg-surface p-4">
-                <x-select wire:model.live="bookmaker_id" label="Bookmaker">
-                    @foreach ($bookmakers as $option)
-                        <x-select.option :value="$option->id" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }} · {{ $option->currency->value }}{{ $option->is_active ? '' : ' (inactive)' }}</x-select.option>
-                    @endforeach
-                </x-select>
+            <section class="grid grid-cols-[minmax(0,1fr)_7rem] items-start gap-3 rounded-[18px] border border-line bg-surface p-4">
+                <div class="col-span-2">
+                    <x-select wire:model.live="bookmaker_id" label="Bookmaker">
+                        @foreach ($bookmakers as $option)
+                            <x-select.option :value="$option->id" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }} · {{ $option->currency->value }}{{ $option->is_active ? '' : ' (inactive)' }}</x-select.option>
+                        @endforeach
+                    </x-select>
+                </div>
 
-                <flux:input wire:model="placed_at" type="datetime-local" label="Placed" required />
+                <flux:input wire:model="placed_date" type="date" label="Placed" required />
+
+                <flux:input
+                    wire:model="placed_time"
+                    label="Time"
+                    aria-label="Time placed (24-hour)"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    maxlength="5"
+                    placeholder="HH:MM"
+                    required
+                />
             </section>
 
             @foreach ($selections as $index => $selection)
@@ -143,9 +156,9 @@
                         placeholder="Filled in from the teams"
                     />
 
-                    <flux:input wire:model="selections.{{ $index }}.pick" label="Pick" autocomplete="off" placeholder="e.g. Arsenal −0.25" required />
+                    <div class="grid grid-cols-[minmax(0,1fr)_7rem] items-start gap-3">
+                        <flux:input wire:model="selections.{{ $index }}.pick" label="Pick" autocomplete="off" placeholder="e.g. Arsenal −0.25" required />
 
-                    <div class="grid grid-cols-2 gap-3">
                         <flux:input
                             wire:model.live.debounce.400ms="selections.{{ $index }}.odds"
                             :loading="false"
@@ -156,10 +169,34 @@
                             required
                         />
 
-                        <flux:input wire:model="selections.{{ $index }}.event_starts_at" type="datetime-local" label="Starts" />
+                        <flux:input wire:model="selections.{{ $index }}.event_starts_date" type="date" label="Starts" />
+
+                        <flux:input
+                            wire:model="selections.{{ $index }}.event_starts_time"
+                            label="Time"
+                            aria-label="Start time (24-hour)"
+                            inputmode="decimal"
+                            autocomplete="off"
+                            maxlength="5"
+                            placeholder="HH:MM"
+                        />
                     </div>
 
-                    @if ($showDetails)
+                    <button
+                        type="button"
+                        wire:click="toggleSelectionDetails({{ $index }})"
+                        aria-expanded="{{ $selection['show_details'] ? 'true' : 'false' }}"
+                        class="flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-[15px] font-medium text-accent-content hover:bg-accent-soft"
+                    >
+                        {{ $selection['show_details'] ? 'Fewer details' : 'More details: competition, market, closing odds' }}
+                        @if ($selection['show_details'])
+                            <flux:icon.chevron-up variant="mini" />
+                        @else
+                            <flux:icon.chevron-down variant="mini" />
+                        @endif
+                    </button>
+
+                    @if ($selection['show_details'])
                         <div class="grid grid-cols-2 gap-3">
                             <flux:input
                                 wire:model="selections.{{ $index }}.competition"
@@ -206,7 +243,7 @@
                         <span class="text-[17px] font-semibold">{{ $totalOdds ?? '—' }}</span>
                     </div>
 
-                    <flux:error name="selections" />
+                    <flux:error name="selections" :deep="false" />
                 </div>
             @endif
 
@@ -256,7 +293,7 @@
                 aria-expanded="{{ $showDetails ? 'true' : 'false' }}"
                 class="flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-[15px] font-medium text-accent-content hover:bg-accent-soft"
             >
-                {{ $showDetails ? 'Fewer details' : 'More details: competition, market, tipster, tags…' }}
+                {{ $showDetails ? 'Fewer details' : 'More details: tipster, tags, notes…' }}
                 @if ($showDetails)
                     <flux:icon.chevron-up variant="mini" />
                 @else

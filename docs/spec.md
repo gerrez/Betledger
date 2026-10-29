@@ -305,9 +305,16 @@ same items. Touch targets ≥ 44 px.
 An experiment (roadmap Phase 5): an Android app that shows BetLedger and receives push
 notifications from the server.
 
-- **App.** A native Kotlin app whose screen is a full-screen WebView on the web app
-  (`APP_URL`), so it looks and works like the phone layout of the website; the user
-  signs in inside it. Notifications are native: Firebase Cloud Messaging (FCM).
+- **App** (`android/`, package `com.betledger.app`, Android 8+). A native Kotlin app
+  whose screen is a full-screen WebView on the web app, so it looks and works like the
+  phone layout of the website; the user signs in inside it. The server URL is a build
+  setting (`betledger.url` in `android/local.properties`, default
+  `http://10.0.2.2:8000`, the emulator's view of a local `php artisan serve`). Only that
+  site loads in the WebView; other links open in the browser. Notifications are native:
+  Firebase Cloud Messaging (FCM). The app asks for the notification permission on start
+  (Android 13+). Tapping a notification opens its URL's path and query on the app's
+  server. Without `google-services.json` it builds and runs without push. Build and
+  experiment notes: `android/README.md`.
 - **Registering a phone.** The app gets an FCM token and exposes it to the page through
   a JavaScript bridge, `window.BetLedgerAndroid`: `getPushToken()` (the token, or an
   empty string while it isn't known yet) and `getDeviceName()` (e.g. "Google Pixel 8").
@@ -633,3 +640,10 @@ notifications from the server.
   that simply expires leaves the device registered, and it keeps getting the previous
   account's notifications until someone signs in on it or the device is removed in
   Settings. Test notifications are sent right away rather than queued.
+- **Android app (assumed in 5.2).** The app lives in `android/` in this repository (not a
+  separate repo), is built by the owner in Android Studio and not by CI. It asks for the
+  notification permission on every start until it is granted (Android stops showing the
+  prompt after two refusals). The file picker offers any file type, because the CSV
+  import's `accept=".csv"` is an extension Android's picker can't filter on; the server
+  validates the file. Debug builds allow plain HTTP for local servers; release builds
+  need HTTPS.

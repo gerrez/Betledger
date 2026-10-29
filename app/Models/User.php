@@ -139,6 +139,14 @@ class User extends Authenticatable // implements MustVerifyEmail
     }
 
     /**
+     * @return HasMany<PushDevice, $this>
+     */
+    public function pushDevices(): HasMany
+    {
+        return $this->hasMany(PushDevice::class);
+    }
+
+    /**
      * The base currency can only change while the user has no bets: each bet's exchange
      * rate converts to the base currency it was saved with.
      */

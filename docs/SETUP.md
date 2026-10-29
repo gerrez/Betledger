@@ -97,3 +97,20 @@ This creates `demo@example.com` (bookmakers and lists to try things with) and
 `other@example.com` (a second user whose data the demo user must never see), both with the
 password `password`. Running it again resets both accounts to the demo data; other
 accounts are left alone. It does nothing in production.
+
+## Push notifications (Firebase)
+
+The server sends push notifications to the Android app (roadmap Phase 5) through
+Firebase Cloud Messaging. One-time setup:
+
+1. Create a project at <https://console.firebase.google.com> (Analytics not needed).
+2. **Server key:** Project settings → Service accounts → *Generate new private key*.
+   Save the JSON file outside the repo (it is a secret) and point `.env` at it:
+   `FCM_CREDENTIALS=C:\path\to\betledger-firebase-adminsdk.json` (or paste the JSON
+   itself as the value, which is easier on hosts without files). In production, set it
+   as a secret environment variable.
+3. **App config** (needed from task 5.2): Project settings → General → *Add app* →
+   Android, package name `com.betledger.app`; download `google-services.json` into
+   `android/app/`. It is git-ignored.
+4. Settings → Notifications in BetLedger shows a warning until `FCM_CREDENTIALS` is set.
+   Once the app has registered your phone, use "Send test notification" there.

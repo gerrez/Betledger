@@ -2,6 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
     <head>
         @include('partials.head')
+        <meta name="push-device-registration" content="{{ route('push-devices.store') }}" data-csrf="{{ csrf_token() }}" data-user="{{ auth()->id() }}" />
     </head>
     <body class="min-h-dvh bg-canvas text-ink antialiased">
         <div class="lg:flex">

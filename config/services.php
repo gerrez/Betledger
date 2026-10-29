@@ -28,6 +28,14 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    /*
+     * Firebase Cloud Messaging, for push notifications to the Android app: the path to
+     * the service account JSON key (or the JSON itself). See docs/spec.md.
+     */
+    'fcm' => [
+        'credentials' => env('FCM_CREDENTIALS'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

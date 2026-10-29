@@ -300,6 +300,41 @@ same items. Touch targets ≥ 44 px.
 - Implement with Flux (free) components + Tailwind 4 theme tokens; map the tokens above
   into the Tailwind theme rather than hard-coding hex values in views.
 
+## Android app and push notifications
+
+An experiment (roadmap Phase 5): an Android app that shows BetLedger and receives push
+notifications from the server.
+
+- **App.** A native Kotlin app whose screen is a full-screen WebView on the web app
+  (`APP_URL`), so it looks and works like the phone layout of the website; the user
+  signs in inside it. Notifications are native: Firebase Cloud Messaging (FCM).
+- **Registering a phone.** The app gets an FCM token and exposes it to the page through
+  a JavaScript bridge, `window.BetLedgerAndroid`: `getPushToken()` (the token, or an
+  empty string while it isn't known yet) and `getDeviceName()` (e.g. "Google Pixel 8").
+  On every page behind the login, `resources/js/push.js` reads the token and posts it to
+  `POST /push-devices` (`token`, `platform: android`, `name`) once per app start, and
+  again when the app dispatches a `betledger:push-token` event on `window` because the
+  token changed. In a normal browser there is no bridge and nothing happens.
+- **`push_devices`**: `user_id`, `token` (unique, up to 512 characters), `platform`
+  (`android`), `name` (nullable), `last_seen_at` (last registration), timestamps. A token
+  belongs to one app install, so registering a token another account has moves the
+  device to the signed-in account. Logging out removes the device registered in that
+  session. A device FCM reports as `UNREGISTERED` (app uninstalled or data cleared) is
+  removed when sending to it.
+- **Sending.** Laravel notifications with the `PushChannel` (`App\Notifications\Push`)
+  go to all of the user's devices through the FCM HTTP v1 API, authenticated with a
+  Firebase service account key (`FCM_CREDENTIALS` in `.env`: the path to the JSON key,
+  or the JSON itself). Without it, nothing is sent and a warning is logged. A message has
+  a title, body and optional URL, all also sent as data (`title`, `body`, `url`,
+  `channel`) so the app can open the URL when the notification is tapped. It is either a
+  *notification message* (Android shows it itself while the app is in the background)
+  or a *data message* (always handed to the app, which shows it). Android notification
+  channel: `general`.
+- **Settings → Notifications** (`/settings/notifications`): the user's devices (name,
+  last opened) with Remove, and two test buttons ("Send test notification", "Send data
+  message") that send to all of them right away. A warning shows when the server has no
+  FCM credentials.
+
 ## Open questions
 
 <!-- Owner decisions still pending, plus assumptions Claude sessions had to make. -->
@@ -591,3 +626,10 @@ same items. Touch targets ≥ 44 px.
   report a P&L below −stake. Until the owner knows why, they are imported as lost with
   payout 0 (profit −stake) instead of being refused, and the reported P&L is kept in the
   notes. Owner: what causes these, and should the extra loss count in the profit?
+- **Push devices (assumed in 5.1).** Registration needs no extra permission: any
+  signed-in user can register the token their app reports, and a token another account
+  registered moves to them (the phone changed hands or accounts). Logging out removes
+  the phone only when the logout happens in the session that registered it; a session
+  that simply expires leaves the device registered, and it keeps getting the previous
+  account's notifications until someone signs in on it or the device is removed in
+  Settings. Test notifications are sent right away rather than queued.

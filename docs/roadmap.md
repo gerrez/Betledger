@@ -173,3 +173,36 @@ is too big for one review.
 - [ ] **4.7 Automatic exchange rates.** Fetch rates for bookmakers in other currencies;
       a bet still copies the rate when saved.
 - [ ] **4.8 Each-way and system bets.**
+
+## Phase 5 — Android app and push notifications
+
+An experiment the owner asked for (ahead of the rest of Phase 4): an Android app that
+shows the web app and receives push notifications from the server. Design in "Android
+app and push notifications" in `docs/spec.md`. The app is a native Kotlin shell around a
+WebView, so every screen comes from the web app; push (Firebase Cloud Messaging) is
+native.
+
+- [x] **5.1 Push devices and the FCM channel (server).** `push_devices` table, model,
+      policy, factory; `POST /push-devices` for the app to register its token (the web
+      page reads it from the app's JavaScript bridge); logging out forgets that phone.
+      A Laravel notification channel that sends through the FCM HTTP v1 API with a
+      service-account key (`FCM_CREDENTIALS`), no new package, and removes tokens FCM
+      reports as unregistered. Settings → Notifications: list and remove devices, send a
+      test notification message or data message. Tests with faked HTTP; isolation.
+- [ ] **5.2 Android app shell.** An `android/` Gradle project (Kotlin, min SDK 26,
+      package `com.betledger.app`, `google-services.json` git-ignored):
+      full-screen WebView on `APP_URL` with the `BetLedgerAndroid` bridge
+      (`getPushToken()`, `getDeviceName()`), Firebase Messaging service (`onNewToken`
+      dispatches `betledger:push-token` in the page, `onMessageReceived` shows data
+      messages), the `general` notification channel, the Android 13+
+      `POST_NOTIFICATIONS` prompt, opening a tapped notification's `url` in the
+      WebView, back button through WebView history, file chooser for the CSV import,
+      external links in the browser. README for building it in Android Studio and
+      running it on an emulator against a local server. Built by the owner, not CI.
+- [ ] **5.3 Settle reminders.** A scheduled command (every 15 minutes) that notifies the
+      user about pending bets whose last selection started more than a set time ago
+      (once per bet), opening the bet. A per-user on/off setting on Settings →
+      Notifications. Feature tests with frozen time; isolation.
+- [ ] **5.4 Settle from the notification (bonus).** Won/Lost action buttons on the settle
+      reminder that settle the bet without opening the app, through a token-authenticated
+      endpoint (Laravel Sanctum, justified in the PR) and the 2.9 settle service.

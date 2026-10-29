@@ -8,3 +8,7 @@
 
 CHANGELOG.md export-ignore
 README.md export-ignore
+
+# Android app (android/): Windows scripts keep CRLF, the Gradle wrapper jar is binary.
+*.bat text eol=crlf
+*.jar binary

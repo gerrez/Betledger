@@ -1,0 +1,12 @@
+.gradle/
+.kotlin/
+build/
+.idea/
+*.iml
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Firebase config for the app: each developer downloads their own (docs/SETUP.md).
+app/google-services.json

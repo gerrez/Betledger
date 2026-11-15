@@ -106,7 +106,8 @@ Firebase Cloud Messaging. One-time setup:
 1. Create a project at <https://console.firebase.google.com> (Analytics not needed).
 2. **Server key:** Project settings → Service accounts → *Generate new private key*.
    Save the JSON file outside the repo (it is a secret) and point `.env` at it:
-   `FCM_CREDENTIALS=C:\path\to\betledger-firebase-adminsdk.json` (or paste the JSON
+   `FCM_CREDENTIALS=C:/path/to/betledger-firebase-adminsdk.json` (forward slashes work on
+   Windows and survive quoting when the path has spaces; or paste the JSON
    itself as the value, which is easier on hosts without files). In production, set it
    as a secret environment variable.
 3. **App config** (needed from task 5.2): Project settings → General → *Add app* →

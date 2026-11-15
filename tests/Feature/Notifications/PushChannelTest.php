@@ -5,12 +5,12 @@ namespace Tests\Feature\Notifications;
 use App\Models\PushDevice;
 use App\Models\User;
 use App\Notifications\Push\FcmClient;
+use App\Notifications\Push\PushChannel;
 use App\Notifications\TestPushNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use InvalidArgumentException;
 use Tests\TestCase;
 
 class PushChannelTest extends TestCase
@@ -161,7 +161,7 @@ class PushChannelTest extends TestCase
         Http::assertSentCount(3);
         $this->assertModelExists($first);
         $this->assertModelExists($second);
-        Log::shouldHaveReceived('warning')->with('FCM send failed.', ['status' => 404, 'error' => 'Project not found.'])->twice();
+        Log::shouldHaveReceived('warning')->with('FCM send failed. Firebase answered 404: Project not found.')->twice();
     }
 
     public function test_nothing_is_sent_without_credentials(): void
@@ -193,21 +193,70 @@ class PushChannelTest extends TestCase
         $this->assertFalse(FcmClient::fromConfig('')->isConfigured());
     }
 
-    public function test_unreadable_or_incomplete_credentials_are_refused(): void
+    public function test_unreadable_or_incomplete_credentials_leave_push_off_with_the_reason(): void
     {
         $this->assertRefused('/does/not/exist.json', "FCM_CREDENTIALS: can't read the file /does/not/exist.json.");
         $this->assertRefused('{not json', 'FCM_CREDENTIALS is not a valid service account JSON key.');
         $this->assertRefused('{"project_id": "p", "client_email": "e"}', 'FCM_CREDENTIALS: the service account key has no private_key.');
     }
 
+    public function test_a_refused_service_account_key_is_reported_instead_of_thrown(): void
+    {
+        Log::spy();
+        $this->configureFcm();
+        Http::preventStrayRequests();
+        Http::fake([self::TOKEN_URI => Http::response(['error' => 'invalid_grant'], 400)]);
+        $user = User::factory()->create();
+        $device = PushDevice::factory()->for($user)->create();
+
+        $report = $this->app->make(PushChannel::class)->send($user, new TestPushNotification);
+
+        $this->assertSame([0, 0, 1], [$report->sent, $report->removed, $report->failed]);
+        $this->assertStringStartsWith('Google refused the service account key: ', $report->errors[0]);
+        $this->assertModelExists($device);
+        Http::assertNotSent(fn (Request $request): bool => $request->url() === self::SEND_URL);
+    }
+
+    public function test_a_private_key_that_cannot_sign_is_reported_instead_of_thrown(): void
+    {
+        Log::spy();
+        Http::preventStrayRequests();
+        $this->app->instance(FcmClient::class, new FcmClient(['project_id' => 'betledger-test', 'client_email' => 'e', 'private_key' => 'not a key']));
+        $user = User::factory()->create();
+        PushDevice::factory()->for($user)->create();
+
+        $report = $this->app->make(PushChannel::class)->send($user, new TestPushNotification);
+
+        $this->assertSame(1, $report->failed);
+        Http::assertNothingSent();
+    }
+
+    public function test_the_report_counts_sent_and_removed_devices(): void
+    {
+        $this->configureFcm();
+        Http::preventStrayRequests();
+        Http::fake([
+            self::TOKEN_URI => Http::response(['access_token' => 'access-123']),
+            self::SEND_URL => fn (Request $request) => $request['message']['token'] === 'gone'
+                ? Http::response(['error' => ['details' => [['errorCode' => 'UNREGISTERED']]]], 404)
+                : Http::response(['name' => 'projects/betledger-test/messages/1']),
+        ]);
+        $user = User::factory()->create();
+        PushDevice::factory()->for($user)->create(['token' => 'here']);
+        PushDevice::factory()->for($user)->create(['token' => 'gone']);
+
+        $report = $this->app->make(PushChannel::class)->send($user, new TestPushNotification);
+
+        $this->assertSame([1, 1, 0, []], [$report->sent, $report->removed, $report->failed, $report->errors]);
+        $this->assertSame(['here'], $user->pushDevices()->pluck('token')->all());
+    }
+
     private function assertRefused(string $credentials, string $message): void
     {
-        try {
-            FcmClient::fromConfig($credentials);
-            $this->fail("Credentials {$credentials} were accepted.");
-        } catch (InvalidArgumentException $exception) {
-            $this->assertSame($message, $exception->getMessage());
-        }
+        $client = FcmClient::fromConfig($credentials);
+
+        $this->assertFalse($client->isConfigured());
+        $this->assertSame($message, $client->configurationError);
     }
 
     private function base64UrlDecode(string $value): string

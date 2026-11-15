@@ -15,24 +15,37 @@ class PushChannel
 {
     public function __construct(private FcmClient $fcm) {}
 
-    public function send(object $notifiable, Notification $notification): void
+    public function send(object $notifiable, Notification $notification): PushReport
     {
         if (! $notifiable instanceof User || ! $notification instanceof PushNotification) {
             throw new InvalidArgumentException('Push notifications go to users and must implement '.PushNotification::class.'.');
         }
 
         if (! $this->fcm->isConfigured()) {
-            Log::warning('Push notification not sent: FCM_CREDENTIALS is not set.', ['notification' => $notification::class]);
+            $reason = $this->fcm->configurationError ?? 'FCM_CREDENTIALS is not set.';
+            Log::warning("Push notification not sent: {$reason}", ['notification' => $notification::class]);
 
-            return;
+            return new PushReport(errors: [$reason]);
         }
 
         $message = $notification->toPush($notifiable);
+        $sent = $removed = $failed = 0;
+        $errors = [];
 
         foreach ($notifiable->pushDevices()->get() as $device) {
-            if ($this->fcm->send($message->toFcm($device->token)) === FcmResult::Unregistered) {
+            $result = $this->fcm->send($message->toFcm($device->token));
+
+            if ($result->status === FcmResult::Sent) {
+                $sent++;
+            } elseif ($result->status === FcmResult::Unregistered) {
                 $device->delete();
+                $removed++;
+            } else {
+                $failed++;
+                $errors[] = $result->error ?? 'Unknown error.';
             }
         }
+
+        return new PushReport($sent, $removed, $failed, array_values(array_unique($errors)));
     }
 }

@@ -339,8 +339,10 @@ notifications from the server.
   channel: `general`.
 - **Settings → Notifications** (`/settings/notifications`): the user's devices (name,
   last opened) with Remove, and two test buttons ("Send test notification", "Send data
-  message") that send to all of them right away. A warning shows when the server has no
-  FCM credentials.
+  message") that send to all of them right away and then say how many devices got it, how many
+  were removed as uninstalled, and why any others failed (Firebase's answer). A warning
+  shows when the server has no FCM credentials, or says why they can't be used (file
+  not found, not a service account key); the page never fails because of them.
 
 ## Open questions
 

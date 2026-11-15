@@ -30,6 +30,7 @@ class AppShellTest extends TestCase
             'settings password' => ['settings.password'],
             'settings appearance' => ['settings.appearance'],
             'settings import' => ['settings.import'],
+            'settings notifications' => ['settings.notifications'],
         ];
     }
 

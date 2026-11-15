@@ -1,0 +1,182 @@
+<?php
+
+namespace App\Notifications\Push;
+
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
+use Throwable;
+
+/**
+ * Sends messages with the Firebase Cloud Messaging HTTP v1 API, authenticated as a
+ * Firebase service account (OAuth 2 JWT bearer flow, signed with openssl).
+ */
+class FcmClient
+{
+    private const SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
+
+    private const DEFAULT_TOKEN_URI = 'https://oauth2.googleapis.com/token';
+
+    /**
+     * @param  array{project_id: string, client_email: string, private_key: string, token_uri?: string}|null  $credentials
+     * @param  string|null  $configurationError  why `FCM_CREDENTIALS` is set but can't be used
+     */
+    public function __construct(private ?array $credentials, public readonly ?string $configurationError = null) {}
+
+    /**
+     * Read the service account key from `FCM_CREDENTIALS`: the path to the JSON file
+     * downloaded from Firebase, or the JSON itself. A value that can't be used leaves push
+     * off (with {@see $configurationError}) rather than breaking every page that asks.
+     */
+    public static function fromConfig(?string $credentials): self
+    {
+        if ($credentials === null || trim($credentials) === '') {
+            return new self(null);
+        }
+
+        $json = str_starts_with(ltrim($credentials), '{') ? $credentials : @file_get_contents($credentials);
+
+        if ($json === false) {
+            return new self(null, "FCM_CREDENTIALS: can't read the file {$credentials}.");
+        }
+
+        $key = json_decode($json, true);
+
+        if (! is_array($key)) {
+            return new self(null, 'FCM_CREDENTIALS is not a valid service account JSON key.');
+        }
+
+        foreach (['project_id', 'client_email', 'private_key'] as $field) {
+            if (! isset($key[$field]) || ! is_string($key[$field]) || $key[$field] === '') {
+                return new self(null, "FCM_CREDENTIALS: the service account key has no {$field}.");
+            }
+        }
+
+        return new self([
+            'project_id' => $key['project_id'],
+            'client_email' => $key['client_email'],
+            'private_key' => $key['private_key'],
+            'token_uri' => is_string($key['token_uri'] ?? null) ? $key['token_uri'] : self::DEFAULT_TOKEN_URI,
+        ]);
+    }
+
+    public function isConfigured(): bool
+    {
+        return $this->credentials !== null;
+    }
+
+    /**
+     * Send one message (see {@see PushMessage::toFcm()}). Failures are logged and returned
+     * rather than thrown, so one bad device doesn't stop the others.
+     *
+     * @param  array<string, mixed>  $message
+     */
+    public function send(array $message): FcmSendResult
+    {
+        $credentials = $this->credentials();
+
+        try {
+            $accessToken = $this->accessToken();
+        } catch (Throwable $exception) {
+            return $this->failed('Google refused the service account key: '.$exception->getMessage());
+        }
+
+        try {
+            $response = Http::withToken($accessToken)
+                ->post("https://fcm.googleapis.com/v1/projects/{$credentials['project_id']}/messages:send", [
+                    'message' => $message,
+                ]);
+        } catch (ConnectionException $exception) {
+            return $this->failed('Could not reach Firebase: '.$exception->getMessage());
+        }
+
+        if ($response->successful()) {
+            return new FcmSendResult(FcmResult::Sent);
+        }
+
+        // Only FCM's own error code, not the HTTP status: a wrong project ID is a 404 too.
+        $details = $response->json('error.details');
+        $errorCodes = is_array($details) ? array_column($details, 'errorCode') : [];
+
+        if (in_array('UNREGISTERED', $errorCodes, true)) {
+            return new FcmSendResult(FcmResult::Unregistered, 'The app is no longer installed on this device.');
+        }
+
+        $reason = $response->json('error.message');
+
+        return $this->failed('Firebase answered '.$response->status().(is_string($reason) ? ": {$reason}" : '.'));
+    }
+
+    private function failed(string $error): FcmSendResult
+    {
+        Log::warning("FCM send failed. {$error}");
+
+        return new FcmSendResult(FcmResult::Failed, $error);
+    }
+
+    /**
+     * An OAuth access token for the service account, cached for most of its hour.
+     */
+    private function accessToken(): string
+    {
+        $credentials = $this->credentials();
+
+        return Cache::remember('fcm-access-token:'.$credentials['client_email'], now()->addMinutes(50), function () use ($credentials): string {
+            $tokenUri = $credentials['token_uri'] ?? self::DEFAULT_TOKEN_URI;
+            // Google refuses a JWT living over an hour or issued "in the future", judged by its
+            // own clock: backdate it a minute and keep it well short of the hour, so a computer
+            // clock a little off still gets a token.
+            $now = now()->getTimestamp();
+
+            $token = Http::asForm()
+                ->post($tokenUri, [
+                    'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                    'assertion' => $this->signedJwt($credentials['private_key'], [
+                        'iss' => $credentials['client_email'],
+                        'scope' => self::SCOPE,
+                        'aud' => $tokenUri,
+                        'iat' => $now - 60,
+                        'exp' => $now + 1800,
+                    ]),
+                ])
+                ->throw()
+                ->json('access_token');
+
+            if (! is_string($token) || $token === '') {
+                throw new RuntimeException('Google returned no FCM access token.');
+            }
+
+            return $token;
+        });
+    }
+
+    /**
+     * @param  array<string, string|int>  $claims
+     */
+    private function signedJwt(string $privateKey, array $claims): string
+    {
+        $unsigned = self::base64Url(json_encode(['alg' => 'RS256', 'typ' => 'JWT'], JSON_THROW_ON_ERROR))
+            .'.'.self::base64Url(json_encode($claims, JSON_THROW_ON_ERROR));
+
+        if (! openssl_sign($unsigned, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
+            throw new RuntimeException('FCM_CREDENTIALS: the private key could not sign the request.');
+        }
+
+        return $unsigned.'.'.self::base64Url($signature);
+    }
+
+    private static function base64Url(string $value): string
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    }
+
+    /**
+     * @return array{project_id: string, client_email: string, private_key: string, token_uri?: string}
+     */
+    private function credentials(): array
+    {
+        return $this->credentials ?? throw new RuntimeException('FCM_CREDENTIALS is not set.');
+    }
+}

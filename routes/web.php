@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PushDeviceController;
 use App\Livewire\Bets\Create as CreateBet;
 use App\Livewire\Bets\Edit as EditBet;
 use App\Livewire\Bets\Index as BetsIndex;
@@ -10,6 +11,7 @@ use App\Livewire\Overview\Index as Overview;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\BaseCurrency;
 use App\Livewire\Settings\Import;
+use App\Livewire\Settings\Notifications;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
 use App\Livewire\Statistics\Index as StatisticsIndex;
@@ -45,6 +47,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/currency', BaseCurrency::class)->name('settings.currency');
     Route::get('settings/password', Password::class)->name('settings.password');
     Route::get('settings/appearance', Appearance::class)->name('settings.appearance');
+    Route::get('settings/notifications', Notifications::class)->name('settings.notifications');
+
+    Route::post('push-devices', [PushDeviceController::class, 'store'])->name('push-devices.store');
 });
 
 require __DIR__.'/auth.php';

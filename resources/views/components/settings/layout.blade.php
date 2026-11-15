@@ -5,6 +5,7 @@
             <flux:navlist.item href="{{ route('settings.currency') }}" wire:navigate>Currency</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.password') }}" wire:navigate>Password</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.appearance') }}" wire:navigate>Appearance</flux:navlist.item>
+            <flux:navlist.item href="{{ route('settings.notifications') }}" wire:navigate>Notifications</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.import') }}" wire:navigate>Import</flux:navlist.item>
         </flux:navlist>
 

@@ -1,3 +1,5 @@
+import './push';
+
 /**
  * Confirmation before an action: a button with `data-confirm="Message"` (plus optional
  * `data-confirm-title`, `data-confirm-button` and `data-confirm-danger`) opens the shared

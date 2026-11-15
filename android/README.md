@@ -45,6 +45,9 @@ Android Studio may offer newer versions; upgrading is fine.
 4. **Run** the `app` configuration. The emulator reaches your computer's
    `127.0.0.1:8000` as `http://10.0.2.2:8000`, the app's default.
 
+If the server isn't running, the app shows "Can't reach BetLedger" with a **Try again**
+button instead of a blank error.
+
 Without Firebase set up the app still works as a WebView of BetLedger; push stays off
 (Logcat says "Firebase is not configured").
 

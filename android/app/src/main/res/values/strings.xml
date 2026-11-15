@@ -5,4 +5,6 @@
     <string name="notification_channel_general_name">General</string>
     <string name="notification_channel_general_description">Test notifications and reminders from BetLedger</string>
     <string name="no_app_for_link">No app can open this link</string>
+    <string name="connection_error_title">Can\'t reach BetLedger</string>
+    <string name="connection_error_retry">Try again</string>
 </resources>

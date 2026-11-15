@@ -8,9 +8,11 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.TextUtils
 import android.webkit.CookieManager
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -70,9 +72,10 @@ class MainActivity : ComponentActivity() {
             }
         })
 
-        val notificationUrl = notificationUrl(intent)
-        if (notificationUrl != null || savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
-            webView.loadUrl(notificationUrl ?: siteUri.toString())
+        // A recreated activity (dark mode switch, restored from recents) goes back to the page
+        // it was on; only a fresh start opens the site or the tapped notification's page.
+        if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
+            webView.loadUrl(takeNotificationUrl(intent) ?: siteUri.toString())
         }
 
         askForNotificationPermission()
@@ -82,7 +85,7 @@ class MainActivity : ComponentActivity() {
     /** A notification was tapped while the app was open. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        notificationUrl(intent)?.let { webView.loadUrl(it) }
+        takeNotificationUrl(intent)?.let { webView.loadUrl(it) }
     }
 
     override fun onStart() {
@@ -132,6 +135,13 @@ class MainActivity : ComponentActivity() {
                 openInBrowser(request.url)
                 return true
             }
+
+            // The server is down or unreachable: say so, with a way to try again.
+            override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                if (request.isForMainFrame) {
+                    showConnectionError(request.url.toString(), error.description?.toString().orEmpty())
+                }
+            }
         }
 
         webView.webChromeClient = object : WebChromeClient() {
@@ -166,9 +176,18 @@ class MainActivity : ComponentActivity() {
     /**
      * The page a tapped notification points to, on this app's server. Only the path and
      * query are used: the server may name itself differently (e.g. localhost vs 10.0.2.2).
+     * The URL is removed from the intent, and ignored when Android replays the intent from
+     * the recents screen, so a notification opens its page once.
      */
-    private fun notificationUrl(intent: Intent?): String? {
-        val url = intent?.getStringExtra(Notifications.EXTRA_URL)?.takeIf { it.isNotEmpty() } ?: return null
+    private fun takeNotificationUrl(intent: Intent?): String? {
+        intent ?: return null
+        val url = intent.getStringExtra(Notifications.EXTRA_URL)?.takeIf { it.isNotEmpty() } ?: return null
+        intent.removeExtra(Notifications.EXTRA_URL)
+
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) {
+            return null
+        }
+
         val target = Uri.parse(url)
 
         return siteUri.buildUpon()
@@ -177,6 +196,33 @@ class MainActivity : ComponentActivity() {
             .fragment(null)
             .build()
             .toString()
+    }
+
+    private fun showConnectionError(failedUrl: String, reason: String) {
+        val html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <meta name="color-scheme" content="light dark">
+                <style>
+                    body { font-family: sans-serif; margin: 0; padding: 48px 24px; text-align: center; }
+                    p { opacity: .7; overflow-wrap: anywhere; }
+                    a { display: inline-block; margin-top: 16px; padding: 12px 24px; border-radius: 12px;
+                        background: #6c5ce7; color: #fff; text-decoration: none; font-weight: 600; }
+                </style>
+            </head>
+            <body>
+                <h2>${TextUtils.htmlEncode(getString(R.string.connection_error_title))}</h2>
+                <p>${TextUtils.htmlEncode(siteUri.toString())}</p>
+                <p>${TextUtils.htmlEncode(reason)}</p>
+                <a href="${TextUtils.htmlEncode(failedUrl)}">${TextUtils.htmlEncode(getString(R.string.connection_error_retry))}</a>
+            </body>
+            </html>
+        """.trimIndent()
+
+        // The failed URL as history entry, so Back and the link behave as if on that page.
+        webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", failedUrl)
     }
 
     private fun isOwnSite(uri: Uri): Boolean =

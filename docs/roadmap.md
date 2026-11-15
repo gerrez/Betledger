@@ -189,7 +189,7 @@ native.
       service-account key (`FCM_CREDENTIALS`), no new package, and removes tokens FCM
       reports as unregistered. Settings → Notifications: list and remove devices, send a
       test notification message or data message. Tests with faked HTTP; isolation.
-- [ ] **5.2 Android app shell.** An `android/` Gradle project (Kotlin, min SDK 26,
+- [x] **5.2 Android app shell.** An `android/` Gradle project (Kotlin, min SDK 26,
       package `com.betledger.app`, `google-services.json` git-ignored):
       full-screen WebView on `APP_URL` with the `BetLedgerAndroid` bridge
       (`getPushToken()`, `getDeviceName()`), Firebase Messaging service (`onNewToken`

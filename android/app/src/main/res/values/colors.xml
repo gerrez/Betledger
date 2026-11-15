@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The web app's theme tokens (resources/css/app.css), so the bars match the page. -->
+<resources>
+    <color name="canvas">#F7F7FB</color>
+    <color name="accent">#6C5CE7</color>
+    <color name="launcher_background">#6C5CE7</color>
+</resources>

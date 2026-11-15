@@ -206,3 +206,18 @@ native.
 - [ ] **5.4 Settle from the notification (bonus).** Won/Lost action buttons on the settle
       reminder that settle the bet without opening the app, through a token-authenticated
       endpoint (Laravel Sanctum, justified in the PR) and the 2.9 settle service.
+- [ ] **5.5 Install on the owner's phone.** A release build the owner can install and
+      keep updating on their own Android phone, against production:
+      - Release signing configured from `android/keystore.properties` (path, passwords,
+        alias; git-ignored), the keystore itself outside the repo; the build still works
+        without it (debug only). Steps to create the key once, and a warning that losing
+        it means uninstalling (logout, new push token) to install the next version.
+      - `betledger.url` for release builds pointing at production (HTTPS required);
+        debug keeps the local default.
+      - `android/README.md`: build a signed APK in Android Studio, install it on the phone
+        (copy the file, or `adb install -r`), install an update over it, and USB debugging
+        for running debug builds on the phone.
+      - `docs/SETUP.md`: production checklist for push (HTTPS, `FCM_CREDENTIALS` as a
+        secret, the Firebase app's package name) and a test from Settings → Notifications.
+      Owner does the final install. No Play Store (one user; it needs a developer
+      account, a privacy policy and review).

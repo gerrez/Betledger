@@ -6,9 +6,10 @@ use App\Livewire\Settings\Notifications;
 use App\Models\PushDevice;
 use App\Models\User;
 use App\Notifications\Push\FcmClient;
+use App\Notifications\Push\PushChannel;
+use App\Notifications\Push\PushReport;
 use App\Notifications\TestPushNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -56,33 +57,62 @@ class NotificationsTest extends TestCase
         $this->assertModelExists($device);
     }
 
-    public function test_the_test_buttons_send_a_notification_or_data_message_to_the_user(): void
+    public function test_the_test_buttons_send_a_notification_or_data_message_and_say_how_many_devices_got_it(): void
     {
-        Notification::fake();
         $this->app->instance(FcmClient::class, new FcmClient(['project_id' => 'p', 'client_email' => 'e', 'private_key' => 'k']));
+        $this->mock(PushChannel::class)
+            ->shouldReceive('send')
+            ->twice()
+            ->withArgs(fn (User $user, TestPushNotification $notification): bool => $user->is(auth()->user()))
+            ->andReturn(new PushReport(sent: 2), new PushReport(sent: 1, removed: 1));
         $user = User::factory()->create();
         PushDevice::factory()->for($user)->create();
         $this->actingAs($user);
 
         Livewire::test(Notifications::class)
             ->call('sendTest')
-            ->assertDispatched('push-test-sent')
-            ->call('sendTest', true);
-
-        Notification::assertSentToTimes($user, TestPushNotification::class, 2);
-        Notification::assertSentTo($user, TestPushNotification::class, fn (TestPushNotification $notification): bool => ! $notification->dataOnly);
-        Notification::assertSentTo($user, TestPushNotification::class, fn (TestPushNotification $notification): bool => $notification->dataOnly);
+            ->assertSet('testFailed', false)
+            ->assertSee('Sent to 2 devices.')
+            ->call('sendTest', true)
+            ->assertSee('Sent to 1 device. Removed 1 device where the app is no longer installed.');
     }
 
-    public function test_nothing_is_sent_when_push_is_not_set_up(): void
+    public function test_a_failed_test_shows_why(): void
     {
-        Notification::fake();
+        $this->app->instance(FcmClient::class, new FcmClient(['project_id' => 'p', 'client_email' => 'e', 'private_key' => 'k']));
+        $this->mock(PushChannel::class)
+            ->shouldReceive('send')
+            ->once()
+            ->andReturn(new PushReport(failed: 1, errors: ['Firebase answered 403: Permission denied.']));
         $user = User::factory()->create();
         PushDevice::factory()->for($user)->create();
         $this->actingAs($user);
 
-        Livewire::test(Notifications::class)->call('sendTest')->assertNotDispatched('push-test-sent');
+        Livewire::test(Notifications::class)
+            ->call('sendTest')
+            ->assertSet('testFailed', true)
+            ->assertSee('Failed for 1 device: Firebase answered 403: Permission denied.')
+            ->assertDontSee('Sent to');
+    }
 
-        Notification::assertNothingSent();
+    public function test_nothing_is_sent_when_push_is_not_set_up(): void
+    {
+        $this->mock(PushChannel::class)->shouldNotReceive('send');
+        $user = User::factory()->create();
+        PushDevice::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        Livewire::test(Notifications::class)->call('sendTest')->assertSet('testResult', null);
+    }
+
+    public function test_unusable_credentials_show_the_reason_instead_of_breaking_the_page(): void
+    {
+        config(['services.fcm.credentials' => '/does/not/exist.json']);
+        $this->app->forgetInstance(FcmClient::class);
+        $this->actingAs(User::factory()->create());
+
+        $this->get(route('settings.notifications'))
+            ->assertOk()
+            ->assertSee("FCM_CREDENTIALS: can't read the file /does/not/exist.json.");
     }
 }

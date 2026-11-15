@@ -6,8 +6,8 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use InvalidArgumentException;
 use RuntimeException;
+use Throwable;
 
 /**
  * Sends messages with the Firebase Cloud Messaging HTTP v1 API, authenticated as a
@@ -21,12 +21,14 @@ class FcmClient
 
     /**
      * @param  array{project_id: string, client_email: string, private_key: string, token_uri?: string}|null  $credentials
+     * @param  string|null  $configurationError  why `FCM_CREDENTIALS` is set but can't be used
      */
-    public function __construct(private ?array $credentials) {}
+    public function __construct(private ?array $credentials, public readonly ?string $configurationError = null) {}
 
     /**
      * Read the service account key from `FCM_CREDENTIALS`: the path to the JSON file
-     * downloaded from Firebase, or the JSON itself.
+     * downloaded from Firebase, or the JSON itself. A value that can't be used leaves push
+     * off (with {@see $configurationError}) rather than breaking every page that asks.
      */
     public static function fromConfig(?string $credentials): self
     {
@@ -37,18 +39,18 @@ class FcmClient
         $json = str_starts_with(ltrim($credentials), '{') ? $credentials : @file_get_contents($credentials);
 
         if ($json === false) {
-            throw new InvalidArgumentException("FCM_CREDENTIALS: can't read the file {$credentials}.");
+            return new self(null, "FCM_CREDENTIALS: can't read the file {$credentials}.");
         }
 
         $key = json_decode($json, true);
 
         if (! is_array($key)) {
-            throw new InvalidArgumentException('FCM_CREDENTIALS is not a valid service account JSON key.');
+            return new self(null, 'FCM_CREDENTIALS is not a valid service account JSON key.');
         }
 
         foreach (['project_id', 'client_email', 'private_key'] as $field) {
             if (! isset($key[$field]) || ! is_string($key[$field]) || $key[$field] === '') {
-                throw new InvalidArgumentException("FCM_CREDENTIALS: the service account key has no {$field}.");
+                return new self(null, "FCM_CREDENTIALS: the service account key has no {$field}.");
             }
         }
 
@@ -66,28 +68,32 @@ class FcmClient
     }
 
     /**
-     * Send one message (see {@see PushMessage::toFcm()}). Failures are logged rather than
-     * thrown, so one bad device doesn't stop the others.
+     * Send one message (see {@see PushMessage::toFcm()}). Failures are logged and returned
+     * rather than thrown, so one bad device doesn't stop the others.
      *
      * @param  array<string, mixed>  $message
      */
-    public function send(array $message): FcmResult
+    public function send(array $message): FcmSendResult
     {
         $credentials = $this->credentials();
 
         try {
-            $response = Http::withToken($this->accessToken())
+            $accessToken = $this->accessToken();
+        } catch (Throwable $exception) {
+            return $this->failed('Google refused the service account key: '.$exception->getMessage());
+        }
+
+        try {
+            $response = Http::withToken($accessToken)
                 ->post("https://fcm.googleapis.com/v1/projects/{$credentials['project_id']}/messages:send", [
                     'message' => $message,
                 ]);
         } catch (ConnectionException $exception) {
-            Log::warning('FCM send failed: '.$exception->getMessage());
-
-            return FcmResult::Failed;
+            return $this->failed('Could not reach Firebase: '.$exception->getMessage());
         }
 
         if ($response->successful()) {
-            return FcmResult::Sent;
+            return new FcmSendResult(FcmResult::Sent);
         }
 
         // Only FCM's own error code, not the HTTP status: a wrong project ID is a 404 too.
@@ -95,12 +101,19 @@ class FcmClient
         $errorCodes = is_array($details) ? array_column($details, 'errorCode') : [];
 
         if (in_array('UNREGISTERED', $errorCodes, true)) {
-            return FcmResult::Unregistered;
+            return new FcmSendResult(FcmResult::Unregistered, 'The app is no longer installed on this device.');
         }
 
-        Log::warning('FCM send failed.', ['status' => $response->status(), 'error' => $response->json('error.message')]);
+        $reason = $response->json('error.message');
 
-        return FcmResult::Failed;
+        return $this->failed('Firebase answered '.$response->status().(is_string($reason) ? ": {$reason}" : '.'));
+    }
+
+    private function failed(string $error): FcmSendResult
+    {
+        Log::warning("FCM send failed. {$error}");
+
+        return new FcmSendResult(FcmResult::Failed, $error);
     }
 
     /**

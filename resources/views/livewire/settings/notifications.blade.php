@@ -5,7 +5,7 @@
         <div class="space-y-6">
             @if (! $isConfigured)
                 <flux:callout variant="warning" icon="exclamation-triangle" heading="Push notifications are not set up on the server">
-                    <flux:callout.text>Set <code>FCM_CREDENTIALS</code> to the Firebase service account key to send them.</flux:callout.text>
+                    <flux:callout.text>{{ $configurationError ?? 'Set FCM_CREDENTIALS to the Firebase service account key to send them.' }}</flux:callout.text>
                 </flux:callout>
             @endif
 
@@ -42,9 +42,13 @@
                     <div class="flex flex-wrap items-center gap-2">
                         <flux:button variant="primary" wire:click="sendTest" :disabled="! $isConfigured">Send test notification</flux:button>
                         <flux:button wire:click="sendTest(true)" :disabled="! $isConfigured">Send data message</flux:button>
-
-                        <x-action-message class="ms-1" on="push-test-sent">Sent.</x-action-message>
                     </div>
+
+                    @if ($testResult !== null)
+                        <flux:callout :variant="$testFailed ? 'danger' : 'success'" :icon="$testFailed ? 'x-circle' : 'check-circle'" role="status">
+                            <flux:callout.text>{{ $testResult }}</flux:callout.text>
+                        </flux:callout>
+                    @endif
                 </div>
             @endif
         </div>

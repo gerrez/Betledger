@@ -125,7 +125,10 @@ class FcmClient
 
         return Cache::remember('fcm-access-token:'.$credentials['client_email'], now()->addMinutes(50), function () use ($credentials): string {
             $tokenUri = $credentials['token_uri'] ?? self::DEFAULT_TOKEN_URI;
-            $issuedAt = now()->getTimestamp();
+            // Google refuses a JWT living over an hour or issued "in the future", judged by its
+            // own clock: backdate it a minute and keep it well short of the hour, so a computer
+            // clock a little off still gets a token.
+            $now = now()->getTimestamp();
 
             $token = Http::asForm()
                 ->post($tokenUri, [
@@ -134,8 +137,8 @@ class FcmClient
                         'iss' => $credentials['client_email'],
                         'scope' => self::SCOPE,
                         'aud' => $tokenUri,
-                        'iat' => $issuedAt,
-                        'exp' => $issuedAt + 3600,
+                        'iat' => $now - 60,
+                        'exp' => $now + 1800,
                     ]),
                 ])
                 ->throw()

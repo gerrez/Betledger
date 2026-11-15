@@ -123,8 +123,8 @@ class PushChannelTest extends TestCase
             'iss' => 'push@betledger-test.iam.gserviceaccount.com',
             'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
             'aud' => self::TOKEN_URI,
-            'iat' => now()->getTimestamp(),
-            'exp' => now()->getTimestamp() + 3600,
+            'iat' => now()->getTimestamp() - 60,
+            'exp' => now()->getTimestamp() + 1800,
         ], json_decode($this->base64UrlDecode($claims), true));
     }
 

@@ -591,3 +591,25 @@ same items. Touch targets ≥ 44 px.
   report a P&L below −stake. Until the owner knows why, they are imported as lost with
   payout 0 (profit −stake) instead of being refused, and the reported P&L is kept in the
   notes. Owner: what causes these, and should the extra loss count in the profit?
+- **From the November 2026 review (owner).** Questions behind the Phase 6 tasks in
+  `docs/roadmap.md`; each task builds its stated default until these are answered.
+  - *Settlement date default (6.1).* When a bet is settled after the event, should the
+    settled date default to the event's start (when known and in the past) or to the
+    moment of settling? Default: the event's start.
+  - *Existing times after a time zone setting (6.2).* Bets entered by hand so far were
+    typed as local time but stored as UTC, so they are one or two hours off once a time
+    zone is set. Shift them once, or leave them? Default: leave them.
+  - *Registration (6.12).* Is registration meant to be open to anyone? Email
+    verification is currently off (`User` doesn't implement `MustVerifyEmail`).
+    Default: turn verification on and keep registration open.
+  - *Open Sportmarket orders (6.10).* Do you enter open Sportmarket bets by hand before
+    they are settled and imported? If not, 6.10 can be dropped.
+  - *Deleted bets (6.11).* Should a deleted bet be recoverable, and for how long?
+    Default: 30 days.
+  - *Exchange and lay bets.* Do you place lay bets? Sportmarket picks like "AGAINST
+    Under 2.0" are stored as ordinary bets and the export's `Exchange Role` is ignored.
+    Real lay bets (liability, commission) are not planned.
+  - *Roadmap order.* 4.5 (merging list entries) is suggested ahead of 4.4 (cash out),
+    since the import creates differently spelled entries; 4.7 (automatic exchange
+    rates) and 4.8 (each-way and system bets) are suggested last, and 4.7 could be
+    dropped because every bet already keeps its own editable rate.

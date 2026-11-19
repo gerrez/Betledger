@@ -1,0 +1,530 @@
+openapi: 3.0.3
+
+info:
+  title: BetLedger API
+  version: 1.0.0
+  description: |
+    Record bets on a BetLedger account from scripts and other apps.
+
+    This file is the contract between BetLedger and the projects that use its API.
+    It lives at `docs/api/openapi.yaml` in the BetLedger repository; consumers copy it
+    from the `main` branch. BetLedger's test suite checks every documented request and
+    response against this file, so it changes together with the code.
+
+    ## Authentication
+
+    Every request needs a personal access token, created by the user on
+    **Settings → API tokens** in BetLedger, sent as `Authorization: Bearer <token>`.
+    A token acts as the user who created it and only ever reads or writes that user's
+    data. Tokens don't expire; the user can revoke them at any time, after which
+    requests get `401`.
+
+    Send `Accept: application/json`. Every response under `/api`, errors included, is
+    JSON.
+
+    ## Numbers and dates
+
+    Money, odds and exchange rates are **decimal strings** (`"25.50"`, `"1.95"`), never
+    JSON floats, so no precision is lost. In requests a JSON integer (`25`) is accepted
+    as well, and a single decimal comma (`"1,95"`) is read as a point; a JSON float
+    (`25.5`) is rejected. Amounts are in major units of the bet's currency (`"25.50"`
+    is 25 euros 50 cents).
+
+    Dates are ISO 8601 date-times. Responses give them in UTC with a `Z`
+    (`2026-11-19T17:30:00Z`). Requests may send any offset (`+01:00`, `Z`); a date-time
+    without an offset is taken as UTC.
+
+    ## Rate limit
+
+    60 requests per minute per user. Over the limit, requests get `429` with a
+    `Retry-After` header (seconds).
+
+    ## Versioning
+
+    The major version is in the path (`/api/v1`). Within v1, changes are only
+    additive: new endpoints, new optional request fields and new response fields.
+    Ignore response fields you don't know. Removing or renaming a field, changing its
+    type, or rejecting a request that used to be accepted means a new major version
+    (`/api/v2`), agreed with consumers first. `info.version` follows semantic
+    versioning and every change is listed below.
+
+    ## Changelog
+
+    - **1.0.0** (2026-11-20): `POST /bets`.
+
+servers:
+  - url: /api/v1
+    description: Relative to the BetLedger installation, e.g. https://betledger.example/api/v1
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Bets
+
+paths:
+  /bets:
+    post:
+      tags: [Bets]
+      operationId: createBet
+      summary: Record a new bet
+      description: |
+        Records a bet with the same fields and rules as the New bet form in BetLedger.
+        The bet is always open (unsettled); results are not accepted here.
+
+        Sport, competition, market, teams, tipster and tags are **names**. Each is
+        matched to the user's own list entry with that name, ignoring case
+        (`"football"` finds `"Football"`), or added to the user's lists. Competitions
+        and teams are looked up within the selection's sport.
+
+        The bet's currency is the bookmaker's. Unknown fields are ignored, including
+        `user_id`, `status`, `payout` and results.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewBet'
+            examples:
+              single:
+                summary: A single with every field
+                value:
+                  bookmaker: Unibet
+                  placed_at: '2026-11-19T18:30:00+01:00'
+                  stake: '25.50'
+                  exchange_rate: '1'
+                  is_free_bet: false
+                  tipster: Pundit Pete
+                  tags: [Value, Early price]
+                  notes: Took the early price.
+                  selections:
+                    - sport: Football
+                      competition: Premier League
+                      market: Match result
+                      teams: [Arsenal, Chelsea]
+                      event_name: Arsenal v Chelsea
+                      event_starts_at: '2026-11-22T16:30:00Z'
+                      pick: Arsenal
+                      odds: '1.95'
+                      closing_odds: '1.90'
+              accumulator:
+                summary: An accumulator with only the required fields
+                value:
+                  bookmaker: Unibet
+                  stake: 10
+                  selections:
+                    - sport: Football
+                      teams: [Arsenal, Chelsea]
+                      pick: Arsenal
+                      odds: '1.5'
+                    - sport: Tennis
+                      event_name: Sinner v Alcaraz
+                      pick: Sinner
+                      odds: '2.10'
+      responses:
+        '201':
+          description: The bet was recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Bet'
+              examples:
+                single:
+                  value:
+                    data:
+                      id: 812
+                      url: https://betledger.example/bets/812
+                      type: single
+                      status: open
+                      bookmaker: { id: 3, name: Unibet }
+                      placed_at: '2026-11-19T17:30:00Z'
+                      currency: EUR
+                      stake: '25.50'
+                      exchange_rate: '1'
+                      is_free_bet: false
+                      total_odds: '1.95'
+                      tipster: Pundit Pete
+                      tags: [Value, Early price]
+                      notes: Took the early price.
+                      settled_at: null
+                      payout: null
+                      profit: null
+                      selections:
+                        - id: 1544
+                          position: 1
+                          sport: Football
+                          competition: Premier League
+                          market: Match result
+                          teams: [Arsenal, Chelsea]
+                          event_name: Arsenal v Chelsea
+                          event_starts_at: '2026-11-22T16:30:00Z'
+                          pick: Arsenal
+                          odds: '1.95'
+                          closing_odds: '1.90'
+                          result: null
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/EmailNotVerified'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: A personal access token from Settings → API tokens.
+
+  responses:
+    Unauthenticated:
+      description: No token, or a token that is wrong or revoked.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Unauthenticated.
+    EmailNotVerified:
+      description: The user has not verified their email address (only when BetLedger requires verification).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Your email address is not verified.
+    ValidationFailed:
+      description: |
+        The request was not valid; nothing was saved. `errors` has the messages for
+        each field that failed, keyed by its path (`stake`, `selections.0.odds`).
+        `message` summarises the first error. The messages are written for people and
+        may change; rely on the keys, not the text.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          example:
+            message: Enter odds above 1 as a string, like "1.95" (up to 3 decimals). (and 1 more error)
+            errors:
+              selections.0.odds: ['Enter odds above 1 as a string, like "1.95" (up to 3 decimals).']
+              bookmaker: [Choose one of your active bookmakers.]
+    TooManyRequests:
+      description: Over the rate limit of 60 requests per minute.
+      headers:
+        Retry-After:
+          description: Seconds until requests are accepted again.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Too Many Attempts.
+
+  schemas:
+    NewBet:
+      type: object
+      description: |
+        Send the bookmaker either by `bookmaker` (name) or by `bookmaker_id`, not both.
+      required: [stake, selections]
+      oneOf:
+        - required: [bookmaker]
+        - required: [bookmaker_id]
+      properties:
+        bookmaker:
+          type: string
+          maxLength: 255
+          description: The name of one of the user's active bookmakers, ignoring case.
+          example: Unibet
+        bookmaker_id:
+          type: integer
+          description: The id of one of the user's active bookmakers (as returned in `Bet.bookmaker.id`).
+        placed_at:
+          $ref: '#/components/schemas/InputDateTime'
+        stake:
+          description: Above 0, at most 2 decimals, in the bookmaker's currency.
+          oneOf:
+            - $ref: '#/components/schemas/InputDecimal'
+            - type: integer
+              minimum: 1
+          example: '25.50'
+        exchange_rate:
+          description: |
+            1 unit of the bookmaker's currency = this many units of the user's base
+            currency. Above 0, at most 8 decimals. Defaults to the bookmaker's rate.
+            Always 1 when the bookmaker is in the user's base currency, whatever is sent.
+          nullable: true
+          oneOf:
+            - $ref: '#/components/schemas/InputDecimal'
+            - type: integer
+              minimum: 1
+          example: '7.46'
+        is_free_bet:
+          type: boolean
+          default: false
+          description: A free bet's stake is not returned when it wins and not counted as turnover.
+        tipster:
+          type: string
+          nullable: true
+          maxLength: 255
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+            maxLength: 255
+          description: Duplicates that differ only in case are added once.
+        notes:
+          type: string
+          nullable: true
+          maxLength: 5000
+        selections:
+          type: array
+          minItems: 1
+          maxItems: 20
+          description: |
+            One selection makes a single, two or more an accumulator. The product of the
+            odds may be at most 9999999.999.
+          items:
+            $ref: '#/components/schemas/NewSelection'
+
+    NewSelection:
+      type: object
+      description: Send `event_name`, or `teams` to have it made from them ("Arsenal v Chelsea").
+      required: [sport, pick, odds]
+      anyOf:
+        - required: [event_name]
+        - required: [teams]
+          properties:
+            teams:
+              minItems: 1
+      properties:
+        sport:
+          type: string
+          maxLength: 255
+          example: Football
+        competition:
+          type: string
+          nullable: true
+          maxLength: 255
+          example: Premier League
+        market:
+          type: string
+          nullable: true
+          maxLength: 255
+          example: Match result
+        teams:
+          type: array
+          nullable: true
+          description: The participants of the event (clubs, or players in sports like tennis).
+          items:
+            type: string
+            maxLength: 255
+          example: [Arsenal, Chelsea]
+        event_name:
+          type: string
+          nullable: true
+          maxLength: 255
+          example: Arsenal v Chelsea
+        event_starts_at:
+          $ref: '#/components/schemas/InputDateTime'
+        pick:
+          type: string
+          maxLength: 255
+          description: What was backed.
+          example: Arsenal
+        odds:
+          description: Decimal odds above 1, at most 3 decimals.
+          oneOf:
+            - $ref: '#/components/schemas/InputDecimal'
+            - type: integer
+              minimum: 2
+          example: '1.95'
+        closing_odds:
+          description: The odds when the market closed, for closing line value. Above 1, at most 3 decimals.
+          nullable: true
+          oneOf:
+            - $ref: '#/components/schemas/InputDecimal'
+            - type: integer
+              minimum: 2
+          example: '1.90'
+
+    InputDecimal:
+      type: string
+      pattern: '^\s*\d+([.,]\d+)?\s*$'
+      description: A decimal number as a string, with a decimal point or a single decimal comma.
+
+    InputDateTime:
+      type: string
+      nullable: true
+      pattern: '^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$'
+      description: |
+        An ISO 8601 date-time to the minute or second, optionally with an offset
+        (`2026-11-19T18:30`, `2026-11-19T18:30:00+01:00`, `2026-11-19T17:30:00Z`).
+        Without an offset it is taken as UTC. Optional; `placed_at` defaults to now.
+      example: '2026-11-19T18:30:00+01:00'
+
+    Bet:
+      type: object
+      required: [id, url, type, status, bookmaker, placed_at, currency, stake, exchange_rate, is_free_bet, total_odds, tipster, tags, notes, settled_at, payout, profit, selections]
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+          format: uri
+          description: The bet's page in BetLedger.
+        type:
+          type: string
+          enum: [single, accumulator]
+        status:
+          type: string
+          enum: [open, settled]
+        bookmaker:
+          type: object
+          required: [id, name]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        placed_at:
+          $ref: '#/components/schemas/OutputDateTime'
+        currency:
+          type: string
+          description: ISO 4217 code of the bookmaker's currency.
+          enum: [AUD, CAD, CHF, CZK, DKK, EUR, GBP, NOK, NZD, PLN, SEK, USD]
+        stake:
+          $ref: '#/components/schemas/Amount'
+        exchange_rate:
+          type: string
+          pattern: '^\d+(\.\d+)?$'
+          description: 1 unit of `currency` = this many units of the user's base currency, without trailing zeros.
+          example: '0.1341'
+        is_free_bet:
+          type: boolean
+        total_odds:
+          $ref: '#/components/schemas/OutputOdds'
+        tipster:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+          nullable: true
+        settled_at:
+          allOf:
+            - $ref: '#/components/schemas/OutputDateTime'
+          nullable: true
+        payout:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+          nullable: true
+          description: What the bookmaker paid out, once settled.
+        profit:
+          allOf:
+            - $ref: '#/components/schemas/SignedAmount'
+          nullable: true
+          description: Payout minus stake (for a free bet, the payout), once settled.
+        selections:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Selection'
+
+    Selection:
+      type: object
+      required: [id, position, sport, competition, market, teams, event_name, event_starts_at, pick, odds, closing_odds, result]
+      properties:
+        id:
+          type: integer
+        position:
+          type: integer
+          minimum: 1
+          description: Order within the bet, from 1.
+        sport:
+          type: string
+        competition:
+          type: string
+          nullable: true
+        market:
+          type: string
+          nullable: true
+        teams:
+          type: array
+          items:
+            type: string
+        event_name:
+          type: string
+        event_starts_at:
+          allOf:
+            - $ref: '#/components/schemas/OutputDateTime'
+          nullable: true
+        pick:
+          type: string
+        odds:
+          $ref: '#/components/schemas/OutputOdds'
+        closing_odds:
+          allOf:
+            - $ref: '#/components/schemas/OutputOdds'
+          nullable: true
+        result:
+          type: string
+          nullable: true
+          enum: [won, lost, void, half_won, half_lost, null]
+          description: Null while the selection is pending.
+
+    Amount:
+      type: string
+      pattern: '^\d+\.\d{2}$'
+      description: An amount in major units with exactly 2 decimals.
+      example: '25.50'
+
+    SignedAmount:
+      type: string
+      pattern: '^-?\d+\.\d{2}$'
+      example: '-25.50'
+
+    OutputOdds:
+      type: string
+      pattern: '^\d+\.\d{2,4}$'
+      description: Decimal odds with 2 to 4 decimals, without trailing zeros beyond 2 ("2.00", "1.95", "4.095").
+      example: '1.95'
+
+    OutputDateTime:
+      type: string
+      format: date-time
+      pattern: 'Z$'
+      description: ISO 8601 in UTC.
+      example: '2026-11-19T17:30:00Z'
+
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    ValidationError:
+      type: object
+      required: [message, errors]
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            minItems: 1
+            items:
+              type: string

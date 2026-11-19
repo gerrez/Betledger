@@ -438,3 +438,19 @@ Not planned; listed so they aren't proposed again without a reason. Lay/exchange
 worth it if the owner bets on exchanges (open question). Goals and limits, stake-band
 analysis and "units": nothing in the owner's use asks for them. Dead heats, odds boosts
 and payout caps are already covered by the manual payout.
+
+## Phase 7 — API
+
+Asked for by the owner: an authenticated JSON API, starting with recording bets. Design
+in "API" in `docs/spec.md`.
+
+- [x] **7.1 Create a bet through the API.** Laravel Sanctum personal access tokens;
+      Settings → API tokens to create (shown once), list and revoke them.
+      `POST /api/v1/bets` with every field of the New bet form (bookmaker by id or
+      name, tipster, tags, notes, selections with teams, competition, market, start
+      time and closing odds), saved through `RecordBet`. The contract for consumers is
+      `docs/api/openapi.yaml`, checked by `OpenApiContractTest` (every route
+      documented, examples valid and working, real requests and responses match).
+      Feature tests: 401 without or with a revoked token, every field saved, validation
+      messages, another user's bookmaker refused, list entries only ever the token
+      user's, token page isolation.

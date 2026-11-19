@@ -161,7 +161,8 @@ is too big for one review.
       duplicates are per user).
 - [ ] **4.2 CSV export.** Download all of the user's bets (one row per selection, with
       the bet's fields repeated) from Settings. Money in major units with the currency
-      code, odds as entered. Isolation test.
+      code, odds as entered. Isolation test. Link the download from the delete-account
+      dialog too ("Download your bets first"): it is the only backup a user has.
 - [ ] **4.3 Bankroll.** Deposits and withdrawals per bookmaker, and balances (deposits −
       withdrawals + settled profit − open cash stakes). Shown per bookmaker and in total.
 - [ ] **4.4 Cash out.** Full and partial cash out of an open bet, recorded as its own
@@ -173,3 +174,267 @@ is too big for one review.
 - [ ] **4.7 Automatic exchange rates.** Fetch rates for bookmakers in other currencies;
       a bet still copies the rate when saved.
 - [ ] **4.8 Each-way and system bets.**
+
+## Phase 6 — From the November 2026 review
+
+From a review of the app after 4.1b (code, views and tests were read; the app was not
+run). Items are in priority order within the phase. They are independent of Phase 5.
+Suggested order together with the open Phase 4 items, for the owner to confirm:
+**6.1, 6.2, 4.2, 6.3, 6.4, 6.5, 6.6, 6.7, 4.5, 6.8, 6.9, 4.3**, then the rest. Related
+owner decisions are under "Open questions" in `docs/spec.md` ("From the November 2026
+review"); where a task says "default", build that unless the owner has answered.
+
+Every task keeps the rules in `CLAUDE.md`: integer money, decimal-string odds,
+calculations in `app/Domain/`, every query through the user's relations, an isolation
+test for anything that reads or changes user data.
+
+### Correct dates
+
+- [ ] **6.1 Editable settlement date.** `SettleBet` stamps `settled_at` with `now()`
+      (`app/Domain/Bets/SettleBet.php`), and nothing in the app can change it. Profit
+      over time, the Home month card and every date range group by `settled_at`, so a
+      Saturday bet settled on Monday, or last month's bets entered today, land in the
+      wrong period.
+      - Domain: give `SettleBet` an optional "settled at" argument for the moment a bet
+        becomes settled, and a method that changes the date of an already settled bet.
+        Keep the current rules: un-settling clears it, a bet that stays settled through
+        a result change keeps it. Reject a date before `placed_at` or in the future.
+      - Default when none is given: the latest `event_starts_at` of the bet's selections
+        when every selection has one and it is in the past, else now (the owner mostly
+        settles after the event; see the open question).
+      - UI: a "Settled" row in the facts list on the bet detail page with an edit
+        control, and a "Settled" date + 24-hour time pair (the 3.3 inputs) on the edit
+        form, shown only while the bet is settled.
+      - Update the 2.9 and 3.4 notes in `docs/spec.md` ("settled at the time of the
+        change/saving").
+      - Tests: unit tests for the default and the validation; feature tests for
+        changing the date from both pages and for the bet moving between months on the
+        statistics page; isolation.
+- [ ] **6.2 Per-user time zone.** Everything is entered, shown and grouped in UTC
+      (`config/app.php`), so a user in Denmark sees "now" one or two hours behind and a
+      bet settled at 23:30 UTC counts on the wrong day. Answers the 2.6 open question.
+      - Schema: `users.timezone` (IANA name, default `UTC`), validated with Laravel's
+        `timezone` rule. Storage stays UTC; convert only at the edges.
+      - Setting: a "Time zone" field in Settings (next to the base currency), using the
+        3.2 dropdown. Registration pre-fills it from the browser
+        (`Intl.DateTimeFormat().resolvedOptions().timeZone`), falling back to UTC.
+      - One place for the conversion: a small class under `app/Domain/` that turns a
+        UTC instant into the user's local date/time and a local date + time into UTC.
+        Use it in the bet form (Placed, Starts, Settled; parsing and pre-filling), in
+        every formatted date (bet cards, bet detail, import preview), in
+        `StatisticsFilter` (a "from/to" day means that day in the user's zone), in the
+        profit-over-time buckets and in the Home month selector. No `->format()` on a
+        UTC date in a component or view after this task.
+      - Sportmarket import: `settled_at` becomes the end of the game date in the user's
+        zone instead of 23:59 UTC; `placed_at` in the file is already UTC.
+      - Existing bets are not shifted (see the open question); say so in the PR.
+      - Tests with `Europe/Copenhagen`: a bet on each side of local midnight, a day on
+        each side of a daylight-saving change, date-range boundaries, and that two
+        users with different zones each see their own days.
+
+### Finding and entering bets
+
+- [ ] **6.3 Bets list: search and more filters.** `App\Livewire\Bets\Index` filters by
+      bookmaker and sport only, 20 bets per page; after an import of ~600 bets a single
+      bet can't be found.
+      - Add a text search (event name, pick, team, competition and notes) and filters
+        for tipster, tag, competition, market, bet type and a placed/settled date
+        range, all as `#[Url]` properties so a filtered list can be linked to (6.7
+        needs that).
+      - Reuse the statistics conditions instead of writing them twice: move the `where`
+        clauses of `StatisticsQuery::filtered()` into one query class under
+        `app/Domain/Bets/` that both the statistics query and the bets list call with a
+        `StatisticsFilter`-style value object; the list adds the text search and its
+        Open/Settled/All tab.
+      - Text search must behave the same on SQLite and Postgres: compare
+        `LOWER(column) LIKE ?` with a lower-cased term and escaped `%`/`_`; no `ILIKE`.
+      - UI: a search field above the tabs; the extra filters behind one "Filters"
+        button (a sheet on phones) so the phone header stays two rows; active filters
+        shown as removable chips like on the statistics page; "n bets" count and an
+        empty state for "no bets match".
+      - Tests: each filter, the search (case, wildcard characters), combined filters,
+        pagination reset on change, and that neither search nor a filter id from
+        another user reveals that user's bets.
+- [ ] **6.4 Duplicate a bet and "Save and add another".** `Bets\Create` pre-fills only
+      the bookmaker and sport of the latest bet. The same event at two bookmakers, or
+      an evening of similar bets, means retyping everything.
+      - "Duplicate" on the bet detail page opens `bets/create?from={bet}`: every field
+        copied except placed (now), results, payout, closing odds and `external_ref`.
+        The source bet is loaded through `$user->bets()` and the policy, so another
+        user's id is a 404.
+      - A second submit button on the new-bet form, "Save and add another": saves,
+        shows "Bet saved" and stays on the form with bookmaker, sport, competition,
+        tipster, tags and placed date kept, and event, pick, odds and stake cleared.
+      - Tests: the copied and the cleared fields, an accumulator copy, isolation.
+
+### Statistics
+
+- [ ] **6.5 Risk figures (domain and page).** `Totals` has no measure of variance, so the
+      page can't say whether a bad run is normal or how much bankroll the staking needs.
+      - Domain, in `app/Domain/Statistics/`: over the settled bets in `settled_at`
+        order (ties by id), in base currency — **max drawdown** (largest fall of
+        cumulative profit from an earlier peak, with the dates of the peak and the
+        low), **current drawdown**, **longest winning and losing streak** and the
+        current streak (pushes neither extend nor break a streak; use the existing
+        `isWin`/`isLoss` of `BetFigures`), **biggest win and biggest loss** (with the
+        bet, so the page can link to it), **average stake** (cash bets only, like
+        turnover; integer division rounded half up once).
+      - Page: a "Risk" panel on the statistics page under the KPI tiles, respecting
+        the filters. Not on Home.
+      - Define each figure in the Statistics section of `docs/spec.md`.
+      - Unit tests against the 2.12 fixture set with hand-checked numbers, including:
+        no settled bets, only wins, a drawdown that has recovered, free bets.
+      - Depends on 6.1 (the order of settlement must be right for streaks to mean
+        anything).
+- [ ] **6.6 Break-even strike rate.** A strike rate of 45 % says nothing without the
+      odds, and "average odds" is an arithmetic mean of `total_odds`
+      (`StatisticsCalculator`), which one accumulator at 50.0 among twenty bets at 2.0
+      turns into 4.3.
+      - Add **break-even strike rate** = mean of `1 ÷ total_odds` over the same bets
+        the strike rate counts (wins and losses, no pushes), calculated with bcmath
+        and rounded once for display. Show it under the strike-rate tile ("needs
+        51.3 % to break even") and as a column in the breakdown table and odds bands.
+      - Keep "average odds" as defined; add the median next to it only if it fits the
+        tile.
+      - Spec: add the definition. Unit tests with hand-checked values.
+- [ ] **6.7 From a statistics row to its bets.** Breakdown rows and odds bands are plain
+      text; "Tennis −12 % ROI" can't be followed up.
+      - Each breakdown row and odds band links to the bets list with the page's current
+        filters plus that row's value (and the settled tab). The "no competition / no
+        tipster / …" rows link with an explicit "none" filter value.
+      - The count on the linked list must equal the row's count; assert that in a
+        feature test per dimension. Odds bands need a total-odds range filter on the
+        list (URL only, shown as a chip).
+      - Depends on 6.3.
+- [ ] **6.8 Sortable breakdown; month and weekday.** Breakdown rows are always ordered by
+      settled count, then label, so the best and worst rows can't be ranked, and there
+      is no profit-per-month table.
+      - Sorting: column headers on the breakdown table sort by bets, turnover, profit,
+        ROI, strike rate or CLV, ascending/descending, kept in the URL. Sort in the
+        calculator (it owns the rows), with label as the tie-breaker; rows without a
+        value for the sorted column (no ROI because no turnover) go last.
+      - Dimensions: add `Month` (settlement month, newest first by default) and
+        `Weekday` (Monday–Sunday) to `Dimension`. They use the user's time zone once
+        6.2 is in.
+      - Unit tests for each sort and the two dimensions; a feature test for the URL
+        state.
+
+### Closing odds and import
+
+- [ ] **6.9 Quick closing odds.** The Sportmarket export has no closing odds, so the CLV
+      panel is empty for imported bets, and adding them is Edit → More details per
+      selection.
+      - On the bet detail page each selection gets "Add closing odds" (or the existing
+        closing-odds row becomes editable): one decimal input, saved on its own, CLV
+        shown at once. Same validation as the form (> 1, decimal comma accepted).
+      - Saving goes through `RecordBet` or a small domain action next to it, not a
+        direct model update in the component, and never touches results or payout.
+      - On the bets list, a "No closing odds" filter (via 6.3 if it is in, else skip)
+        so the owner can work through them.
+      - Tests: add, change, clear; invalid values; isolation.
+- [ ] **6.10 Import: warn about bets already entered by hand.** Duplicates are detected
+      only by `external_ref`. Open orders are skipped by the import, so a user who logs
+      them by hand gets the same bet again when the settled order is imported later.
+      - In the mapping step, mark an order as a **possible duplicate** when the user
+        has a bet without `external_ref` at the same bookmaker with the same stake,
+        placed within a few minutes of the order, and the same event name
+        (case-insensitive). Load the candidate bets once, not per order.
+      - Preview: possible duplicates get their own group with a link to the existing
+        bet and are **not imported by default**; a checkbox per order (or "import
+        anyway") includes them. Never merge or change the existing bet.
+      - Spec: extend "Import from Sportmarket". Tests: match, near misses (other
+        stake, other bookmaker, outside the time window), opt-in import, isolation.
+      - Only worth doing if the owner logs open Sportmarket bets by hand (open
+        question).
+
+### Safety
+
+- [ ] **6.11 Recently deleted bets.** `Bets\Show::delete()` removes the bet and its
+      selections for good; one wrong tap loses the result history.
+      - Soft-delete bets (`deleted_at`, new migration; `SoftDeletes` on `Bet`).
+        Selections stay attached to the trashed bet. Check that every query on bets
+        goes through the model so trashed bets drop out of lists, statistics, Home and
+        the "in use" checks on Lists and Bookmakers.
+      - Settings → "Deleted bets": the user's trashed bets with Restore and "Delete for
+        good"; a scheduled command prunes bets trashed more than 30 days ago
+        (`Prunable`).
+      - `external_ref`: a trashed imported bet still blocks a re-import, which is
+        right (deleting an imported bet should not make the next import bring it
+        back); say so in the spec. Deleting for good frees it.
+      - The delete confirmation text changes from "can't be undone" to "You can
+        restore it from Settings for 30 days".
+      - Tests: trashed bets are absent from every page and total, restore, prune with
+        frozen time, isolation on restore and force-delete, on both databases.
+- [ ] **6.12 Email verification: decide and make it true.** `User` has
+      `implements MustVerifyEmail` commented out, so the `verified` middleware on the
+      app routes does nothing, while registration is open to anyone.
+      - Default (if the owner hasn't answered): turn verification on. Implement
+        `MustVerifyEmail` on `User`; existing users and the seeded demo accounts get
+        `email_verified_at` set (migration for existing rows, seeder for demo
+        accounts); confirm a mail driver is configured in production in `docs/SETUP.md`.
+      - Alternative if the owner wants a private app: remove the registration routes
+        and the link on the login page instead, and create users with an Artisan
+        command.
+      - Tests: an unverified user is redirected from every app route; the starter
+        kit's verification tests are enabled.
+- [ ] **6.13 Test deleting an account that has data.** `ProfileUpdateTest` deletes a user
+      with no data. Bets reference bookmakers, tipsters and lists through composite
+      foreign keys without cascade, so whether the delete succeeds depends on the
+      order the database cascades in, and SQLite and Postgres may differ.
+      - A feature test that creates a user with the full `DemoDataSeeder` data set
+        (accumulators, tags, teams, settled and open bets), deletes the account
+        through `DeleteUserForm`, and asserts every user-owned table is empty for that
+        user and untouched for a second user. It must pass in both CI jobs.
+      - If it fails on either database, fix it by deleting in dependency order inside
+        a transaction in a domain action, not by loosening the foreign keys.
+
+### Later, when needed
+
+- [ ] **6.14 Team and competition picker in the bet form.** The form uses native
+      `<datalist>`s, which are awkward on phone keyboards, and renders every team of
+      the sport into the page for each selection. `BetForm::sportSuggestions()` also
+      runs two queries per selection on every render (40 for a 20-leg accumulator).
+      - Replace the datalists with a combobox built on the 3.2 dropdown component:
+        type to filter, pick with keys or touch, "Create ‘…’" as the last option;
+        results fetched from the server on typing (debounced, capped at ~20), not
+        rendered up front.
+      - Load suggestions once per sport per render (memoise by sport id), not per
+        selection.
+      - Tests: existing bet-form tests keep passing; a query-count test for a 10-leg
+        accumulator; isolation (suggestions never include another user's entries).
+- [ ] **6.15 Bulk actions and undoing an import.** A wrong import of 500 bets can only be
+      removed one bet at a time (the 4.1b note says so).
+      - Bets list: a "Select" mode with checkboxes, "Select all n matching", and the
+        actions Delete and Add/Remove tag. Every action re-queries the ids through
+        `$user->bets()` so posted ids of another user are ignored.
+      - Imports: store an `import_batch` id (new nullable column, same value for all
+        bets of one confirm) and add an "imported in batch" filter, so "undo the last
+        import" is: filter, select all, delete.
+      - Depends on 6.3; much safer after 6.11 (bulk delete becomes recoverable).
+- [ ] **6.16 Chart values and more date ranges.** The profit chart has no way to read a
+      value (2.14 chose no tooltips), and the ranges are 30/90 days, this year, all
+      time and custom.
+      - Chart: tapping or hovering a point shows its date and cumulative profit in a
+        small label (Alpine, no library); the same values are available to screen
+        readers as a visually hidden table.
+      - Ranges: add "This month", "Last month" and "Last year" to `DateRange`.
+- [ ] **6.17 Statistics performance.** `StatisticsQuery::bets()` loads every matching bet
+      with seven relations on each render, and Home runs it twice. Fine at ~600 bets;
+      revisit when a page takes over ~300 ms or a user passes ~10,000 bets.
+      - First, cheap: on Home, get the open stake with one aggregate query instead of
+        a second full load; add indexes on `selections (user_id, sport_id)`,
+        `(user_id, competition_id)`, `(user_id, market_id)` and
+        `bets (user_id, status)` in a new migration.
+      - Then, only if still slow: load plain rows (no models) for the calculator, or
+        cache the `BetFigures` list per user and filter, invalidated when any of the
+        user's bets changes. Do not move the calculations into SQL: they must stay in
+        `app/Domain/` and unit-tested.
+      - Add a query-count test on the statistics page so regressions show up.
+
+### Considered and left out
+
+Not planned; listed so they aren't proposed again without a reason. Lay/exchange bets
+(liability, commission) need a change to the settlement rules in the spec and are only
+worth it if the owner bets on exchanges (open question). Goals and limits, stake-band
+analysis and "units": nothing in the owner's use asks for them. Dead heats, odds boosts
+and payout caps are already covered by the manual payout.

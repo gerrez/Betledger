@@ -40,6 +40,8 @@ class Edit extends BetForm
         $this->tipster = $bet->tipster->name ?? '';
         $this->tags = array_values($bet->tags->map(fn (Tag $tag): string => $tag->name)->all());
         $this->notes = $bet->notes ?? '';
+        $this->probability = $bet->probability === null ? '' : Decimal::normalize($bet->probability);
+        $this->bet_value = $bet->bet_value === null ? '' : Decimal::normalize($bet->bet_value);
         $this->selections = array_values($bet->selections->map(fn (Selection $selection): array => [
             'id' => $selection->id,
             'sport' => $selection->sport->name,
@@ -57,7 +59,7 @@ class Edit extends BetForm
             'show_details' => $selection->competition_id !== null || $selection->market_id !== null || $selection->closing_odds !== null,
         ])->all());
 
-        $this->showDetails = $this->tipster !== '' || $this->tags !== [] || $this->notes !== '';
+        $this->showDetails = $this->tipster !== '' || $this->tags !== [] || $this->notes !== '' || $this->probability !== '' || $this->bet_value !== '';
     }
 
     public function save(RecordBet $recordBet): void

@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: BetLedger API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Record bets on a BetLedger account from scripts and other apps.
 
@@ -24,7 +24,8 @@ info:
 
     ## Numbers and dates
 
-    Money, odds and exchange rates are **decimal strings** (`"25.50"`, `"1.95"`), never
+    Money, odds, exchange rates and percentages (`probability`, `bet_value`: `"55.5"` is
+    55.5 %) are **decimal strings** (`"25.50"`, `"1.95"`), never
     JSON floats, so no precision is lost. In requests a JSON integer (`25`) is accepted
     as well, and a single decimal comma (`"1,95"`) is read as a point; a JSON float
     (`25.5`) is rejected. Amounts are in major units of the bet's currency (`"25.50"`
@@ -50,6 +51,8 @@ info:
 
     ## Changelog
 
+    - **1.1.0** (2026-11-20): optional `probability` and `bet_value` on `POST /bets`;
+      both returned on `Bet`.
     - **1.0.0** (2026-11-20): `POST /bets`.
 
 servers:
@@ -97,6 +100,7 @@ paths:
                   tipster: Pundit Pete
                   tags: [Value, Early price]
                   notes: Took the early price.
+                  probability: '55.5'
                   selections:
                     - sport: Football
                       competition: Premier League
@@ -147,6 +151,8 @@ paths:
                       exchange_rate: '1'
                       is_free_bet: false
                       total_odds: '1.95'
+                      probability: '55.5'
+                      bet_value: '108.23'
                       tipster: Pundit Pete
                       tags: [Value, Early price]
                       notes: Took the early price.
@@ -285,6 +291,29 @@ components:
           type: string
           nullable: true
           maxLength: 5000
+        probability:
+          description: |
+            Your estimate of the chance the bet wins, as a percentage: above 0, at most
+            100, at most 2 decimals (`"55.5"` = 55.5 %). When sent, `bet_value` is
+            calculated from it, so don't send both.
+          nullable: true
+          oneOf:
+            - $ref: '#/components/schemas/InputDecimal'
+            - type: integer
+              minimum: 1
+              maximum: 100
+          example: '55.5'
+        bet_value:
+          description: |
+            The bet's value as a percentage, for when you have no `probability` to
+            calculate it from: above 0, at most 2 decimals (`"104.5"` = 104.5 %).
+            Rejected together with `probability`.
+          nullable: true
+          oneOf:
+            - $ref: '#/components/schemas/InputDecimal'
+            - type: integer
+              minimum: 1
+          example: '104.5'
         selections:
           type: array
           minItems: 1
@@ -373,7 +402,7 @@ components:
 
     Bet:
       type: object
-      required: [id, url, type, status, bookmaker, placed_at, currency, stake, exchange_rate, is_free_bet, total_odds, tipster, tags, notes, settled_at, payout, profit, selections]
+      required: [id, url, type, status, bookmaker, placed_at, currency, stake, exchange_rate, is_free_bet, total_odds, probability, bet_value, tipster, tags, notes, settled_at, payout, profit, selections]
       properties:
         id:
           type: integer
@@ -412,6 +441,21 @@ components:
           type: boolean
         total_odds:
           $ref: '#/components/schemas/OutputOdds'
+        probability:
+          type: string
+          nullable: true
+          pattern: '^\d+(\.\d+)?$'
+          description: The chance the bet wins as a percentage, without trailing zeros (`"55.5"` = 55.5 %).
+          example: '55.5'
+        bet_value:
+          type: string
+          nullable: true
+          pattern: '^\d+(\.\d+)?$'
+          description: |
+            The bet's value as a percentage, without trailing zeros. With a
+            `probability`, it is `total_odds × probability` rounded half up to 2
+            decimals (`"1.95"` at `"55.5"` → `"108.23"`); otherwise as sent.
+          example: '108.23'
         tipster:
           type: string
           nullable: true

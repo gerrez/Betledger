@@ -170,6 +170,8 @@ class CreateBetTest extends TestCase
         $selection = $bet->selections()->sole();
         $this->assertNull($bet->tipster_id);
         $this->assertNull($bet->notes);
+        $this->assertNull($bet->probability);
+        $this->assertNull($bet->bet_value);
         $this->assertSame(0, $bet->tags()->count());
         $this->assertNull($selection->competition_id);
         $this->assertNull($selection->market_id);
@@ -673,6 +675,96 @@ class CreateBetTest extends TestCase
             ->call('save')
             ->assertHasErrors(['exchange_rate'])
             ->assertSet('showDetails', true);
+
+        $this->assertDatabaseCount('bets', 0);
+    }
+
+    public function test_the_bet_value_is_calculated_from_the_probability_and_the_odds(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->set('showDetails', true)
+            ->set('bet_value', '130')
+            ->set('probability', '55,5')
+            ->assertViewHas('calculatedBetValue', '108.23')
+            ->set('selections.0.odds', '2.1')
+            ->assertViewHas('calculatedBetValue', '116.55')
+            ->assertSee('Bet value = odds × probability.')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $bet = $user->bets()->sole();
+        $this->assertSame('55.50', $bet->probability);
+        $this->assertSame('116.55', $bet->bet_value);
+    }
+
+    public function test_the_bet_value_of_an_accumulator_uses_its_total_odds(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->call('useAccumulator')
+            ->set('selections.1.sport', 'Tennis')
+            ->set('selections.1.event_name', 'Sinner v Alcaraz')
+            ->set('selections.1.pick', 'Sinner')
+            ->set('selections.1.odds', '1.5')
+            ->set('probability', '40')
+            ->assertViewHas('calculatedBetValue', '117')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('117.00', $user->bets()->sole()->bet_value);
+    }
+
+    public function test_a_bet_value_can_be_entered_without_a_probability(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->set('bet_value', ' 104,5 ')
+            ->assertViewHas('calculatedBetValue', null)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $bet = $user->bets()->sole();
+        $this->assertNull($bet->probability);
+        $this->assertSame('104.50', $bet->bet_value);
+    }
+
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function invalidValueFields(): array
+    {
+        return [
+            'probability of 0' => ['probability', '0', 'Enter the probability as a percentage above 0 and at most 100, like 55 or 55.5 (up to 2 decimals).'],
+            'probability above 100' => ['probability', '101', 'Enter the probability as a percentage above 0 and at most 100, like 55 or 55.5 (up to 2 decimals).'],
+            'probability with a percent sign' => ['probability', '55%', 'Enter the probability as a percentage above 0 and at most 100, like 55 or 55.5 (up to 2 decimals).'],
+            'bet value of 0' => ['bet_value', '0', 'Enter the bet value as a percentage above 0, like 105 or 104.5 (up to 2 decimals).'],
+            'bet value with 3 decimals' => ['bet_value', '104.555', 'Enter the bet value as a percentage above 0, like 105 or 104.5 (up to 2 decimals).'],
+        ];
+    }
+
+    #[DataProvider('invalidValueFields')]
+    public function test_an_invalid_probability_or_bet_value_opens_the_details_to_show_the_error(string $field, string $value, string $message): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        $this->fillSingle(Livewire::test(Create::class), $bookmaker)
+            ->set($field, $value)
+            ->call('save')
+            ->assertHasErrors([$field])
+            ->assertSet('showDetails', true)
+            ->assertSee($message);
 
         $this->assertDatabaseCount('bets', 0);
     }

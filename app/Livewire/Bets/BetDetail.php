@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Bets;
 
+use App\Domain\BetValue;
 use App\Domain\ClosingLineValue;
 use App\Domain\Currency;
 use App\Domain\Decimal;
@@ -204,6 +205,8 @@ final readonly class BetDetail
             ['label' => 'Sport', 'value' => $sports],
             $bet->tipster === null ? null : ['label' => 'Tipster', 'value' => $bet->tipster->name],
             $bet->tags->isEmpty() ? null : ['label' => 'Tags', 'value' => $bet->tags->map(fn (Tag $tag): string => $tag->name)->sort()->implode(' · ')],
+            $bet->probability === null ? null : ['label' => 'Probability', 'value' => BetValue::formatPercent($bet->probability)],
+            $bet->bet_value === null ? null : ['label' => 'Bet value', 'value' => BetValue::formatPercent($bet->bet_value)],
         ];
 
         return array_values(array_filter($facts));

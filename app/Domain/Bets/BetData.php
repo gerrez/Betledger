@@ -15,6 +15,8 @@ final readonly class BetData
      * @param  string  $exchangeRate  1 unit of the bookmaker's currency = this many units of the base currency
      * @param  list<string>  $tags
      * @param  list<SelectionData>  $selections
+     * @param  string|null  $probability  a percentage, e.g. "55.5"
+     * @param  string|null  $betValue  a percentage as entered; ignored when there is a probability, from which it is calculated
      */
     public function __construct(
         public int $bookmakerId,
@@ -26,5 +28,7 @@ final readonly class BetData
         public array $tags,
         public ?string $notes,
         public array $selections,
+        public ?string $probability = null,
+        public ?string $betValue = null,
     ) {}
 }

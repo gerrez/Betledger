@@ -4,6 +4,7 @@ namespace App\Livewire\Bets;
 
 use App\Domain\Bets\BetData;
 use App\Domain\Bets\SelectionData;
+use App\Domain\BetValue;
 use App\Domain\Decimal;
 use App\Domain\ExchangeRate;
 use App\Domain\Money;
@@ -63,7 +64,13 @@ abstract class BetForm extends Component
 
     public string $notes = '';
 
-    /** Whether the bet's own details (tipster, rate, tags, notes) are shown. */
+    /** The chance the bet wins as a percentage ("55.5"), or empty. */
+    public string $probability = '';
+
+    /** The bet value as a percentage, entered while there is no probability (else it is calculated), or empty. */
+    public string $bet_value = '';
+
+    /** Whether the bet's own details (tipster, rate, probability, value, tags, notes) are shown. */
     public bool $showDetails = false;
 
     /**
@@ -226,6 +233,8 @@ abstract class BetForm extends Component
             'isAccumulator' => count($this->selections) > 1,
             'canAddSelection' => count($this->selections) < self::MAX_SELECTIONS,
             'totalOdds' => $totalOdds === null ? null : Odds::format($totalOdds),
+            'hasProbability' => trim($this->probability) !== '',
+            'calculatedBetValue' => $this->calculatedBetValue(),
             'preview' => $this->preview(),
             'resultButtons' => array_map(fn (array $selection): array => BetDetail::resultButtons(SelectionResult::tryFrom($selection['result'])), $this->selections),
             'settlement' => $this->savedSettlement(),
@@ -316,6 +325,24 @@ abstract class BetForm extends Component
             'tags' => ['array'],
             'tags.*' => ['string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'probability' => [
+                'nullable',
+                'string',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! is_string($value) || ! BetValue::isValidProbability($value)) {
+                        $fail('Enter the probability as a percentage above 0 and at most 100, like 55 or 55.5 (up to 2 decimals).');
+                    }
+                },
+            ],
+            'bet_value' => $this->probability !== '' ? ['nullable'] : [
+                'nullable',
+                'string',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! is_string($value) || ! BetValue::isValid($value)) {
+                        $fail('Enter the bet value as a percentage above 0, like 105 or 104.5 (up to 2 decimals).');
+                    }
+                },
+            ],
             'selections' => [
                 'required',
                 'array',
@@ -375,7 +402,7 @@ abstract class BetForm extends Component
     private function showDetailsWithErrors(ValidationException $exception): void
     {
         foreach (array_keys($exception->errors()) as $key) {
-            if (preg_match('/^(tipster|tags|notes|exchange_rate)(\.|$)/', $key) === 1) {
+            if (preg_match('/^(tipster|tags|notes|exchange_rate|probability|bet_value)(\.|$)/', $key) === 1) {
                 $this->showDetails = true;
             }
 
@@ -394,6 +421,8 @@ abstract class BetForm extends Component
         $this->placed_time = TimeOfDay::fromInput($this->placed_time) ?? trim($this->placed_time);
         $this->stake = Decimal::fromInput($this->stake);
         $this->exchange_rate = Decimal::fromInput($this->exchange_rate);
+        $this->probability = Decimal::fromInput($this->probability);
+        $this->bet_value = Decimal::fromInput($this->bet_value);
 
         if ($this->isBaseCurrencyBookmaker()) {
             $this->exchange_rate = ExchangeRate::SAME_CURRENCY;
@@ -430,7 +459,25 @@ abstract class BetForm extends Component
                 id: $selection['id'],
                 result: SelectionResult::tryFrom($selection['result']),
             ), $this->selections),
+            probability: $this->nullIfBlank($this->probability),
+            betValue: $this->probability === '' ? $this->nullIfBlank($this->bet_value) : null,
         );
+    }
+
+    /**
+     * The bet value from the probability and the total odds as entered so far ("115.5"),
+     * or null until both are valid.
+     */
+    private function calculatedBetValue(): ?string
+    {
+        $probability = Decimal::fromInput($this->probability);
+        $totalOdds = $this->totalOdds();
+
+        if (! BetValue::isValidProbability($probability) || $totalOdds === null || ! Odds::isValidTotal($totalOdds)) {
+            return null;
+        }
+
+        return Decimal::normalize(BetValue::fromProbability($totalOdds, $probability));
     }
 
     /**

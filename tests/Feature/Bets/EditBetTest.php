@@ -160,6 +160,56 @@ class EditBetTest extends TestCase
         $this->assertSame(1, $otherUser->tags()->count());
     }
 
+    public function test_the_probability_and_bet_value_are_filled_in_and_kept_up_to_date(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $bet = Bet::factory()->forBookmaker($bookmaker)->single('2.00')->create(['probability' => '50.00', 'bet_value' => '100.00']);
+        $this->actingAs($user);
+
+        Livewire::test(Edit::class, ['bet' => $bet])
+            ->assertSet('probability', '50')
+            ->assertSet('bet_value', '100')
+            ->assertSet('showDetails', true)
+            ->set('selections.0.odds', '2.2')
+            ->assertViewHas('calculatedBetValue', '110')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $bet->refresh();
+        $this->assertSame('50.00', $bet->probability);
+        $this->assertSame('110.00', $bet->bet_value);
+
+        Livewire::test(Edit::class, ['bet' => $bet])
+            ->set('probability', '')
+            ->set('bet_value', '95')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $bet->refresh();
+        $this->assertNull($bet->probability);
+        $this->assertSame('95.00', $bet->bet_value);
+
+        Livewire::test(Edit::class, ['bet' => $bet])
+            ->set('bet_value', '')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertNull($bet->refresh()->bet_value);
+    }
+
+    public function test_a_bet_without_a_probability_or_value_keeps_its_details_closed(): void
+    {
+        $user = User::factory()->create();
+        $bet = Bet::factory()->forBookmaker(Bookmaker::factory()->for($user)->create())->create();
+        $this->actingAs($user);
+
+        Livewire::test(Edit::class, ['bet' => $bet])
+            ->assertSet('probability', '')
+            ->assertSet('bet_value', '')
+            ->assertSet('showDetails', false);
+    }
+
     public function test_a_single_can_become_an_accumulator_and_back(): void
     {
         $user = User::factory()->create();

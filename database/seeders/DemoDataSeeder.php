@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Domain\Bets\SettleBet;
 use App\Domain\BetStatus;
 use App\Domain\BetType;
+use App\Domain\BetValue;
 use App\Domain\Currency;
 use App\Domain\Odds;
 use App\Domain\Settlement\Leg;
@@ -129,10 +130,10 @@ class DemoDataSeeder extends Seeder
             'teams' => [$teams[$home], $teams[$away]],
         ];
 
-        $this->placeBet($unibet, 2000, daysAgo: 12, tipster: $ownModel, tags: [$tags['value']], notes: 'Saka back in training; line moved from 2.20.', selections: [
+        $this->placeBet($unibet, 2000, daysAgo: 12, tipster: $ownModel, tags: [$tags['value']], notes: 'Saka back in training; line moved from 2.20.', probability: '55', selections: [
             $leg('Arsenal', 'Chelsea', 'Premier League', '1X2', 'Arsenal', '2.10', SelectionResult::Won, 11, closingOdds: '1.95'),
         ]);
-        $this->placeBet($bet365, 1500, daysAgo: 9, selections: [
+        $this->placeBet($bet365, 1500, daysAgo: 9, betValue: '103.5', selections: [
             $leg('Real Madrid', 'FC Barcelona', 'La Liga', 'Asian handicap', 'Real Madrid −0.25', '1.95', SelectionResult::HalfLost, 8, closingOdds: '2.02'),
         ]);
         $this->placeBet($unibet, 1000, daysAgo: 7, selections: [
@@ -143,7 +144,7 @@ class DemoDataSeeder extends Seeder
         $this->placeBet($bet365, 1000, daysAgo: 5, isFreeBet: true, tags: [$tags['live']], selections: [
             $leg('Boston Celtics', 'Los Angeles Lakers', 'NBA', '1X2', 'Boston Celtics', '3.00', SelectionResult::Won, 5),
         ]);
-        $this->placeBet($unibet, 2500, daysAgo: 4, tipster: $ownModel, selections: [
+        $this->placeBet($unibet, 2500, daysAgo: 4, tipster: $ownModel, probability: '52', selections: [
             $leg('Carlos Alcaraz', 'Jannik Sinner', 'Wimbledon', '1X2', 'Carlos Alcaraz', '1.75', SelectionResult::Lost, 3, closingOdds: '1.70'),
         ]);
         // Calculated payout 102.50; the bookmaker paid 100.00, so it was entered by hand.
@@ -155,7 +156,7 @@ class DemoDataSeeder extends Seeder
             $leg('Liverpool', 'Chelsea', 'Premier League', '1X2', 'Liverpool', '1.65', SelectionResult::Won, 1),
             $leg('Jannik Sinner', 'Carlos Alcaraz', 'US Open', '1X2', 'Jannik Sinner', '2.20', null, -2),
         ]);
-        $this->placeBet($unibet, 2000, daysAgo: 0, tags: [$tags['value']], selections: [
+        $this->placeBet($unibet, 2000, daysAgo: 0, tags: [$tags['value']], probability: '56.5', selections: [
             $leg('Arsenal', 'Liverpool', 'Premier League', 'Over/Under', 'Over 2.5', '1.90', null, -3),
         ]);
 
@@ -222,9 +223,13 @@ class DemoDataSeeder extends Seeder
      * @param  int  $stake  minor units
      * @param  list<Tag>  $tags
      * @param  list<array<string, mixed>>  $selections  selection attributes plus `teams` (list<Team>)
+     * @param  string|null  $probability  percentage; the bet value is calculated from it
+     * @param  string|null  $betValue  percentage, for a bet without a probability
      */
-    private function placeBet(Bookmaker $bookmaker, int $stake, int $daysAgo, array $selections, bool $isFreeBet = false, ?Tipster $tipster = null, array $tags = [], ?string $notes = null): Bet
+    private function placeBet(Bookmaker $bookmaker, int $stake, int $daysAgo, array $selections, bool $isFreeBet = false, ?Tipster $tipster = null, array $tags = [], ?string $notes = null, ?string $probability = null, ?string $betValue = null): Bet
     {
+        $totalOdds = Odds::total(array_column($selections, 'odds'));
+
         $bet = new Bet([
             'bookmaker_id' => $bookmaker->id,
             'tipster_id' => $tipster?->id,
@@ -234,7 +239,9 @@ class DemoDataSeeder extends Seeder
             'currency' => $bookmaker->currency,
             'exchange_rate' => $bookmaker->exchange_rate,
             'is_free_bet' => $isFreeBet,
-            'total_odds' => Odds::total(array_column($selections, 'odds')),
+            'total_odds' => $totalOdds,
+            'probability' => $probability,
+            'bet_value' => BetValue::forBet($totalOdds, $probability, $betValue),
             'notes' => $notes,
         ]);
         $bet->user()->associate($bookmaker->user_id);

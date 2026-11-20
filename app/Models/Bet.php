@@ -29,6 +29,8 @@ use Illuminate\Support\Carbon;
  * @property string $exchange_rate 1 unit of the bet's currency = this many units of the user's base currency, copied from the bookmaker when saved
  * @property bool $is_free_bet
  * @property string $total_odds product of the selection odds, 4 decimal places
+ * @property string|null $probability the user's estimate of the chance the bet wins, a percentage with 2 decimal places ("55.50")
+ * @property string|null $bet_value a percentage with 2 decimal places: total odds × probability when there is a probability, else as entered
  * @property BetStatus $status
  * @property Carbon|null $settled_at
  * @property int|null $payout minor units
@@ -74,6 +76,8 @@ class Bet extends Model
         'exchange_rate',
         'is_free_bet',
         'total_odds',
+        'probability',
+        'bet_value',
         'notes',
         'external_ref',
     ];
@@ -93,6 +97,8 @@ class Bet extends Model
             'exchange_rate' => 'decimal:8',
             'is_free_bet' => 'boolean',
             'total_odds' => 'decimal:4',
+            'probability' => 'decimal:2',
+            'bet_value' => 'decimal:2',
             'status' => BetStatus::class,
             'settled_at' => 'datetime',
             'payout' => 'integer',

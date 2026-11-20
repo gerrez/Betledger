@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api;
 
 use App\Domain\Bets\BetData;
 use App\Domain\Bets\SelectionData;
+use App\Domain\BetValue;
 use App\Domain\Decimal;
 use App\Domain\ExchangeRate;
 use App\Domain\Money;
@@ -17,15 +18,15 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 /**
- * A new bet sent to the API: the same fields as the New bet form. Amounts, odds and
- * rates are decimal strings ("25.50", "1.95"; a JSON integer is accepted too, a JSON
+ * A new bet sent to the API: the same fields as the New bet form. Amounts, odds, rates
+ * and percentages (probability, bet value) are decimal strings ("25.50", "1.95"; a JSON integer is accepted too, a JSON
  * float is not), dates are ISO 8601 date-times. Sport, competition, market, teams,
  * tipster and tags are names, matched to the user's own entries or added to their lists.
  */
 class StoreBetRequest extends FormRequest
 {
     /** The decimal fields of a bet and of each selection. */
-    private const BET_DECIMALS = ['stake', 'exchange_rate'];
+    private const BET_DECIMALS = ['stake', 'exchange_rate', 'probability', 'bet_value'];
 
     private const SELECTION_DECIMALS = ['odds', 'closing_odds'];
 
@@ -123,6 +124,25 @@ class StoreBetRequest extends FormRequest
             'tags' => ['nullable', 'list'],
             'tags.*' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'probability' => [
+                'nullable',
+                'string',
+                'prohibits:bet_value',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! is_string($value) || ! BetValue::isValidProbability($value)) {
+                        $fail('Enter the probability as a percentage above 0 and at most 100, like "55.5" (up to 2 decimals).');
+                    }
+                },
+            ],
+            'bet_value' => [
+                'nullable',
+                'string',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! is_string($value) || ! BetValue::isValid($value)) {
+                        $fail('Enter the bet value as a percentage above 0, like "104.5" (up to 2 decimals).');
+                    }
+                },
+            ],
             'selections' => [
                 'required',
                 'list',
@@ -162,6 +182,9 @@ class StoreBetRequest extends FormRequest
             'stake.required' => 'Enter the stake.',
             'stake.string' => 'Send the stake as a string, like "25.50".',
             'exchange_rate.string' => 'Send the rate as a string, like "7.46".',
+            'probability.string' => 'Send the probability as a string, like "55.5".',
+            'probability.prohibits' => 'Send the probability or the bet value, not both: the bet value is calculated from the probability.',
+            'bet_value.string' => 'Send the bet value as a string, like "104.5".',
             'selections.required' => 'Add at least one selection.',
             'selections.max' => 'An accumulator can have at most '.BetForm::MAX_SELECTIONS.' selections.',
             'selections.*.sport.required' => 'Enter the sport.',
@@ -225,6 +248,8 @@ class StoreBetRequest extends FormRequest
                 odds: $this->stringOrNull($selection['odds'] ?? null) ?? '',
                 closingOdds: $this->stringOrNull($selection['closing_odds'] ?? null),
             ), $selections),
+            probability: $this->filled('probability') ? $this->string('probability')->value() : null,
+            betValue: $this->filled('bet_value') ? $this->string('bet_value')->value() : null,
         );
     }
 

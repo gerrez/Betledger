@@ -36,6 +36,8 @@ class DemoDataSeederTest extends TestCase
         $this->assertSame(2, $demo->bets()->where('type', BetType::Accumulator)->count());
         $this->assertSame(1, $demo->bets()->where('is_free_bet', true)->count());
         $this->assertSame(1, $demo->bets()->where('payout_is_manual', true)->count());
+        $this->assertSame(3, $demo->bets()->whereNotNull('probability')->count());
+        $this->assertSame(4, $demo->bets()->whereNotNull('bet_value')->count());
         $this->assertFalse($demo->canChangeBaseCurrency());
 
         $other = User::query()->where('email', DemoDataSeeder::OTHER_EMAIL)->sole();

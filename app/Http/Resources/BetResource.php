@@ -38,6 +38,8 @@ class BetResource extends JsonResource
             'exchange_rate' => Decimal::normalize($this->exchange_rate),
             'is_free_bet' => $this->is_free_bet,
             'total_odds' => Odds::format($this->total_odds),
+            'probability' => $this->probability === null ? null : Decimal::normalize($this->probability),
+            'bet_value' => $this->bet_value === null ? null : Decimal::normalize($this->bet_value),
             'tipster' => $this->tipster?->name,
             'tags' => $this->tags->map(fn (Tag $tag): string => $tag->name)->values()->all(),
             'notes' => $this->notes,

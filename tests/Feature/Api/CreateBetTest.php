@@ -69,6 +69,7 @@ class CreateBetTest extends TestCase
             'tipster' => 'Pundit Pete',
             'tags' => ['Value', 'Live'],
             'notes' => 'Early price.',
+            'probability' => '55,5',
             'selections' => [[
                 'sport' => 'Football',
                 'competition' => 'Premier League',
@@ -97,6 +98,8 @@ class CreateBetTest extends TestCase
                 'exchange_rate' => '0.1342',
                 'is_free_bet' => true,
                 'total_odds' => '1.95',
+                'probability' => '55.5',
+                'bet_value' => '108.23',
                 'tipster' => 'Pundit Pete',
                 'tags' => ['Value', 'Live'],
                 'notes' => 'Early price.',
@@ -131,6 +134,8 @@ class CreateBetTest extends TestCase
         $this->assertSame($user->id, $bet->tipster?->user_id);
         $this->assertEqualsCanonicalizing(['Value', 'Live'], $bet->tags->pluck('name')->all());
         $this->assertSame('Early price.', $bet->notes);
+        $this->assertSame('55.50', $bet->probability);
+        $this->assertSame('108.23', $bet->bet_value);
 
         $selection = $bet->selections->sole();
         $this->assertSame('Football', $selection->sport->name);
@@ -168,6 +173,53 @@ class CreateBetTest extends TestCase
         $this->assertSame(BetType::Accumulator, $bet->type);
         $this->assertSame('3.0000', $bet->total_odds);
         $this->assertSame(['Football', 'Tennis'], $bet->selections->map(fn ($selection) => $selection->sport->name)->all());
+    }
+
+    public function test_an_accumulators_bet_value_is_calculated_from_its_total_odds(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        Sanctum::actingAs($user);
+
+        $this->postJson(route('api.v1.bets.store'), [
+            'bookmaker_id' => $bookmaker->id,
+            'stake' => '10',
+            'probability' => 40,
+            'selections' => [
+                ['sport' => 'Football', 'event_name' => 'Arsenal v Chelsea', 'pick' => 'Arsenal', 'odds' => '1.5'],
+                ['sport' => 'Tennis', 'event_name' => 'Sinner v Alcaraz', 'pick' => 'Sinner', 'odds' => '1.85'],
+            ],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.total_odds', '2.775')
+            ->assertJsonPath('data.probability', '40')
+            ->assertJsonPath('data.bet_value', '111');
+    }
+
+    public function test_a_bet_value_can_be_sent_without_a_probability(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        Sanctum::actingAs($user);
+
+        $this->postJson(route('api.v1.bets.store'), [...$this->single($bookmaker), 'bet_value' => '104,5'])
+            ->assertCreated()
+            ->assertJsonPath('data.probability', null)
+            ->assertJsonPath('data.bet_value', '104.5');
+
+        $this->assertSame('104.50', $user->bets()->sole()->bet_value);
+    }
+
+    public function test_probability_and_bet_value_are_optional(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        Sanctum::actingAs($user);
+
+        $this->postJson(route('api.v1.bets.store'), [...$this->single($bookmaker), 'probability' => null, 'bet_value' => null])
+            ->assertCreated()
+            ->assertJsonPath('data.probability', null)
+            ->assertJsonPath('data.bet_value', null);
     }
 
     public function test_the_bookmaker_can_be_sent_by_name_and_brings_its_exchange_rate(): void
@@ -352,6 +404,13 @@ class CreateBetTest extends TestCase
             'bookmaker by id and name' => [['bookmaker' => 'Unibet'], 'bookmaker_id', 'Send the bookmaker by name or by id, not both.'],
             'tags as a string' => [['tags' => 'Value'], 'tags', 'The tags field must be a list.'],
             'notes too long' => [['notes' => str_repeat('a', 5001)], 'notes', 'The notes field must not be greater than 5000 characters.'],
+            'probability as a JSON float' => [['probability' => 55.5], 'probability', 'Send the probability as a string, like "55.5".'],
+            'probability of 0' => [['probability' => '0'], 'probability', 'Enter the probability as a percentage above 0 and at most 100, like "55.5" (up to 2 decimals).'],
+            'probability above 100' => [['probability' => '100.01'], 'probability', 'Enter the probability as a percentage above 0 and at most 100, like "55.5" (up to 2 decimals).'],
+            'probability with 3 decimals' => [['probability' => '55.555'], 'probability', 'Enter the probability as a percentage above 0 and at most 100, like "55.5" (up to 2 decimals).'],
+            'probability and bet value' => [['probability' => '55', 'bet_value' => '107'], 'probability', 'Send the probability or the bet value, not both: the bet value is calculated from the probability.'],
+            'bet value of 0' => [['bet_value' => '0'], 'bet_value', 'Enter the bet value as a percentage above 0, like "104.5" (up to 2 decimals).'],
+            'bet value as a JSON float' => [['bet_value' => 104.5], 'bet_value', 'Send the bet value as a string, like "104.5".'],
         ];
     }
 

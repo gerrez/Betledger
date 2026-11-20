@@ -3,6 +3,7 @@
 namespace App\Domain\Bets;
 
 use App\Domain\BetType;
+use App\Domain\BetValue;
 use App\Domain\ExchangeRate;
 use App\Domain\Odds;
 use App\Models\Bet;
@@ -124,6 +125,7 @@ final class RecordBet
     private function betAttributes(User $user, BetData $data): array
     {
         $bookmaker = $user->bookmakers()->findOrFail($data->bookmakerId);
+        $totalOdds = Odds::total(array_map(fn (SelectionData $selection): string => $selection->odds, $data->selections));
 
         return [
             'bookmaker_id' => $bookmaker->id,
@@ -134,7 +136,9 @@ final class RecordBet
             'currency' => $bookmaker->currency,
             'exchange_rate' => $bookmaker->currency === $user->base_currency ? ExchangeRate::SAME_CURRENCY : $data->exchangeRate,
             'is_free_bet' => $data->isFreeBet,
-            'total_odds' => Odds::total(array_map(fn (SelectionData $selection): string => $selection->odds, $data->selections)),
+            'total_odds' => $totalOdds,
+            'probability' => $data->probability,
+            'bet_value' => BetValue::forBet($totalOdds, $data->probability, $data->betValue),
             'notes' => $data->notes,
         ];
     }

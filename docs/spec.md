@@ -97,6 +97,8 @@ data has a `user_id` (directly, or via its parent bet) and is scoped by policies
 | `exchange_rate` | decimal(18,8) | **copied from the bookmaker when saved**, so updating a bookmaker's rate later does not rewrite history. Editable on the bet. |
 | `is_free_bet` | bool | stake not returned (see settlement) |
 | `total_odds` | decimal(14,4) | product of selection odds, rounded to 4 dp; stored for queries |
+| `probability` | decimal(5,2), nullable | the user's estimate of the chance the bet wins, as a percentage (`55.50` = 55.5 %), above 0 and at most 100 |
+| `bet_value` | decimal(11,2), nullable | the bet's value as a percentage; `total_odds × probability` when there is a probability, else as entered (see "Probability and bet value") |
 | `status` | enum `open`, `settled` | |
 | `settled_at` | datetime, nullable | |
 | `payout` | bigint, nullable | minor units, set on settlement |
@@ -168,6 +170,25 @@ Worked examples (stake 100.00 = 10000 minor units):
 | Acca 1.50 × 2.00 × 1.80, middle leg void | 1.50 × 1 × 1.80 = 2.70 | 27000 | +17000 |
 | Free bet single @ 3.00, won | 3.00 | 20000 | +20000 |
 | Free bet acca, one leg void, rest lost | 0 | 0 | 0 |
+
+## Probability and bet value
+
+Both optional, on the bet as a whole (an accumulator has one probability, for all of its
+selections winning). Entered in the bet form's "More details" and through the API, shown
+on the bet detail page.
+
+- **Probability:** the user's estimate of the chance the bet wins, a percentage above 0
+  and at most 100 with up to 2 decimals.
+- **Bet value** (first version): `total_odds × probability`, rounded half up to 2
+  decimals, as a percentage: 100 % is break-even, above 100 % a value bet. Odds 2.10 at
+  55 % → 115.50 %. Calculated in `App\Domain\BetValue` with bcmath, never floats.
+- With a probability, the bet value is always calculated: the form shows it read-only
+  and the API rejects a `bet_value` sent together with a `probability`. It is
+  recalculated whenever the bet is saved, so changing the odds updates it.
+- Without a probability, the user may enter the bet value directly (e.g. from a tipster
+  or another tool), or leave it empty.
+- Void, half-won and half-lost outcomes are not taken into account yet; see the open
+  question.
 
 ## Statistics
 
@@ -652,3 +673,28 @@ same items. Touch targets ≥ 44 px.
   - *Bookmakers by name.* The API accepts the bookmaker's name as well as its id, since
     the app shows no bookmaker ids. Bookmakers are not created through the API (they need
     a currency and rate).
+- **Probability and bet value (first version, assumed when they were added).** The owner
+  asked for an optional probability and a bet value calculated from it as
+  `odds × probability`, kept simple for now. To decide in a later iteration:
+  - *Void, half won and half lost.* One probability treats every outcome other than a
+    win as a full loss, which understates the value of lines that can push or end half
+    won/lost (Asian handicaps, quarter-goal totals). Using the settlement factors, the
+    value would be `P(won) × odds + P(half_won) × (odds + 1) / 2 + P(void) × 1 +
+    P(half_lost) × 0.5`. That needs a probability per outcome (or at least
+    win / void / lose) instead of one number. Which outcomes should the form ask for, and
+    only for markets that can have them?
+  - *Accumulators.* The probability is for the whole bet (every leg winning) and the
+    value uses the total odds. Should each selection get its own probability instead,
+    with the bet's probability their product (and void legs dropping out)?
+  - *Free bets.* The stake is not returned, so a free bet's expected return is
+    `probability × (odds − 1)`, not `probability × odds`. Free bets use the same formula
+    as cash bets for now.
+  - *How value is shown.* Assumed: as the expected return in percent (105 % = 5 % edge),
+    as asked. The other common form is the edge itself (`odds × probability − 1`,
+    shown as +5 %), like CLV. Which reads better?
+  - *Both sent through the API.* Assumed: sending both `probability` and `bet_value` is
+    rejected (422) rather than silently ignoring one, since the value is calculated from
+    the probability.
+  - *Statistics.* Probability and bet value are stored and shown on the bet but not used
+    in statistics yet (e.g. average bet value, or results by value band like the odds
+    bands). Sportmarket imports have neither.

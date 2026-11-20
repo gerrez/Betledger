@@ -137,6 +137,16 @@ class BetDetailTest extends TestCase
         $this->assertSeeInOrder($this->page($bet), ['Beat the close +5.3%', 'Matched the close 0.0%', 'CLV', '+5.3%']);
     }
 
+    public function test_the_probability_and_bet_value_are_shown_when_the_bet_has_them(): void
+    {
+        $withProbability = $this->single(odds: '2.10', stake: 1000);
+        $withProbability->update(['probability' => '55.50', 'bet_value' => '116.55']);
+        $withoutProbability = $this->single(odds: '2.10', stake: 1000);
+
+        $this->assertSeeInOrder($this->page($withProbability), ['Probability', '55.5%', 'Bet value', '116.55%']);
+        $this->page($withoutProbability)->assertDontSee(['Probability', 'Bet value']);
+    }
+
     public function test_results_set_on_the_page_settle_and_reopen_the_bet(): void
     {
         $bet = $this->single(odds: '1.95', stake: 10000);

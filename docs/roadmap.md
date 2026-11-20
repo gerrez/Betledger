@@ -174,6 +174,14 @@ is too big for one review.
 - [ ] **4.7 Automatic exchange rates.** Fetch rates for bookmakers in other currencies;
       a bet still copies the rate when saved.
 - [ ] **4.8 Each-way and system bets.**
+- [x] **4.9 Probability and bet value (first version).** Asked for by the owner. Two
+      optional bet fields: `probability` (a percentage) and `bet_value`, calculated as
+      total odds × probability (`App\Domain\BetValue`) or entered directly when there is
+      no probability. In the bet form's "More details", on the bet detail page, and on
+      `POST /api/v1/bets` (contract 1.1.0). Void and half results are not taken into
+      account yet; see "Probability and bet value" under "Open questions" in
+      `docs/spec.md`. Unit tests for the calculation and validation; feature tests for
+      the form (create, edit, recalculation), the detail page and the API.
 
 ## Phase 6 — From the November 2026 review
 

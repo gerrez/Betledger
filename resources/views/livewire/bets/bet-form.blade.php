@@ -317,7 +317,7 @@
                 aria-expanded="{{ $showDetails ? 'true' : 'false' }}"
                 class="flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-[15px] font-medium text-accent-content hover:bg-accent-soft"
             >
-                {{ $showDetails ? 'Fewer details' : 'More details: tipster, tags, notes…' }}
+                {{ $showDetails ? 'Fewer details' : 'More details: tipster, probability, tags, notes…' }}
                 @if ($showDetails)
                     <flux:icon.chevron-up variant="mini" />
                 @else
@@ -347,6 +347,49 @@
                     @unless ($isBaseCurrency)
                         <p class="text-sm text-muted">1 {{ $bookmaker?->currency->value }} = this many {{ $baseCurrency->value }}. Copied from the bookmaker; change it if this bet got a different rate.</p>
                     @endunless
+
+                    <div class="grid grid-cols-2 items-start gap-3">
+                        <div class="flex flex-col gap-2">
+                            <flux:input.group label="Probability">
+                                <flux:input
+                                    wire:model.live.debounce.400ms="probability"
+                                    :loading="false"
+                                    inputmode="decimal"
+                                    autocomplete="off"
+                                    placeholder="e.g. 55"
+                                    aria-label="Probability"
+                                />
+                                <flux:input.group.suffix>%</flux:input.group.suffix>
+                            </flux:input.group>
+
+                            <flux:error name="probability" />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <flux:input.group label="Bet value">
+                                @if ($hasProbability)
+                                    <flux:input wire:key="bet-value-calculated" :value="$calculatedBetValue ?? ''" placeholder="—" aria-label="Bet value" disabled />
+                                @else
+                                    <flux:input
+                                        wire:key="bet-value-entered"
+                                        wire:model="bet_value"
+                                        inputmode="decimal"
+                                        autocomplete="off"
+                                        aria-label="Bet value"
+                                    />
+                                @endif
+                                <flux:input.group.suffix>%</flux:input.group.suffix>
+                            </flux:input.group>
+
+                            <flux:error name="bet_value" />
+                        </div>
+                    </div>
+
+                    <p class="text-sm text-muted">
+                        {{ $hasProbability
+                            ? 'Bet value = odds × probability. Above 100% means the odds pay more than the chance you give it.'
+                            : 'Your estimate of the chance this bet wins. With it, the bet value is calculated as odds × probability; without it, you can enter the bet value yourself.' }}
+                    </p>
 
                     <div class="flex flex-col gap-2">
                         <span class="text-sm font-medium" id="tags-label">Tags</span>

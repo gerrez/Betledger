@@ -263,6 +263,33 @@ can't have) is imported as **lost** with payout 0, and its notes and the preview
 - the order was imported before (`bets.external_ref` = `sportmarket:<Order Id>`, a new
   nullable column, unique per user).
 
+## API
+
+A JSON API under `/api/v1` for scripts and apps that record bets on the user's account.
+
+**The contract is `docs/api/openapi.yaml`** (OpenAPI 3.0): endpoints, fields, rules,
+errors, examples, the versioning policy and a changelog. It is the only thing projects
+that use the API rely on; they copy it from `main`. Anything a consumer needs to know
+goes there, not here. `tests/Feature/Api/OpenApiContractTest.php` keeps it true: every
+API route must be in it, its examples must be valid and work, and real requests and
+responses are checked against it.
+
+**Changing the API.** Change the code and `openapi.yaml` in the same PR, bump
+`info.version` and add a changelog line. Within v1 only additive changes (new
+endpoints, new optional request fields, new response fields); anything that breaks a
+consumer needs `/api/v2`, agreed with the consumers first.
+
+**Authentication.** Personal access tokens (Laravel Sanctum). The user creates a token
+on **Settings → API tokens** (named after what uses it; the value is shown once, only a
+hash is stored), sees when each token was last used, and revokes tokens there. A token
+acts as its user and only ever reads or writes that user's data. Tokens don't expire
+and have no separate abilities (see the open question). 60 requests per minute per
+user.
+
+**`POST /api/v1/bets`** records a new bet with the same fields and rules as the New bet
+form, through the same `RecordBet` service: list entries are matched by name or added,
+the currency and default rate come from the bookmaker, and the bet is always open.
+
 ## Screens and visual design
 
 Mockups: `docs/design/project/*.dc.html` (also published as a private canvas for the owner).
@@ -613,3 +640,15 @@ same items. Touch targets ≥ 44 px.
     since the import creates differently spelled entries; 4.7 (automatic exchange
     rates) and 4.8 (each-way and system bets) are suggested last, and 4.7 could be
     dropped because every bet already keeps its own editable rate.
+- **API (assumed when the API was added).** The owner asked for an authenticated API that
+  creates a bet with every field of the New bet form. Assumed:
+  - *Tokens.* Personal access tokens from Settings, without expiry or per-token
+    abilities: every token can do everything the API offers. Add abilities (e.g.
+    read-only) when the API grows beyond creating bets.
+  - *Results.* A bet created through the API is open, like on the form, which only
+    offers results when editing. Settling through the API would be a separate endpoint.
+  - *Time zone.* A date-time without an offset is taken as UTC, like everything else
+    until per-user time zones (6.2); then it should mean the user's zone.
+  - *Bookmakers by name.* The API accepts the bookmaker's name as well as its id, since
+    the app shows no bookmaker ids. Bookmakers are not created through the API (they need
+    a currency and rate).

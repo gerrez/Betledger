@@ -81,6 +81,10 @@ All of these must pass. CI runs the same checks and a PR can't merge without the
 - Work on a feature branch, never on `main`. Finish with a PR that describes what changed,
   how it was tested, and anything you were unsure about.
 - Tick off the task in `docs/roadmap.md` in the same PR.
+- The API (`routes/api.php`) has consumers that only see `docs/api/openapi.yaml`. Any
+  change to an API route, request field or response changes that file in the same PR,
+  with a version bump and changelog line; breaking changes need a new `/api/vN`.
+  `OpenApiContractTest` fails when code and contract disagree.
 - If the spec is ambiguous, choose the simplest reasonable option, write the assumption
   in the PR description, and add it to the "Open questions" section of `docs/spec.md`.
   Don't silently invent product behaviour.

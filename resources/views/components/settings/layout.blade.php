@@ -6,6 +6,7 @@
             <flux:navlist.item href="{{ route('settings.password') }}" wire:navigate>Password</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.appearance') }}" wire:navigate>Appearance</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.import') }}" wire:navigate>Import</flux:navlist.item>
+            <flux:navlist.item href="{{ route('settings.api-tokens') }}" wire:navigate>API tokens</flux:navlist.item>
         </flux:navlist>
 
         {{-- On desktop these live in the sidebar; phones reach them from Settings. --}}

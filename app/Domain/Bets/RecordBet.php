@@ -38,6 +38,7 @@ final class RecordBet
         return DB::transaction(function () use ($user, $data): Bet {
             $bet = new Bet($this->betAttributes($user, $data));
             $bet->user()->associate($user);
+            $bet->event_at = $bet->placed_at; // until the selections give it its event date
             $bet->save();
 
             $bet->tags()->attach($this->tagIds($user, $data));
@@ -48,6 +49,8 @@ final class RecordBet
 
                 $selection->teams()->attach($this->teamIds($user, $selectionData, $sport));
             }
+
+            $bet->syncEventAt()->save();
 
             if ($this->hasResults($data)) {
                 $this->settleBet->recalculate($bet);
@@ -62,7 +65,8 @@ final class RecordBet
      * Selections that are kept (by id) are updated in place; the others are removed.
      * When the stake, the free bet flag or the selections' odds or results change, the
      * bet is settled again by the settlement rules: it may become open or settled, and a
-     * payout the user entered by hand is replaced by the calculated one.
+     * payout the user entered by hand is replaced by the calculated one. The event date
+     * is worked out again on every edit (a changed start time moves the bet).
      */
     public function update(Bet $bet, BetData $data): Bet
     {
@@ -92,6 +96,7 @@ final class RecordBet
             }
 
             $bet->unsetRelation('selections');
+            $bet->syncEventAt()->save();
 
             if ($this->settlementInputs($bet) !== $settlementInputs) {
                 $this->settleBet->recalculate($bet);

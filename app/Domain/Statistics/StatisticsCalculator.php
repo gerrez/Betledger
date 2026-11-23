@@ -4,6 +4,7 @@ namespace App\Domain\Statistics;
 
 use App\Domain\Decimal;
 use Carbon\CarbonImmutable;
+use InvalidArgumentException;
 
 /**
  * Statistics rules from docs/spec.md over bets already reduced to BetFigures (in the
@@ -87,21 +88,21 @@ final class StatisticsCalculator
     }
 
     /**
-     * Cumulative profit of the settled bets by settlement date, one point per period
-     * (empty ones included) from the start of the range, or the first settled bet, to
-     * its end, or the last settled bet. The period follows from the range unless given.
+     * Cumulative profit of the settled bets by event date (`BetFigures::$eventAt`), one
+     * point per period (empty ones included) from the start of the range, or the first
+     * settled bet, to its end, or the last settled bet. The period follows from the range unless given.
      * No settled bets, no points.
      *
      * @param  list<BetFigures>  $bets
      */
     public function profitOverTime(array $bets, ?CarbonImmutable $from = null, ?CarbonImmutable $to = null, ?Period $period = null): ProfitSeries
     {
-        /** @var array<string, int> $profitByDay profit per settlement day, earliest first */
+        /** @var array<string, int> $profitByDay profit per event day, earliest first */
         $profitByDay = [];
 
         foreach ($bets as $bet) {
-            if ($bet->settledAt !== null) {
-                $day = $bet->settledAt->toDateString();
+            if ($bet->isSettled()) {
+                $day = ($bet->eventAt ?? throw new InvalidArgumentException('Profit over time needs the event date of every settled bet.'))->toDateString();
                 $profitByDay[$day] = ($profitByDay[$day] ?? 0) + ($bet->profit ?? 0);
             }
         }

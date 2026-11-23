@@ -24,7 +24,7 @@ class BetFiguresTest extends TestCase
 
     public function test_an_open_bet_has_no_profit(): void
     {
-        $bet = $this->bet(stake: 1000, profit: null, factor: null, settledAt: null);
+        $bet = $this->bet(stake: 1000, profit: null, factor: null, eventAt: null);
 
         $this->assertFalse($bet->isSettled());
         $this->assertNull($bet->profit);
@@ -49,7 +49,7 @@ class BetFiguresTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        $this->bet(stake: 1000, profit: null, factor: '1', settledAt: null);
+        $this->bet(stake: 1000, profit: null, factor: '1', eventAt: null);
     }
 
     /**
@@ -81,7 +81,7 @@ class BetFiguresTest extends TestCase
 
     public function test_an_open_bet_is_neither_a_win_nor_a_loss(): void
     {
-        $bet = $this->bet(profit: null, factor: null, settledAt: null, isFreeBet: true);
+        $bet = $this->bet(profit: null, factor: null, eventAt: null, isFreeBet: true);
 
         $this->assertSame([false, false], [$bet->isWin(), $bet->isLoss()]);
     }
@@ -109,7 +109,7 @@ class BetFiguresTest extends TestCase
      * @param  list<string|null>  $closingOdds
      * @param  array<value-of<Dimension>, list<Group>>  $groups
      */
-    private function bet(int $stake = 1000, ?int $profit = 0, ?string $factor = '1', bool $isFreeBet = false, string $exchangeRate = '1', string $totalOdds = '2.0000', ?string $settledAt = '2026-10-21 12:00', array $closingOdds = [], array $groups = []): BetFigures
+    private function bet(int $stake = 1000, ?int $profit = 0, ?string $factor = '1', bool $isFreeBet = false, string $exchangeRate = '1', string $totalOdds = '2.0000', ?string $eventAt = '2026-10-21 12:00', array $closingOdds = [], array $groups = []): BetFigures
     {
         return new BetFigures(
             stake: $stake,
@@ -119,9 +119,9 @@ class BetFiguresTest extends TestCase
             type: BetType::Accumulator,
             isFreeBet: $isFreeBet,
             totalOdds: $totalOdds,
-            settledAt: $settledAt === null ? null : CarbonImmutable::parse($settledAt),
             closingOdds: $closingOdds,
             groups: $groups,
+            eventAt: $eventAt === null ? null : CarbonImmutable::parse($eventAt),
         );
     }
 }

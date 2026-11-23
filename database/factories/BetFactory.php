@@ -37,6 +37,7 @@ class BetFactory extends Factory
             'tipster_id' => null,
             'type' => BetType::Single,
             'placed_at' => fake()->dateTimeBetween('-60 days', '-1 day'),
+            'event_at' => fn (array $attributes) => $attributes['placed_at'], // worked out from the selections after creating
             'stake' => fake()->numberBetween(1, 40) * 500,
             'currency' => fn (array $attributes) => Bookmaker::findOrFail($attributes['bookmaker_id'])->currency,
             'exchange_rate' => fn (array $attributes) => Bookmaker::findOrFail($attributes['bookmaker_id'])->exchange_rate,
@@ -141,8 +142,8 @@ class BetFactory extends Factory
     }
 
     /**
-     * Derive the type, total odds, status, payout, profit and settlement date from the
-     * bet's selections.
+     * Derive the type, total odds, event date, status, payout, profit and settlement date
+     * from the bet's selections.
      */
     private function syncWithSelections(Bet $bet): void
     {
@@ -152,6 +153,7 @@ class BetFactory extends Factory
 
         $bet->type = BetType::forSelectionCount($selections->count());
         $bet->total_odds = Odds::total($selections->pluck('odds')->all());
+        $bet->syncEventAt();
         $bet->status = $settlement === null ? BetStatus::Open : BetStatus::Settled;
         $bet->settled_at = $settlement === null ? null : ($bet->settled_at ?? $bet->placed_at->copy()->addHours(3));
         $bet->payout = $settlement?->payout;

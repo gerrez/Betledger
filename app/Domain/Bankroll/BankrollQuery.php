@@ -85,7 +85,6 @@ final class BankrollQuery
                 type: $bet->type,
                 isFreeBet: $bet->is_free_bet,
                 totalOdds: $bet->total_odds,
-                settledAt: $settled ? $bet->settled_at?->toImmutable() : null,
             );
         })->all());
     }

@@ -100,6 +100,7 @@ and saving another currency is refused with a validation error. The rate stays e
 | `tipster_id` | fk tipsters, nullable | |
 | `type` | enum `single`, `accumulator` | must match the number of selections |
 | `placed_at` | datetime | |
+| `event_at` | datetime | when the bet was decided, which statistics count a settled bet on (6.1): the latest `event_starts_at` of its selections (an accumulator counts on its last leg), else `placed_at`, never before `placed_at`. A Sportmarket import uses its game date (the same instant as its `settled_at`) and keeps it when edited, unless a selection gets a start time. Worked out whenever a bet is recorded, edited or imported; settling doesn't change it. Indexed with `user_id`. Internal: not in the API or the CSV export |
 | `stake` | bigint | minor units, in the bet's `currency` |
 | `currency` | char(3) | copied from the bookmaker when saved |
 | `exchange_rate` | decimal(18,8) | **copied from the bookmaker when saved**, so updating a bookmaker's rate later does not rewrite history. Editable on the bet. |
@@ -108,7 +109,7 @@ and saving another currency is refused with a validation error. The rate stays e
 | `probability` | decimal(5,2), nullable | the user's estimate of the chance the bet wins, as a percentage (`55.50` = 55.5 %), above 0 and at most 100 |
 | `bet_value` | decimal(11,2), nullable | the bet's value as a percentage; `total_odds × probability` when there is a probability, else as entered (see "Probability and bet value") |
 | `status` | enum `open`, `settled` | |
-| `settled_at` | datetime, nullable | |
+| `settled_at` | datetime, nullable | when the result was recorded; drives the bankroll and the "Recently settled" sort, not statistics |
 | `payout` | bigint, nullable | minor units, set on settlement |
 | `payout_is_manual` | bool | true when the user replaced the calculated payout with the amount actually paid |
 | `profit` | bigint, nullable | `payout − stake` (free bets: `payout`) |
@@ -219,8 +220,8 @@ on the bet detail page.
 All statistics are in the user's **base currency**: each bet's amounts are converted with
 the bet's own `exchange_rate` (rounded half up to minor units per bet).
 
-**Filters** (apply to every view): date range (by settlement date; open bets by placed
-date), bookmaker, sport, competition, team, market, tipster, tag, bet type, and
+**Filters** (apply to every view): date range (settled bets by their event date,
+`event_at`; open bets by placed date), bookmaker, sport, competition, team, market, tipster, tag, bet type, and
 **include/exclude free bets**.
 
 **Totals:** number of bets (settled/open), turnover, profit, ROI, strike rate, average
@@ -680,7 +681,7 @@ same items. Touch targets ≥ 44 px.
   other rows come by number of settled bets, most first, then by name, and a value with
   only open bets still gets a row. **Odds bands** run up to and including their upper
   bound at the stored four decimals: 1.5000 is in 1.01–1.50, 1.5050 in 1.51–2.00.
-  **Profit over time** counts profit on the settlement date, by day for ranges up to 31
+  **Profit over time** counts profit on the event date (`event_at`, since 6.1), by day for ranges up to 31
   days, by week (from Monday) up to 182 days, else by month, with a point for every
   period, empty ones included, from the start of the range (or the first settled bet,
   for "All time") to its end (or the last settled bet).
@@ -711,11 +712,11 @@ same items. Touch targets ≥ 44 px.
   the range the card says the chart shows once bets are settled. No tooltips: the chart
   has a text description for screen readers (periods and the final cumulative profit).
 - **Home overview (assumed in 2.15).** The home page stays at `/dashboard`, where logging
-  in leads. The month selector lists every month from the user's first bet (placed or
-  settled) to the current one, newest first; the month is kept in the URL, and an
+  in leads. The month selector lists every month from the user's first bet (by placed
+  or event date) to the current one, newest first; the month is kept in the URL, and an
   unknown or future month shows the current one. The profit card, its ROI badge and the
-  strike rate, average odds and closing line tiles cover the bets **settled in that
-  month** (free bets included, in the base currency as on the statistics page; the
+  strike rate, average odds and closing line tiles cover the settled bets **whose event
+  date is in that month** (since 6.1; free bets included, in the base currency as on the statistics page; the
   current month up to today). "Open stake" and the open bets preview always show the bets
   open **now**, whichever month is chosen (the mockup's "3 bets pending" and "Open bets ·
   3" agree). The sparkline is the month's cumulative profit by day, drawn like the
@@ -759,7 +760,7 @@ same items. Touch targets ≥ 44 px.
   status other than `settled`, `void` or `failed` counts as not settled.
 - **Sportmarket import details (assumed before 4.1).** The game's kick-off time isn't in
   the export, so `event_starts_at` stays empty and `settled_at` is the game date at
-  23:59 UTC. In-play bets get an "In-play" tag. The market names for Sportmarket's codes
+  23:59 UTC. Statistics count an imported bet on that same instant (its `event_at`, 6.1). In-play bets get an "In-play" tag. The market names for Sportmarket's codes
   are listed in "Import from Sportmarket".
 - **Sportmarket import mapping (assumed in 4.1a).** `App\Domain\Import\Sportmarket`
   reads the export and maps each order; nothing is saved (that's 4.1b). The fill with
@@ -796,10 +797,17 @@ same items. Touch targets ≥ 44 px.
   notes. Owner: what causes these, and should the extra loss count in the profit?
 - **From the November 2026 review (owner).** Questions behind the Phase 6 tasks in
   `docs/roadmap.md`; each task builds its stated default until these are answered.
-  - *Which date statistics use (6.1).* Owner: statistics should follow the event date,
-    not the settlement date, and an accumulator counts on its last leg's start
-    (confirmed). Assumed for 6.1: a bet without start times counts on its placed date;
-    open bets are still filtered by placed date; the bankroll keeps the settlement date.
+  - *Which date statistics use (6.1).* **Resolved and built in 6.1.** Owner: statistics
+    follow the event date, not the settlement date, and an accumulator counts on its last
+    leg's start (confirmed). Built as `bets.event_at` (see the bets table): a bet without
+    start times counts on its placed date; open bets are still filtered by placed date;
+    the bankroll and the "Recently settled" sort keep the settlement date; the API and
+    the CSV export are unchanged. Assumed in 6.1: an imported Sportmarket bet keeps its
+    game date as its event date when it is edited, un-settled or settled again, because
+    the export has no start time and `settled_at` changes when it is settled again; it
+    only moves if the user gives a selection a start time (then the latest start
+    counts). If an edit moves its placed date past the game date, the event date
+    becomes the placed date and stays there.
   - *Existing times after a time zone setting (6.2).* Bets entered by hand so far were
     typed as local time but stored as UTC, so they are one or two hours off once a time
     zone is set. Shift them once, or leave them? Default: leave them.

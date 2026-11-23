@@ -12,7 +12,8 @@ use InvalidArgumentException;
 
 /**
  * A bet as far as statistics are concerned, with its stake and profit converted to the
- * user's base currency with the bet's own exchange rate (rounded half up per amount).
+ * user's base currency with the bet's own exchange rate (rounded half up per amount). It
+ * is settled when it has a profit (and a factor).
  */
 final readonly class BetFigures
 {
@@ -32,6 +33,7 @@ final readonly class BetFigures
      * @param  string  $exchangeRate  the bet's own rate: 1 unit of its currency = this many units of the base currency
      * @param  list<string|null>  $closingOdds  one per selection, null when it has none
      * @param  array<value-of<Dimension>, list<Group>>  $groups  what the bet counts under per dimension (bet type excepted, which follows from $type); a dimension left out counts it under none
+     * @param  CarbonImmutable|null  $eventAt  when the bet was decided (`bets.event_at`), which profit over time counts a settled bet on; the bankroll, which has no periods, leaves it out
      */
     public function __construct(
         int $stake,
@@ -41,12 +43,12 @@ final readonly class BetFigures
         public BetType $type,
         public bool $isFreeBet,
         public string $totalOdds,
-        public ?CarbonImmutable $settledAt,
         array $closingOdds = [],
         public array $groups = [],
+        public ?CarbonImmutable $eventAt = null,
     ) {
-        if (($profit === null) !== ($settledAt === null) || ($factor === null) !== ($settledAt === null)) {
-            throw new InvalidArgumentException('A settled bet has a profit, a factor and a settlement date; an open bet has none of them.');
+        if (($profit === null) !== ($factor === null)) {
+            throw new InvalidArgumentException('A settled bet has a profit and a factor; an open bet has neither.');
         }
 
         Odds::assertValid($totalOdds);
@@ -58,7 +60,7 @@ final readonly class BetFigures
 
     public function isSettled(): bool
     {
-        return $this->settledAt !== null;
+        return $this->profit !== null;
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Import\Sportmarket;
 
+use App\Domain\Bets\EventDate;
 use App\Domain\Bets\RecordBet;
 use App\Domain\Bets\SettleBet;
 use App\Models\Bookmaker;
@@ -22,7 +23,8 @@ final class RecordOrders
 
     /**
      * Create a settled bet at the bookmaker for every order to import; skipped orders and
-     * errors are left out. The settlement date and a manual payout come from the order.
+     * errors are left out. The settlement date and a manual payout come from the order;
+     * the event date is the settlement date (the game date), as the order has no start time.
      *
      * @param  list<ImportedOrder>  $orders  read for the bookmaker's currency
      * @return int the number of bets created
@@ -51,6 +53,7 @@ final class RecordOrders
 
         $bet->external_ref = $imported->externalRef;
         $bet->settled_at = Carbon::instance($imported->settledAt);
+        $bet->event_at = Carbon::instance(EventDate::forImport($bet->placed_at, $imported->settledAt));
         $bet->save();
 
         if ($imported->manualPayout !== null) {

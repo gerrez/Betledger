@@ -6,6 +6,7 @@ use App\Domain\Bankroll\BankrollQuery;
 use App\Domain\BetStatus;
 use App\Domain\BetType;
 use App\Domain\Currency;
+use App\Models\Bet;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoDataSeeder;
@@ -33,7 +34,11 @@ class DemoDataSeederTest extends TestCase
         $this->assertSame(4, $demo->markets()->count());
         $this->assertSame(2, $demo->tipsters()->count());
         $this->assertSame(3, $demo->tags()->count());
-        $this->assertSame(24, $demo->bets()->count());
+        $this->assertSame(25, $demo->bets()->count());
+        $decidedBeforeTheMonthItWasSettled = $demo->bets()->where('status', BetStatus::Settled)->get()
+            ->filter(fn (Bet $bet): bool => $bet->event_at->format('Y-m') < $bet->settled_at?->format('Y-m'));
+        $this->assertCount(1, $decidedBeforeTheMonthItWasSettled);
+        $this->assertTrue($decidedBeforeTheMonthItWasSettled->sole()->settled_at?->isCurrentMonth());
         $this->assertSame(2, $demo->bets()->where('status', BetStatus::Open)->count());
         $this->assertSame(2, $demo->bets()->where('type', BetType::Accumulator)->count());
         $this->assertSame(1, $demo->bets()->where('is_free_bet', true)->count());

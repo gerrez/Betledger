@@ -797,10 +797,9 @@ same items. Touch targets ≥ 44 px.
 - **From the November 2026 review (owner).** Questions behind the Phase 6 tasks in
   `docs/roadmap.md`; each task builds its stated default until these are answered.
   - *Which date statistics use (6.1).* Owner: statistics should follow the event date,
-    not the settlement date. Assumed for 6.1: an accumulator counts on its last leg's
-    start; a bet without start times counts on its placed date; open bets are still
-    filtered by placed date; the bankroll keeps the settlement date. Confirm, or say if
-    an accumulator should count on its first leg instead.
+    not the settlement date, and an accumulator counts on its last leg's start
+    (confirmed). Assumed for 6.1: a bet without start times counts on its placed date;
+    open bets are still filtered by placed date; the bankroll keeps the settlement date.
   - *Existing times after a time zone setting (6.2).* Bets entered by hand so far were
     typed as local time but stored as UTC, so they are one or two hours off once a time
     zone is set. Shift them once, or leave them? Default: leave them.

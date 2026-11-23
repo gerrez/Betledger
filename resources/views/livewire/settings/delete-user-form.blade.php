@@ -20,6 +20,11 @@
                 </flux:subheading>
             </div>
 
+            <div class="space-y-2">
+                <flux:text>{{ __('The CSV export is the only backup of your bets: once the account is deleted, they cannot be recovered.') }}</flux:text>
+                <flux:button icon="arrow-down-tray" :href="route('settings.export.download')">{{ __('Download your bets first') }}</flux:button>
+            </div>
+
             <flux:input wire:model="password" id="password" label="{{ __('Password') }}" type="password" name="password" />
 
             <div class="flex justify-end space-x-2">

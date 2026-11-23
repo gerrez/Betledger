@@ -314,6 +314,26 @@ class ManageListsTest extends TestCase
         $this->assertModelExists($entry);
     }
 
+    /**
+     * @param  class-string<Sport|Competition|Team|Market|Tipster|Tag>  $model
+     */
+    #[DataProvider('lists')]
+    public function test_a_name_cannot_contain_a_bar(string $list, string $model): void
+    {
+        $user = User::factory()->create();
+        $entry = $model::factory()->for($user)->create(['name' => 'Old name']);
+        $this->actingAs($user);
+
+        Livewire::test(Index::class, ['list' => $list])
+            ->call('rename', $entry->id)
+            ->set('name', 'Live | Value')
+            ->call('save')
+            ->assertHasErrors(['name' => 'Names can’t contain “|”.'])
+            ->assertSet('showRename', true);
+
+        $this->assertSame('Old name', $entry->fresh()?->name);
+    }
+
     public function test_switching_lists_closes_the_rename_form(): void
     {
         $user = User::factory()->create();

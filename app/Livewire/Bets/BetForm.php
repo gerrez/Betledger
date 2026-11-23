@@ -7,6 +7,7 @@ use App\Domain\Bets\SelectionData;
 use App\Domain\BetValue;
 use App\Domain\Decimal;
 use App\Domain\ExchangeRate;
+use App\Domain\ListName;
 use App\Domain\Money;
 use App\Domain\Odds;
 use App\Domain\Settlement\Leg;
@@ -178,6 +179,13 @@ abstract class BetForm extends Component
 
         $name = trim($this->selections[$index]['team_name']);
         $teams = $this->selections[$index]['teams'];
+        $this->resetValidation("selections.{$index}.teams");
+
+        if (! ListName::isValid($name)) {
+            $this->addError("selections.{$index}.teams", ListName::MESSAGE);
+
+            return;
+        }
 
         if ($name !== '' && ! in_array(mb_strtolower($name), array_map(mb_strtolower(...), $teams), true)) {
             $suggestions = $this->sportSuggestions($this->user()->sports()->get(), $this->selections[$index]['sport']);
@@ -202,6 +210,13 @@ abstract class BetForm extends Component
     public function addTag(): void
     {
         $name = trim($this->tag_name);
+        $this->resetValidation('tags');
+
+        if (! ListName::isValid($name)) {
+            $this->addError('tags', ListName::MESSAGE);
+
+            return;
+        }
 
         if ($name !== '' && ! in_array(mb_strtolower($name), array_map(mb_strtolower(...), $this->tags), true)) {
             $this->tags[] = $this->spelledAsSaved($name, $this->user()->tags()->pluck('name')->all());
@@ -321,9 +336,9 @@ abstract class BetForm extends Component
                 },
             ],
             'is_free_bet' => ['boolean'],
-            'tipster' => ['nullable', 'string', 'max:255'],
+            'tipster' => ['nullable', 'string', 'max:255', ListName::rule()],
             'tags' => ['array'],
-            'tags.*' => ['string', 'max:255'],
+            'tags.*' => ['string', 'max:255', ListName::rule()],
             'notes' => ['nullable', 'string', 'max:5000'],
             'probability' => [
                 'nullable',
@@ -357,11 +372,11 @@ abstract class BetForm extends Component
                 },
             ],
             'selections.*.id' => ['nullable', 'integer', 'distinct', Rule::in($this->savedSelectionIds())],
-            'selections.*.sport' => ['required', 'string', 'max:255'],
-            'selections.*.competition' => ['nullable', 'string', 'max:255'],
-            'selections.*.market' => ['nullable', 'string', 'max:255'],
+            'selections.*.sport' => ['required', 'string', 'max:255', ListName::rule()],
+            'selections.*.competition' => ['nullable', 'string', 'max:255', ListName::rule()],
+            'selections.*.market' => ['nullable', 'string', 'max:255', ListName::rule()],
             'selections.*.teams' => ['array'],
-            'selections.*.teams.*' => ['string', 'max:255'],
+            'selections.*.teams.*' => ['string', 'max:255', ListName::rule()],
             'selections.*.event_name' => ['required', 'string', 'max:255'],
             'selections.*.event_starts_date' => ['nullable', 'required_with:selections.*.event_starts_time', 'date_format:'.self::DATE],
             'selections.*.event_starts_time' => ['nullable', 'required_with:selections.*.event_starts_date', 'string', $time],

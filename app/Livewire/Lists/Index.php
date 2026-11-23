@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Lists;
 
+use App\Domain\ListName;
 use App\Models\Competition;
 use App\Models\Market;
 use App\Models\Sport;
@@ -77,7 +78,7 @@ class Index extends Component
         }
 
         $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255', $unique],
+            'name' => ['required', 'string', 'max:255', ListName::rule(), $unique],
         ], [
             'name.unique' => $duplicateMessage,
         ]);

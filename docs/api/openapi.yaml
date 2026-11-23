@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: BetLedger API
-  version: 1.1.0
+  version: 1.2.0
   description: |
     Record bets on a BetLedger account from scripts and other apps.
 
@@ -35,6 +35,12 @@ info:
     (`2026-11-19T17:30:00Z`). Requests may send any offset (`+01:00`, `Z`); a date-time
     without an offset is taken as UTC.
 
+    ## Names
+
+    Sport, competition, market, teams, tipster and tags are names of entries in the
+    user's lists. They can't contain `|`, which BetLedger's CSV export uses to join
+    tags and teams; a request with one gets `422`.
+
     ## Rate limit
 
     60 requests per minute per user. Over the limit, requests get `429` with a
@@ -51,6 +57,10 @@ info:
 
     ## Changelog
 
+    - **1.2.0** (2026-11-23): `sport`, `competition`, `market`, `teams`, `tipster` and
+      `tags` on `POST /bets` refuse names containing `|` (`422`). This rejects requests
+      that 1.1.0 accepted; it stays in v1 by agreement with the owner, the API's only
+      consumer so far.
     - **1.1.0** (2026-11-20): optional `probability` and `bet_value` on `POST /bets`;
       both returned on `Bet`.
     - **1.0.0** (2026-11-20): `POST /bets`.
@@ -280,12 +290,14 @@ components:
           type: string
           nullable: true
           maxLength: 255
+          pattern: '^[^|]*$'
         tags:
           type: array
           nullable: true
           items:
             type: string
             maxLength: 255
+            pattern: '^[^|]*$'
           description: Duplicates that differ only in case are added once.
         notes:
           type: string
@@ -338,16 +350,19 @@ components:
         sport:
           type: string
           maxLength: 255
+          pattern: '^[^|]*$'
           example: Football
         competition:
           type: string
           nullable: true
           maxLength: 255
+          pattern: '^[^|]*$'
           example: Premier League
         market:
           type: string
           nullable: true
           maxLength: 255
+          pattern: '^[^|]*$'
           example: Match result
         teams:
           type: array
@@ -356,6 +371,7 @@ components:
           items:
             type: string
             maxLength: 255
+            pattern: '^[^|]*$'
           example: [Arsenal, Chelsea]
         event_name:
           type: string

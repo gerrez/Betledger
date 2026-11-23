@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\ExportBetsController;
 use App\Livewire\Bets\Create as CreateBet;
 use App\Livewire\Bets\Edit as EditBet;
 use App\Livewire\Bets\Index as BetsIndex;
@@ -10,6 +11,7 @@ use App\Livewire\Overview\Index as Overview;
 use App\Livewire\Settings\ApiTokens;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\BaseCurrency;
+use App\Livewire\Settings\Export;
 use App\Livewire\Settings\Import;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
@@ -47,6 +49,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/currency', BaseCurrency::class)->name('settings.currency');
     Route::get('settings/password', Password::class)->name('settings.password');
     Route::get('settings/appearance', Appearance::class)->name('settings.appearance');
+
+    // Not behind "verified": the delete-account dialog links to the download as a backup.
+    Route::get('settings/export', Export::class)->name('settings.export');
+    Route::get('settings/export/bets', ExportBetsController::class)->name('settings.export.download');
 });
 
 require __DIR__.'/auth.php';

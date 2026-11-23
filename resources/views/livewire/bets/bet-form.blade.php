@@ -138,6 +138,8 @@
                             <flux:button wire:click="addTeam({{ $index }})" icon="plus">Add</flux:button>
                         </div>
 
+                        <flux:error name="selections.{{ $index }}.teams" class="mt-0" />
+
                         <datalist id="teams-list-{{ $index }}">
                             @foreach ($sportSuggestions[$index]['teams'] as $name)
                                 <option value="{{ $name }}"></option>
@@ -424,6 +426,8 @@
                             />
                             <flux:button wire:click="addTag" icon="plus">Add</flux:button>
                         </div>
+
+                        <flux:error name="tags" class="mt-0" />
                     </div>
 
                     <flux:textarea wire:model="notes" label="Notes" rows="3" placeholder="Why you took it, team news…" />

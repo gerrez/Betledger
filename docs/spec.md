@@ -284,6 +284,84 @@ can't have) is imported as **lost** with payout 0, and its notes and the preview
 - the order was imported before (`bets.external_ref` = `sportmarket:<Order Id>`, a new
   nullable column, unique per user).
 
+## Export
+
+Settings → Export downloads all of the user's bets as one CSV file,
+`betledger-bets-YYYY-MM-DD.csv` (the date is today in UTC). The delete-account dialog
+links to the same download ("Download your bets first"), since it is the only backup a
+user has. Built in roadmap 4.2; 4.6 will import this exact format, so the columns are a
+contract: add columns only at the end, never rename or reorder them.
+
+**File.** UTF-8 with a byte order mark (so Excel on Windows shows æøå), comma separated,
+RFC 4180 quoting: a field containing a comma, a double quote or a line break is wrapped in
+double quotes and its double quotes are doubled; backslashes are not escape characters.
+Rows end in CRLF; line breaks inside notes are kept as they are. The first row holds the
+column names. A user without bets gets only that row.
+
+**Rows.** One row per selection. The bet's columns are repeated on every row of the bet,
+and `bet_id` groups the rows of an accumulator. Bets are ordered by `placed_at`, then
+`bet_id`; a bet's rows by `selection_position`.
+
+**Conventions.**
+- *Empty cell* = no value (null).
+- *Money:* amounts in major units with a decimal point and two decimals, no thousands
+  separator, a leading `-` when negative (`12.50`, `-0.05`, `0.00`), in the bet's
+  `currency`. Converted from minor units with integer arithmetic only.
+- *Decimals* (odds, total odds, exchange rate, probability, bet value): plain decimal
+  form with a point, **trailing zeros dropped** (`1.850` → `1.85`, `2.000` → `2`, rate
+  `1.00000000` → `1`). Odds are decimal odds as stored, never converted to another
+  format. Dropping the zeros makes SQLite and Postgres produce the same text.
+- *Dates and times:* ISO 8601 in UTC with a `Z` offset, to the second
+  (`2026-11-23T14:05:00Z`). Still UTC once per-user time zones (6.2) exist: the file is
+  a backup, and UTC is what is stored.
+- *Booleans:* `yes` or `no`.
+- *Enums:* the stored values: `type` `single`/`accumulator`, `status` `open`/`settled`,
+  `result` `won`/`lost`/`void`/`half_won`/`half_lost` (empty = pending).
+- *Lists of names* (tags, teams): names joined with ` | ` (space, bar, space), sorted by
+  byte value. List entries are exported by name, never by internal id. List names can't
+  contain `|`, so splitting on ` | ` gives the names back.
+
+**Columns**, in order:
+
+| Column | From | Notes |
+|---|---|---|
+| `bet_id` | `bets.id` | groups an accumulator's rows; only meaningful within one export |
+| `external_ref` | `bets.external_ref` | e.g. `sportmarket:2384015187` |
+| `type` | `bets.type` | |
+| `placed_at` | `bets.placed_at` | UTC |
+| `bookmaker` | bookmaker name | |
+| `currency` | `bets.currency` | ISO 4217; the currency of `stake`, `payout` and `profit` |
+| `base_currency` | the user's base currency | what `exchange_rate` converts to; the same on every row |
+| `exchange_rate` | `bets.exchange_rate` | 1 `currency` = this many `base_currency` |
+| `stake` | `bets.stake` | money |
+| `is_free_bet` | `bets.is_free_bet` | `yes`/`no` |
+| `total_odds` | `bets.total_odds` | |
+| `probability` | `bets.probability` | percentage (`55.5` = 55.5 %) |
+| `bet_value` | `bets.bet_value` | percentage |
+| `status` | `bets.status` | |
+| `settled_at` | `bets.settled_at` | UTC; empty while open |
+| `payout` | `bets.payout` | money; empty while open |
+| `payout_is_manual` | `bets.payout_is_manual` | `yes`/`no` |
+| `profit` | `bets.profit` | money; empty while open |
+| `tipster` | tipster name | |
+| `tags` | tag names | ` \| `-separated |
+| `notes` | `bets.notes` | |
+| `selection_position` | `selections.position` | 1, 2, … within the bet |
+| `sport` | sport name | |
+| `competition` | competition name | within the sport |
+| `market` | market name | |
+| `teams` | team names | ` \| `-separated, within the sport |
+| `event_name` | `selections.event_name` | |
+| `event_starts_at` | `selections.event_starts_at` | UTC |
+| `pick` | `selections.pick` | |
+| `odds` | `selections.odds` | |
+| `closing_odds` | `selections.closing_odds` | |
+| `result` | `selections.result` | empty = pending |
+
+The rows are built by `App\Domain\Export\BetsCsv` and written by
+`App\Http\Controllers\Settings\ExportBetsController`, which reads the bets through the
+user's own relation in chunks with every relation eager loaded.
+
 ## API
 
 A JSON API under `/api/v1` for scripts and apps that record bets on the user's account.
@@ -698,3 +776,31 @@ same items. Touch targets ≥ 44 px.
   - *Statistics.* Probability and bet value are stored and shown on the bet but not used
     in statistics yet (e.g. average bet value, or results by value band like the odds
     bands). Sportmarket imports have neither.
+- **CSV export (assumed in 4.2).** See "Export". Assumed:
+  - *Comma, BOM, CRLF.* Comma separated with a UTF-8 byte order mark, so Excel on Windows
+    shows æøå. Excel set to a Danish locale expects semicolons and may put each row in one
+    cell; use Data → From Text/CSV there. A semicolon option could be added later.
+  - *UTC dates.* Every date and time is UTC with a `Z`, also after per-user time zones
+    (6.2), so the file means the same everywhere and re-imports exactly.
+  - *Trailing zeros dropped* from odds, rates and percentages (`1.850` → `1.85`), so the
+    text is the same on SQLite and Postgres. The stored precision is never exceeded, so
+    nothing is lost.
+  - *`yes`/`no` booleans* rather than `1`/`0`, for people reading the file.
+  - *`base_currency` column* added to the suggested columns: without it the exchange rate
+    can't be interpreted when the file is imported into an account with another base
+    currency.
+  - *Names joined with ` | `.* Answered by the owner: list names (sports, competitions,
+    teams, markets, tipsters, tags) can't contain `|` (`App\Domain\ListName`), so tags and
+    teams split unambiguously on import (4.6). The bet form, the Lists page and the API
+    refuse it (API contract 1.2.0, kept in v1 by agreement with the owner), and a
+    Sportmarket order with `|` in a name is an error. Entries saved before this keep
+    their names; renaming one on the Lists page requires removing the `|`.
+  - *No email verification needed.* The page and the download are in the `auth` group,
+    not `auth` + `verified`, because the delete-account dialog (also only `auth`) links to
+    the download and the backup must always work.
+  - *No CSV formula escaping.* Cells starting with `=`, `+`, `-` or `@` are not prefixed
+    with `'`: the data is the user's own, negative amounts start with `-`, and escaping
+    would change the values a 4.6 re-import reads.
+  - *`bet_id`* is the database id, only meaningful within one export; a re-import should
+    use it to group rows, not to match existing bets (`external_ref` does that for
+    imported bets).

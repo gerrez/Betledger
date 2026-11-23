@@ -7,6 +7,7 @@ use App\Domain\Bets\SelectionData;
 use App\Domain\BetValue;
 use App\Domain\Decimal;
 use App\Domain\ExchangeRate;
+use App\Domain\ListName;
 use App\Domain\Money;
 use App\Domain\Odds;
 use App\Livewire\Bets\BetForm;
@@ -120,9 +121,9 @@ class StoreBetRequest extends FormRequest
                 },
             ],
             'is_free_bet' => ['boolean'],
-            'tipster' => ['nullable', 'string', 'max:255'],
+            'tipster' => ['nullable', 'string', 'max:255', ListName::rule()],
             'tags' => ['nullable', 'list'],
-            'tags.*' => ['required', 'string', 'max:255'],
+            'tags.*' => ['required', 'string', 'max:255', ListName::rule()],
             'notes' => ['nullable', 'string', 'max:5000'],
             'probability' => [
                 'nullable',
@@ -157,11 +158,11 @@ class StoreBetRequest extends FormRequest
                 },
             ],
             'selections.*' => ['array'],
-            'selections.*.sport' => ['required', 'string', 'max:255'],
-            'selections.*.competition' => ['nullable', 'string', 'max:255'],
-            'selections.*.market' => ['nullable', 'string', 'max:255'],
+            'selections.*.sport' => ['required', 'string', 'max:255', ListName::rule()],
+            'selections.*.competition' => ['nullable', 'string', 'max:255', ListName::rule()],
+            'selections.*.market' => ['nullable', 'string', 'max:255', ListName::rule()],
             'selections.*.teams' => ['nullable', 'list'],
-            'selections.*.teams.*' => ['required', 'string', 'max:255'],
+            'selections.*.teams.*' => ['required', 'string', 'max:255', ListName::rule()],
             'selections.*.event_name' => ['required', 'string', 'max:255'],
             'selections.*.event_starts_at' => ['nullable', 'string', $dateTime],
             'selections.*.pick' => ['required', 'string', 'max:255'],

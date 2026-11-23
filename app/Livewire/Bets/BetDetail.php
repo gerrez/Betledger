@@ -6,6 +6,7 @@ use App\Domain\BetValue;
 use App\Domain\ClosingLineValue;
 use App\Domain\Currency;
 use App\Domain\Decimal;
+use App\Domain\LocalTime;
 use App\Domain\Money;
 use App\Domain\Odds;
 use App\Domain\Settlement\Leg;
@@ -44,7 +45,7 @@ final readonly class BetDetail
         public ?string $confirmResultChange,
     ) {}
 
-    public static function fromBet(Bet $bet, Currency $baseCurrency, SettlementCalculator $calculator): self
+    public static function fromBet(Bet $bet, Currency $baseCurrency, SettlementCalculator $calculator, LocalTime $localTime): self
     {
         $selections = $bet->selections;
         $isAccumulator = $selections->count() > 1;
@@ -57,9 +58,9 @@ final readonly class BetDetail
             isFreeBet: $bet->is_free_bet,
             result: self::result($bet, $baseCurrency, $calculator, $legs),
             potential: self::potential($bet, $calculator, $legs),
-            selections: array_values($selections->map(fn (Selection $selection): array => self::selection($selection))->all()),
+            selections: array_values($selections->map(fn (Selection $selection): array => self::selection($selection, $localTime))->all()),
             clv: $isAccumulator && $clv !== null ? ['percent' => ClosingLineValue::formatPercent($clv), 'tone' => self::clvTone($clv)] : null,
-            facts: self::facts($bet, $baseCurrency),
+            facts: self::facts($bet, $baseCurrency, $localTime),
             notes: $bet->notes,
             currency: $bet->currency->value,
             confirmResultChange: $bet->payout_is_manual && $bet->payout !== null
@@ -69,11 +70,11 @@ final readonly class BetDetail
     }
 
     /**
-     * A date and time in full: "7 Oct 2026, 17:42".
+     * An instant in full, in the user's zone: "7 Oct 2026, 17:42".
      */
-    public static function formatDateTime(CarbonInterface $time): string
+    public static function formatDateTime(CarbonInterface $time, LocalTime $localTime): string
     {
-        return $time->format('j M Y, H:i');
+        return $localTime->toLocal($time)->format('j M Y, H:i');
     }
 
     /**
@@ -144,7 +145,7 @@ final readonly class BetDetail
     /**
      * @return array{id: int, pick: string, meta: string, startsAt: string|null, odds: string, hasResult: bool, buttons: list<array{result: string, label: string, isPressed: bool, tone: 'won'|'lost'|'void'}>, closingOdds: string|null, clv: array{label: string, tone: 'profit'|'loss'|'even'}|null}
      */
-    private static function selection(Selection $selection): array
+    private static function selection(Selection $selection, LocalTime $localTime): array
     {
         $clv = $selection->closing_odds === null ? null : ClosingLineValue::forBet($selection->odds, [$selection->closing_odds]);
 
@@ -152,7 +153,7 @@ final readonly class BetDetail
             'id' => $selection->id,
             'pick' => $selection->pick,
             'meta' => implode(' · ', array_filter([$selection->event_name, $selection->competition?->name, $selection->market?->name])),
-            'startsAt' => $selection->event_starts_at === null ? null : self::formatDateTime($selection->event_starts_at),
+            'startsAt' => $selection->event_starts_at === null ? null : self::formatDateTime($selection->event_starts_at, $localTime),
             'odds' => Odds::format($selection->odds),
             'hasResult' => $selection->result !== null,
             'buttons' => self::resultButtons($selection->result),
@@ -187,7 +188,7 @@ final readonly class BetDetail
     /**
      * @return list<array{label: string, value: string}>
      */
-    private static function facts(Bet $bet, Currency $baseCurrency): array
+    private static function facts(Bet $bet, Currency $baseCurrency, LocalTime $localTime): array
     {
         $inBaseCurrency = $bet->currency !== $baseCurrency;
         $rate = $inBaseCurrency ? ', rate '.Decimal::normalize($bet->exchange_rate) : '';
@@ -200,8 +201,8 @@ final readonly class BetDetail
             ['label' => 'Bookmaker', 'value' => "{$bet->bookmaker->name} ({$bet->currency->value}{$rate})"],
             ['label' => 'Stake', 'value' => $stake],
             $bet->selections->count() > 1 ? ['label' => 'Total odds', 'value' => Odds::format($bet->total_odds)] : null,
-            ['label' => 'Placed', 'value' => self::formatDateTime($bet->placed_at)],
-            $bet->settled_at === null ? null : ['label' => 'Settled', 'value' => self::formatDateTime($bet->settled_at)],
+            ['label' => 'Placed', 'value' => self::formatDateTime($bet->placed_at, $localTime)],
+            $bet->settled_at === null ? null : ['label' => 'Settled', 'value' => self::formatDateTime($bet->settled_at, $localTime)],
             ['label' => 'Sport', 'value' => $sports],
             $bet->tipster === null ? null : ['label' => 'Tipster', 'value' => $bet->tipster->name],
             $bet->tags->isEmpty() ? null : ['label' => 'Tags', 'value' => $bet->tags->map(fn (Tag $tag): string => $tag->name)->sort()->implode(' · ')],

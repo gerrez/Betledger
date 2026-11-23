@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Bets;
 
+use App\Domain\LocalTime;
 use App\Domain\Money;
 use App\Domain\Odds;
 use App\Domain\Settlement\SelectionResult;
@@ -39,22 +40,25 @@ final readonly class BetCard
     ) {}
 
     /**
+     * Times are shown in the user's zone, and "today" is the user's today.
+     *
      * @param  Selection|null  $undoable  the bet's selection whose result the card offers to undo
      */
-    public static function fromBet(Bet $bet, CarbonInterface $now, ?Selection $undoable = null): self
+    public static function fromBet(Bet $bet, LocalTime $localTime, ?Selection $undoable = null): self
     {
+        $now = $localTime->now();
         $selections = $bet->selections;
         $first = $selections->firstOrFail();
         $isAccumulator = $selections->count() > 1;
 
         $meta = $isAccumulator
-            ? [$bet->bookmaker->name, 'placed '.self::formatTime($bet->placed_at, $now)]
+            ? [$bet->bookmaker->name, 'placed '.self::formatTime($localTime->toLocal($bet->placed_at), $now)]
             : [
                 $first->competition?->name,
                 $bet->bookmaker->name,
                 $first->event_starts_at === null
-                    ? 'placed '.self::formatTime($bet->placed_at, $now)
-                    : self::formatTime($first->event_starts_at, $now),
+                    ? 'placed '.self::formatTime($localTime->toLocal($bet->placed_at), $now)
+                    : self::formatTime($localTime->toLocal($first->event_starts_at), $now),
             ];
 
         return new self(
@@ -65,7 +69,7 @@ final readonly class BetCard
             totalOdds: Odds::format($bet->total_odds),
             isFreeBet: $bet->is_free_bet,
             isAccumulator: $isAccumulator,
-            legs: array_values($selections->map(fn (Selection $selection): array => self::leg($selection, $now))->all()),
+            legs: array_values($selections->map(fn (Selection $selection): array => self::leg($selection, $localTime, $now))->all()),
             result: self::result($bet, $undoable),
             settle: self::settle($bet),
             lastResult: $undoable !== null && ! $bet->isSettled() ? $undoable->pick.': '.$undoable->result?->label() : null,
@@ -76,7 +80,8 @@ final readonly class BetCard
     /**
      * A date and time relative to now: "today 18:30", "tomorrow 18:30", "yesterday 18:30",
      * the weekday within six days ("Sat 11:05"), else the date ("14 Oct 18:30", or
-     * "14 Oct 2025" in another year).
+     * "14 Oct 2025" in another year). Both must be in the same (the user's) zone, so the
+     * days compared are local days (LocalTime::toLocal()).
      */
     public static function formatTime(CarbonInterface $time, CarbonInterface $now): string
     {
@@ -95,12 +100,12 @@ final readonly class BetCard
     /**
      * @return array{pick: string, event: string, odds: string, status: string, tone: 'won'|'lost'|'void'|'pending'}
      */
-    private static function leg(Selection $selection, CarbonInterface $now): array
+    private static function leg(Selection $selection, LocalTime $localTime, CarbonInterface $now): array
     {
         $event = $selection->event_name;
 
         if ($selection->result === null && $selection->event_starts_at !== null) {
-            $event .= ' · '.self::formatTime($selection->event_starts_at, $now);
+            $event .= ' · '.self::formatTime($localTime->toLocal($selection->event_starts_at), $now);
         }
 
         return [

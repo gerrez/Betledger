@@ -13,7 +13,8 @@ use Livewire\Attributes\Title;
 class Create extends BetForm
 {
     /**
-     * Start from the bookmaker and sport of the user's latest bet, placed now.
+     * Start from the bookmaker and sport of the user's latest bet, placed now in the
+     * user's time zone.
      */
     public function mount(): void
     {
@@ -23,8 +24,10 @@ class Create extends BetForm
 
         $bookmaker = $bookmakers->firstWhere('id', $latestBet?->bookmaker_id) ?? $bookmakers->first();
 
-        $this->placed_date = now()->format(self::DATE);
-        $this->placed_time = now()->format(self::TIME);
+        $now = $user->localTime()->now();
+
+        $this->placed_date = $now->format(self::DATE);
+        $this->placed_time = $now->format(self::TIME);
         $this->selectBookmaker($bookmaker);
         $this->selections = [$this->emptySelection($latestBet?->selections->first()?->sport->name ?? '')];
     }

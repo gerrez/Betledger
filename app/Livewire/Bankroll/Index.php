@@ -58,7 +58,7 @@ class Index extends Component
         $this->bookmaker_id = (string) $bookmakerId;
         $this->type = TransactionType::tryFrom($type)->value ?? '';
         $this->amount = '';
-        $this->occurred_on = now()->toDateString();
+        $this->occurred_on = $this->user()->localTime()->today()->toDateString();
         $this->note = '';
         $this->showForm = true;
     }
@@ -111,7 +111,7 @@ class Index extends Component
                     }
                 },
             ],
-            'occurred_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'occurred_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:'.$user->localTime()->today()->toDateString()],
             'note' => ['nullable', 'string', 'max:255'],
         ], [
             'type.required' => 'Choose deposit or withdrawal.',
@@ -184,7 +184,7 @@ class Index extends Component
             'activeBookmakers' => $user->bookmakers()->where('is_active', true)->orderBy('name')->get(),
             'editingBookmaker' => $this->editingId === null ? null : $user->bookmakers()->find((int) $this->bookmaker_id),
             'types' => TransactionType::cases(),
-            'today' => now()->toDateString(),
+            'today' => $user->localTime()->today()->toDateString(),
         ]);
     }
 

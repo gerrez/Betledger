@@ -5,6 +5,7 @@ namespace App\Domain\Import\Sportmarket;
 use App\Domain\Currency;
 use App\Domain\Decimal;
 use App\Domain\ListName;
+use App\Domain\LocalTime;
 use App\Domain\Money;
 use App\Domain\Odds;
 use App\Domain\Settlement\Leg;
@@ -63,15 +64,17 @@ final class SportmarketImport
 
     /**
      * Read an export for a bookmaker in the given currency. Orders come in the order they
-     * first appear in the file.
+     * first appear in the file. A bet is settled at 23:59 on its game date in the user's
+     * time zone (UTC when none is given).
      *
      * @param  list<string>  $importedRefs  the `external_ref` of the user's bets, to skip orders imported before
      * @return list<ImportedOrder>
      *
      * @throws InvalidOrdersFile when the file isn't a Sportmarket orders export
      */
-    public function read(string $contents, Currency $currency, array $importedRefs = []): array
+    public function read(string $contents, Currency $currency, array $importedRefs = [], ?LocalTime $localTime = null): array
     {
+        $localTime ??= LocalTime::utc();
         $rowsByOrder = [];
 
         foreach (OrdersFile::parse($contents) as $row) {
@@ -82,7 +85,7 @@ final class SportmarketImport
         $orders = [];
 
         foreach ($rowsByOrder as $orderId => $rows) {
-            $orders[] = $this->order((string) $orderId, $rows, $currency, $imported);
+            $orders[] = $this->order((string) $orderId, $rows, $currency, $imported, $localTime);
         }
 
         return $orders;
@@ -100,7 +103,7 @@ final class SportmarketImport
      * @param  non-empty-list<OrderRow>  $rows
      * @param  array<string, int>  $imported
      */
-    private function order(string $orderId, array $rows, Currency $currency, array $imported): ImportedOrder
+    private function order(string $orderId, array $rows, Currency $currency, array $imported, LocalTime $localTime): ImportedOrder
     {
         $fills = array_values(array_filter($rows, fn (OrderRow $row): bool => ! $row->hasFailed()));
 
@@ -119,7 +122,7 @@ final class SportmarketImport
         }
 
         try {
-            return ImportedOrder::bet($orderId, $this->bet($orderId, $fills, $currency));
+            return ImportedOrder::bet($orderId, $this->bet($orderId, $fills, $currency, $localTime));
         } catch (InvalidOrder $exception) {
             return ImportedOrder::error($orderId, $exception->getMessage());
         }
@@ -130,7 +133,7 @@ final class SportmarketImport
      *
      * @throws InvalidOrder
      */
-    private function bet(string $orderId, array $fills, Currency $currency): ImportedBet
+    private function bet(string $orderId, array $fills, Currency $currency, LocalTime $localTime): ImportedBet
     {
         foreach ($fills as $fill) {
             if (strtoupper($fill->currency) !== $currency->value) {
@@ -155,7 +158,7 @@ final class SportmarketImport
 
         $main = $this->largestFill($fills, $stakes);
         $placedAt = $this->placedAt($fills);
-        $settledAt = $this->gameDate($main)->setTime(23, 59);
+        $settledAt = $localTime->toUtc($this->gameDate($main)->toDateString(), '23:59');
         $teams = array_values(array_filter([$main->home, $main->away], fn (string $team): bool => $team !== ''));
 
         if ($teams === []) {

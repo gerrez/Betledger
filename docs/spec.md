@@ -62,6 +62,7 @@ data has a `user_id` (directly, or via its parent bet) and is scoped by policies
 | Column | Type | Notes |
 |---|---|---|
 | `base_currency` | char(3) | ISO 4217, default `EUR`. Can only be changed while the user has no bets (v1). |
+| `timezone` | string | IANA name (`Europe/Copenhagen`), default `UTC`; one of PHP's current identifiers (Laravel's `timezone:all` rule), so legacy names like `Europe/Kiev` are refused. Times are entered and shown, and days and months grouped, in this zone; every stored datetime stays UTC (6.2). Changing it moves no stored time. |
 
 ### `bookmakers`
 
@@ -301,7 +302,7 @@ editable after a bookmaker is deactivated.
 
 **Transactions:** type deposit or withdrawal; amount above 0 with the same limits as a
 stake (`Money::isValidStake`, decimal comma accepted); date required and not after today
-(default today); optional note up to 255 characters.
+in the user's time zone (default today there); optional note up to 255 characters.
 
 ## Import from Sportmarket
 
@@ -346,7 +347,7 @@ with the calculated payout of each result (won, lost, void, half-won, half-lost)
 bet's odds and stake, and take the nearest. The bet is settled through the settle service
 with that result; when the reported payout differs from the calculated one (rounding of
 the 3-dp odds, Sportmarket's cents, or fills with different results), it is kept as a
-**manual payout**. `settled_at` is the game date at 23:59 UTC (the export has no
+**manual payout**. `settled_at` is the game date at 23:59 in the user's time zone (6.2; the export has no
 settlement time), but never before `placed_at`. On the owner's full export (588 orders)
 this gives 331 won, 157 lost, 54 void, 30 half-won and 10 half-lost, with no order close
 to two results; 211 bets get a manual payout, at most €1.14 from the calculated one.
@@ -588,9 +589,9 @@ same items. Touch targets ≥ 44 px.
   (e.g. an outright) needs it typed. The sport is a field in the selection card.
 - **Bet form defaults (assumed in 2.6).** A new bet starts at the bookmaker and sport of
   the user's latest bet (else the first active bookmaker alphabetically, and no sport),
-  placed now. Times are entered and stored in the app's time zone (UTC); there is no
-  per-user time zone yet, so a user in Denmark sees "now" one or two hours behind.
-  Owner: should users get a time zone setting?
+  placed now. **Answered in 6.2:** users have a time zone (Settings → Currency and time
+  zone), and Placed and Starts are entered and shown in it ("now" is the user's local
+  now); they are stored as UTC instants.
 - **Limits on entry (assumed in 2.6).** Stakes go up to 999,999,999.99 and odds up to
   9,999,999.999 with at most three decimals (the column's precision), so payouts always
   fit in an integer. Saving a bet goes to the bets list (a placeholder until 2.8) with a
@@ -620,7 +621,7 @@ same items. Touch targets ≥ 44 px.
   recently settled, newest, oldest placed; All — newest, oldest placed. Changing tab
   goes back to that tab's default order. 20 bets per page. A card shows the event's start
   for a single (or "placed …" when it has none) and "placed …" for an accumulator, in
-  the app's time zone ("today 18:30", "Sat 11:05" within six days either way, else
+  the user's time zone, comparing local days (6.2) ("today 18:30", "Sat 11:05" within six days either way, else
   "14 Oct 18:30"). Total odds show all four stored decimals ("@ 5.4054"), not the
   mockup's rounded "5.41". A settled single's banner names its result ("Settled: ½ Won");
   an accumulator's just says "Settled", with payout and profit. A card opens the bet
@@ -666,8 +667,9 @@ same items. Touch targets ≥ 44 px.
   detail and edit pages.
 - **Statistics service (assumed in 2.12).** `App\Domain\Statistics`: `StatisticsQuery`
   loads the user's filtered bets, `StatisticsCalculator` does the sums. Each filter takes
-  one value (one bookmaker, one sport, …); dates are whole days in the app's time zone
-  (UTC), both included. Stake and profit are each converted to the base currency with the
+  one value (one bookmaker, one sport, …); dates are whole days in the user's time zone
+  (6.2; from local midnight to local midnight, so 23 or 25 hours on daylight-saving
+  days), both included. Stake and profit are each converted to the base currency with the
   bet's rate and rounded per bet; profit is the stored one, so a manual payout counts.
   **Open stake** counts open cash bets only (a free bet's stake isn't at risk, as for
   turnover), while the open bet count includes free bets. **Average odds** cover every
@@ -681,12 +683,12 @@ same items. Touch targets ≥ 44 px.
   other rows come by number of settled bets, most first, then by name, and a value with
   only open bets still gets a row. **Odds bands** run up to and including their upper
   bound at the stored four decimals: 1.5000 is in 1.01–1.50, 1.5050 in 1.51–2.00.
-  **Profit over time** counts profit on the event date (`event_at`, since 6.1), by day for ranges up to 31
+  **Profit over time** counts profit on the event date (`event_at`, since 6.1) as a local day in the user's zone (6.2), by day for ranges up to 31
   days, by week (from Monday) up to 182 days, else by month, with a point for every
   period, empty ones included, from the start of the range (or the first settled bet,
   for "All time") to its end (or the last settled bet).
 - **Statistics page (assumed in 2.13).** `/statistics` opens on the last 90 days (as in
-  the mockup). "30 days" and "90 days" are today and the 29 or 89 days before, "This
+  the mockup). "30 days" and "90 days" are today (the user's today, 6.2) and the 29 or 89 days before, "This
   year" runs from 1 January to today, and "Custom…" shows From and To dates, starting
   from the range shown until then; either can be left empty (no limit), and dates
   entered the wrong way round are read the right way round. The range, filters, free
@@ -717,7 +719,8 @@ same items. Touch targets ≥ 44 px.
   unknown or future month shows the current one. The profit card, its ROI badge and the
   strike rate, average odds and closing line tiles cover the settled bets **whose event
   date is in that month** (since 6.1; free bets included, in the base currency as on the statistics page; the
-  current month up to today). "Open stake" and the open bets preview always show the bets
+  current month up to today). Months and days are the user's, in their time zone (6.2),
+  and so are the month selector's months. "Open stake" and the open bets preview always show the bets
   open **now**, whichever month is chosen (the mockup's "3 bets pending" and "Open bets ·
   3" agree). The sparkline is the month's cumulative profit by day, drawn like the
   statistics chart without axes, and is left out when nothing was settled that month.
@@ -760,7 +763,8 @@ same items. Touch targets ≥ 44 px.
   status other than `settled`, `void` or `failed` counts as not settled.
 - **Sportmarket import details (assumed before 4.1).** The game's kick-off time isn't in
   the export, so `event_starts_at` stays empty and `settled_at` is the game date at
-  23:59 UTC. Statistics count an imported bet on that same instant (its `event_at`, 6.1). In-play bets get an "In-play" tag. The market names for Sportmarket's codes
+  23:59 in the user's time zone (23:59 UTC until 6.2; bets imported before 6.2 keep it).
+  Statistics count an imported bet on that same instant (its `event_at`, 6.1). In-play bets get an "In-play" tag. The market names for Sportmarket's codes
   are listed in "Import from Sportmarket".
 - **Sportmarket import mapping (assumed in 4.1a).** `App\Domain\Import\Sportmarket`
   reads the export and maps each order; nothing is saved (that's 4.1b). The fill with
@@ -810,7 +814,29 @@ same items. Touch targets ≥ 44 px.
     becomes the placed date and stays there.
   - *Existing times after a time zone setting (6.2).* Bets entered by hand so far were
     typed as local time but stored as UTC, so they are one or two hours off once a time
-    zone is set. Shift them once, or leave them? Default: leave them.
+    zone is set. Shift them once, or leave them? Default: leave them (built in 6.2:
+    nothing is shifted, so they now show one or two hours later than typed).
+  - *Per-user time zone (assumed in 6.2).*
+    - *Settings page.* The time zone sits on the base currency's page, renamed
+      "Currency and time zone" (same route, `settings.currency`), with its own form and
+      Save button; it stays editable after the base currency is locked by bets. The
+      dropdown lists every zone PHP knows (~420), shown with spaces for underscores.
+    - *Registration.* The zone comes from the browser
+      (`Intl.DateTimeFormat().resolvedOptions().timeZone`) without a visible field. A
+      missing or unknown zone becomes UTC without an error.
+    - *Legacy zone names.* Validation uses `timezone:all`, not `all_with_bc`, so the list
+      and the rule agree exactly and only current names are stored. A browser reporting a
+      legacy name (e.g. `Europe/Kiev` for `Europe/Kyiv`) registers with UTC and the user
+      picks the zone in Settings.
+    - *Daylight saving.* A typed time that doesn't exist (the spring-forward gap, e.g.
+      02:30 on 29 March in Copenhagen) moves forward by the gap (03:30). A typed time that
+      happens twice (the autumn fold, 02:30 on 25 October) is the first of the two, still
+      in summer time. So a bet placed in the second 02:30–03:00 shows as 02:30 and moves
+      an hour earlier if its edit form is saved; the hour is rare enough to accept.
+    - *Not converted.* The bankroll's `occurred_on`, statistics dates and profit-over-time
+      periods are calendar dates and are not moved; they mean a day in the user's zone.
+      The CSV export and its file name stay UTC; `settled_at` is still stamped as an
+      instant when a result is set.
   - *Registration (6.12).* Is registration meant to be open to anyone? Email
     verification is currently off (`User` doesn't implement `MustVerifyEmail`).
     Default: turn verification on and keep registration open.
@@ -832,8 +858,12 @@ same items. Touch targets ≥ 44 px.
     read-only) when the API grows beyond creating bets.
   - *Results.* A bet created through the API is open, like on the form, which only
     offers results when editing. Settling through the API would be a separate endpoint.
-  - *Time zone.* A date-time without an offset is taken as UTC, like everything else
-    until per-user time zones (6.2); then it should mean the user's zone.
+  - *Time zone.* A date-time without an offset is taken as UTC. Per-user time zones (6.2)
+    did not change this: consumers only see `docs/api/openapi.yaml` (v1.2.0), which
+    promises UTC, and changing what an existing field means is a breaking change that
+    needs a new `/api/vN` (`CLAUDE.md`). Sending an offset gives the exact instant.
+    Owner: keep v1 on UTC, or add a `/api/v2` that reads offset-less times in the
+    user's zone?
   - *Bookmakers by name.* The API accepts the bookmaker's name as well as its id, since
     the app shows no bookmaker ids. Bookmakers are not created through the API (they need
     a currency and rate).

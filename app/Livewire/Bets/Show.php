@@ -149,7 +149,7 @@ class Show extends Component
         $this->bet->load(['bookmaker', 'tipster', 'tags', 'selections.sport', 'selections.competition', 'selections.market']);
 
         return view('livewire.bets.show', [
-            'detail' => BetDetail::fromBet($this->bet, $this->user()->base_currency, $calculator),
+            'detail' => BetDetail::fromBet($this->bet, $this->user()->base_currency, $calculator, $this->user()->localTime()),
         ]);
     }
 

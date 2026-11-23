@@ -25,7 +25,8 @@ use Livewire\Component;
 /**
  * The home page: a month's profit with a sparkline, KPI tiles, and a preview of the open
  * bets. The month's figures cover the settled bets whose event date (`event_at`) is in it;
- * open stake and open bets are always the ones open now.
+ * open stake and open bets are always the ones open now. Months and days are the user's
+ * own (in their time zone).
  */
 #[Title('Overview')]
 class Index extends Component
@@ -43,10 +44,11 @@ class Index extends Component
     {
         $user = $this->user();
         $currency = $user->base_currency;
-        $now = CarbonImmutable::now();
-        $month = $this->selectedMonth($now);
-        $isCurrentMonth = $month->equalTo($now->startOfMonth());
-        $lastDay = $isCurrentMonth ? $now->startOfDay() : $month->endOfMonth()->startOfDay();
+        $localTime = $user->localTime();
+        $today = $localTime->today();
+        $month = $this->selectedMonth($today);
+        $isCurrentMonth = $month->equalTo($today->startOfMonth());
+        $lastDay = $isCurrentMonth ? $today : $month->endOfMonth()->startOfDay();
 
         $settled = $query->bets($user, new StatisticsFilter($month, $lastDay, status: BetStatus::Settled));
         $monthTotals = $calculator->totals($settled);
@@ -56,7 +58,7 @@ class Index extends Component
 
         return view('livewire.overview.index', [
             'hasBets' => $settled !== [] || $openTotals->openBets > 0 || $user->bets()->exists(),
-            'months' => $this->months($user, $now),
+            'months' => $this->months($user, $today),
             'monthName' => $monthName,
             'profitLabel' => $isCurrentMonth ? 'Profit this month' : "Profit in {$monthName}",
             'symbol' => $currency->symbol(),
@@ -71,7 +73,7 @@ class Index extends Component
                 ->with(['bookmaker', 'selections'])
                 ->limit(self::PREVIEW_SIZE)
                 ->get()
-                ->map(fn (Bet $bet): OpenBetRow => OpenBetRow::fromBet($bet, $now)),
+                ->map(fn (Bet $bet): OpenBetRow => OpenBetRow::fromBet($bet, $localTime)),
         ]);
     }
 
@@ -93,16 +95,18 @@ class Index extends Component
 
     /**
      * The months to choose from, newest first: the current month (an empty value) back to
-     * the month of the user's first bet, by placed or event date.
+     * the month of the user's first bet, by placed or event date, in the user's zone.
      *
+     * @param  CarbonImmutable  $today  the user's today, as a calendar date
      * @return list<array{value: string, label: string}>
      */
-    private function months(User $user, CarbonImmutable $now): array
+    private function months(User $user, CarbonImmutable $today): array
     {
-        $current = $now->startOfMonth();
+        $localTime = $user->localTime();
+        $current = $today->startOfMonth();
         $first = collect([$user->bets()->min('placed_at'), $user->bets()->min('event_at')])
             ->filter()
-            ->map(fn (string $date): CarbonImmutable => CarbonImmutable::parse($date)->startOfMonth())
+            ->map(fn (string $instant): CarbonImmutable => $localTime->day(CarbonImmutable::parse($instant, 'UTC'))->startOfMonth())
             ->push($current)
             ->min();
         $months = [];
@@ -115,11 +119,13 @@ class Index extends Component
     }
 
     /**
-     * The first day of the month shown.
+     * The first day of the month shown, as a calendar date.
+     *
+     * @param  CarbonImmutable  $today  the user's today, as a calendar date
      */
-    private function selectedMonth(CarbonImmutable $now): CarbonImmutable
+    private function selectedMonth(CarbonImmutable $today): CarbonImmutable
     {
-        $current = $now->startOfMonth();
+        $current = $today->startOfMonth();
 
         if (preg_match('/^\d{4}-\d{2}$/', $this->month) !== 1) {
             return $current;

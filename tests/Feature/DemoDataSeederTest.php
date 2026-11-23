@@ -26,6 +26,7 @@ class DemoDataSeederTest extends TestCase
 
         $demo = User::query()->where('email', DemoDataSeeder::DEMO_EMAIL)->sole();
         $this->assertNotNull($demo->email_verified_at);
+        $this->assertSame('Europe/Copenhagen', $demo->timezone);
         $this->assertSame(5, $demo->bookmakers()->count());
         $this->assertSame(1, $demo->bookmakers()->where('is_active', false)->count());
         $this->assertSame(4, $demo->sports()->count());
@@ -56,6 +57,7 @@ class DemoDataSeederTest extends TestCase
         $this->assertFalse($rows['Sportmarket']->hasActivity());
 
         $other = User::query()->where('email', DemoDataSeeder::OTHER_EMAIL)->sole();
+        $this->assertSame('UTC', $other->timezone);
         $this->assertSame(1, $other->sports()->count());
         $this->assertSame(1, $other->tags()->count());
         $this->assertSame(1, $other->bets()->count());

@@ -232,7 +232,7 @@ test for anything that reads or changes user data.
         settled after its event counts in the event's month on the statistics page and
         on Home, that changing a start time in the edit form moves it, that the
         bankroll still uses `settled_at`; isolation.
-- [ ] **6.2 Per-user time zone.** Everything is entered, shown and grouped in UTC
+- [x] **6.2 Per-user time zone.** Everything is entered, shown and grouped in UTC
       (`config/app.php`), so a user in Denmark sees "now" one or two hours behind and a
       bet settled at 23:30 UTC counts on the wrong day. Answers the 2.6 open question.
       - Schema: `users.timezone` (IANA name, default `UTC`), validated with Laravel's

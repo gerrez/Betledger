@@ -3,6 +3,7 @@
 namespace App\Livewire\Settings;
 
 use App\Domain\Currency;
+use App\Domain\LocalTime;
 use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -10,17 +11,26 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Currency')]
+/**
+ * Settings → Currency and time zone: two forms, each with its own Save button. The base
+ * currency is locked once the user has bets; the time zone can always change.
+ */
+#[Title('Currency and time zone')]
 class BaseCurrency extends Component
 {
     public string $base_currency = '';
+
+    public string $timezone = '';
 
     /**
      * Mount the component.
      */
     public function mount(): void
     {
-        $this->base_currency = Auth::user()->base_currency->value;
+        $user = Auth::user();
+
+        $this->base_currency = $user->base_currency->value;
+        $this->timezone = $user->timezone;
     }
 
     /**
@@ -47,11 +57,32 @@ class BaseCurrency extends Component
         $this->dispatch('base-currency-updated');
     }
 
+    /**
+     * Change the time zone that times are entered, shown and grouped into days in.
+     * Stored times are instants and don't move.
+     */
+    public function updateTimezone(): void
+    {
+        $validated = $this->validate([
+            'timezone' => ['required', 'string', 'timezone:all'],
+        ], [
+            'timezone.required' => 'Choose a time zone.',
+            'timezone.timezone' => 'Choose a time zone from the list.',
+        ]);
+
+        $user = Auth::user();
+        $user->timezone = $validated['timezone'];
+        $user->save();
+
+        $this->dispatch('timezone-updated');
+    }
+
     public function render(): View
     {
         return view('livewire.settings.base-currency', [
             'currencies' => Currency::cases(),
             'canChange' => Auth::user()->canChangeBaseCurrency(),
+            'timezones' => array_map(fn (string $timezone): array => ['value' => $timezone, 'label' => LocalTime::label($timezone)], LocalTime::identifiers()),
         ]);
     }
 }

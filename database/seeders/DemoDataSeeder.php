@@ -47,14 +47,15 @@ class DemoDataSeeder extends Seeder
         DB::transaction(function (): void {
             User::query()->whereIn('email', [self::DEMO_EMAIL, self::OTHER_EMAIL])->delete();
 
-            $this->seedDemoUser($this->createUser('Demo', self::DEMO_EMAIL));
-            $this->seedOtherUser($this->createUser('Other User', self::OTHER_EMAIL));
+            // Two time zones side by side: the demo account shows Danish local times.
+            $this->seedDemoUser($this->createUser('Demo', self::DEMO_EMAIL, 'Europe/Copenhagen'));
+            $this->seedOtherUser($this->createUser('Other User', self::OTHER_EMAIL, 'UTC'));
         });
 
         $this->command->info('Log in as '.self::DEMO_EMAIL.' (or '.self::OTHER_EMAIL.') with password "'.self::PASSWORD.'".');
     }
 
-    private function createUser(string $name, string $email): User
+    private function createUser(string $name, string $email, string $timezone): User
     {
         $user = new User;
         $user->forceFill([
@@ -63,6 +64,7 @@ class DemoDataSeeder extends Seeder
             'password' => self::PASSWORD,
             'email_verified_at' => now(),
             'base_currency' => Currency::Eur,
+            'timezone' => $timezone,
         ])->save();
 
         return $user;

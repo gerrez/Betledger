@@ -20,20 +20,17 @@
             <flux:heading>Your tokens</flux:heading>
 
             @forelse ($tokens as $token)
-                <div class="flex min-h-11 items-center justify-between gap-4 border-b border-zinc-200 py-2 last:border-b-0 dark:border-zinc-700" wire:key="token-{{ $token->id }}">
+                <div class="flex min-h-11 items-center justify-between gap-4 border-b border-zinc-200 py-2 last:border-b-0 dark:border-zinc-700" wire:key="token-{{ $token['id'] }}">
                     <div class="min-w-0">
-                        <p class="truncate font-medium">{{ $token->name }}</p>
-                        <flux:text size="sm">
-                            Created {{ $token->created_at?->format('j M Y') }} ·
-                            {{ $token->last_used_at === null ? 'Never used' : 'Last used '.$token->last_used_at->diffForHumans() }}
-                        </flux:text>
+                        <p class="truncate font-medium">{{ $token['name'] }}</p>
+                        <flux:text size="sm">{{ $token['meta'] }}</flux:text>
                     </div>
 
                     <flux:button
                         variant="ghost"
                         size="sm"
-                        wire:click="revokeToken({{ $token->id }})"
-                        data-confirm="Requests using “{{ $token->name }}” are refused from now on. This can’t be undone."
+                        wire:click="revokeToken({{ $token['id'] }})"
+                        data-confirm="Requests using “{{ $token['name'] }}” are refused from now on. This can’t be undone."
                         data-confirm-title="Revoke this token?"
                         data-confirm-button="Revoke"
                         data-confirm-danger

@@ -260,7 +260,7 @@ class Index extends Component
         $range = $this->dateRange();
 
         if ($range !== DateRange::Custom) {
-            return $range->days(CarbonImmutable::now());
+            return $range->days($this->user()->localTime()->today());
         }
 
         $from = $this->date($this->from);

@@ -92,6 +92,18 @@ class ApiTokensTest extends TestCase
         $this->assertNotNull($otherToken->accessToken->fresh());
     }
 
+    public function test_the_creation_date_is_the_users_local_date(): void
+    {
+        $this->travelTo('2026-11-22 23:30:00'); // 23 November in Copenhagen
+        $user = User::factory()->create(['timezone' => 'Europe/Copenhagen']);
+        $user->createToken('Odds feed');
+        $this->actingAs($user);
+
+        Livewire::test(ApiTokens::class)
+            ->assertSee('Created 23 Nov 2026 · Never used')
+            ->assertDontSee('22 Nov 2026');
+    }
+
     public function test_token_names_are_escaped(): void
     {
         $user = User::factory()->create();

@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Bankroll\BankrollQuery;
 use App\Domain\BetStatus;
 use App\Domain\BetType;
+use App\Domain\Currency;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoDataSeeder;
@@ -39,11 +41,20 @@ class DemoDataSeederTest extends TestCase
         $this->assertSame(3, $demo->bets()->whereNotNull('probability')->count());
         $this->assertSame(4, $demo->bets()->whereNotNull('bet_value')->count());
         $this->assertFalse($demo->canChangeBaseCurrency());
+        $this->assertSame(6, $demo->bankrollTransactions()->count());
+
+        $rows = collect(app(BankrollQuery::class)->bankroll($demo)->rows)->keyBy('name');
+        $this->assertSame(['Bet365', 'Danske Spil', 'Sportmarket', 'Unibet', 'Old Bookie'], $rows->keys()->all());
+        $this->assertSame(-5000, $rows['Old Bookie']->figures->balance);
+        $this->assertSame(Currency::Gbp, $rows['Bet365']->figures->currency);
+        $this->assertGreaterThan(0, $rows['Bet365']->figures->balance);
+        $this->assertFalse($rows['Sportmarket']->hasActivity());
 
         $other = User::query()->where('email', DemoDataSeeder::OTHER_EMAIL)->sole();
         $this->assertSame(1, $other->sports()->count());
         $this->assertSame(1, $other->tags()->count());
         $this->assertSame(1, $other->bets()->count());
+        $this->assertSame(2, $other->bankrollTransactions()->count());
     }
 
     public function test_running_it_again_starts_the_demo_accounts_over(): void

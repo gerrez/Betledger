@@ -11,6 +11,8 @@ use App\Domain\Odds;
 use App\Domain\Settlement\Leg;
 use App\Domain\Settlement\SelectionResult;
 use App\Domain\Settlement\SettlementCalculator;
+use App\Domain\TransactionType;
+use App\Models\BankrollTransaction;
 use App\Models\Bet;
 use App\Models\Bookmaker;
 use App\Models\Tag;
@@ -187,6 +189,33 @@ class DemoDataSeeder extends Seeder
                 $leg($home, $away, $competition, '1X2', $pick, $odds, $result, $daysAgo - 1),
             ]);
         }
+
+        // Bankroll: Sportmarket has no transactions, so its card shows the empty state.
+        // Old Bookie withdrew more than it held (€50 + €50 profit − €150), so its balance
+        // is negative; Bet365 and Danske Spil have balances in their own currency.
+        $this->addTransaction($unibet, TransactionType::Deposit, 30000, daysAgo: 150, note: 'Bank transfer');
+        $this->addTransaction($unibet, TransactionType::Withdrawal, 10000, daysAgo: 20);
+        $this->addTransaction($bet365, TransactionType::Deposit, 20000, daysAgo: 140, note: 'Debit card');
+        $this->addTransaction($danskeSpil, TransactionType::Deposit, 100000, daysAgo: 3);
+        $this->addTransaction($oldBookie, TransactionType::Deposit, 5000, daysAgo: 60);
+        $this->addTransaction($oldBookie, TransactionType::Withdrawal, 15000, daysAgo: 35, note: 'Closing the account');
+    }
+
+    /**
+     * @param  int  $amount  minor units of the bookmaker's currency
+     */
+    private function addTransaction(Bookmaker $bookmaker, TransactionType $type, int $amount, int $daysAgo, ?string $note = null): void
+    {
+        $transaction = new BankrollTransaction([
+            'bookmaker_id' => $bookmaker->id,
+            'type' => $type,
+            'amount' => $amount,
+            'currency' => $bookmaker->currency,
+            'occurred_on' => now()->subDays($daysAgo)->toDateString(),
+            'note' => $note,
+        ]);
+        $transaction->user()->associate($bookmaker->user_id);
+        $transaction->save();
     }
 
     /**
@@ -214,6 +243,9 @@ class DemoDataSeeder extends Seeder
             'result' => SelectionResult::Won,
             'teams' => [$team],
         ]]);
+
+        $this->addTransaction($bookmaker, TransactionType::Deposit, 10000, daysAgo: 10, note: 'Other Users Deposit');
+        $this->addTransaction($bookmaker, TransactionType::Withdrawal, 2000, daysAgo: 1);
     }
 
     /**

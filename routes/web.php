@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Settings\ExportBetsController;
+use App\Livewire\Bankroll\Index as BankrollIndex;
 use App\Livewire\Bets\Create as CreateBet;
 use App\Livewire\Bets\Edit as EditBet;
 use App\Livewire\Bets\Index as BetsIndex;
@@ -35,6 +36,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('statistics', StatisticsIndex::class)->name('statistics');
 
     Route::get('bookmakers', BookmakersIndex::class)->name('bookmakers.index');
+
+    Route::get('bankroll', BankrollIndex::class)->name('bankroll.index');
 
     Route::get('lists', ListsIndex::class)->name('lists.index');
 

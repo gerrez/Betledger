@@ -72,4 +72,21 @@ class Bookmaker extends Model
     {
         return $this->hasMany(Bet::class);
     }
+
+    /**
+     * @return HasMany<BankrollTransaction, $this>
+     */
+    public function bankrollTransactions(): HasMany
+    {
+        return $this->hasMany(BankrollTransaction::class);
+    }
+
+    /**
+     * The currency can only change while the bookmaker has no bets and no transactions:
+     * both are amounts in the bookmaker's currency, and its balance adds them up.
+     */
+    public function canChangeCurrency(): bool
+    {
+        return $this->bets()->doesntExist() && $this->bankrollTransactions()->doesntExist();
+    }
 }

@@ -13,6 +13,7 @@
         {{-- On desktop these live in the sidebar; phones reach them from Settings. --}}
         <flux:navlist class="mt-4 lg:hidden">
             <flux:navlist.item href="{{ route('bookmakers.index') }}" wire:navigate>Bookmakers</flux:navlist.item>
+            <flux:navlist.item href="{{ route('bankroll.index') }}" wire:navigate>Bankroll</flux:navlist.item>
             <flux:navlist.item href="{{ route('lists.index') }}" wire:navigate>Lists</flux:navlist.item>
 
             <form method="POST" action="{{ route('logout') }}" class="w-full">

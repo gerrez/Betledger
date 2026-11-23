@@ -24,6 +24,7 @@ class AppShellTest extends TestCase
             'new bet' => ['bets.create'],
             'statistics' => ['statistics'],
             'bookmakers' => ['bookmakers.index'],
+            'bankroll' => ['bankroll.index'],
             'lists' => ['lists.index'],
             'settings profile' => ['settings.profile'],
             'settings currency' => ['settings.currency'],
@@ -77,6 +78,19 @@ class AppShellTest extends TestCase
         $this->assertStringContainsString('<title>Statistics · '.config('app.name').'</title>', $html);
         $this->assertMatchesRegularExpression($this->currentLinkPattern('statistics'), $html);
         $this->assertDoesNotMatchRegularExpression($this->currentLinkPattern('bets.index'), $html);
+    }
+
+    public function test_the_bankroll_is_in_the_sidebar_and_under_settings_on_phones(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $html = $this->get(route('bankroll.index'))->assertOk()->getContent();
+        $this->assertIsString($html);
+        // The sidebar link, and the phone tab bar's Settings tab, are both marked current.
+        $this->assertMatchesRegularExpression($this->currentLinkPattern('bankroll.index'), $html);
+        $this->assertMatchesRegularExpression($this->currentLinkPattern('settings.profile'), $html);
+
+        $this->get(route('settings.profile'))->assertOk()->assertSee(route('bankroll.index'));
     }
 
     private function currentLinkPattern(string $routeName): string

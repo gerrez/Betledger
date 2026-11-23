@@ -163,8 +163,10 @@ is too big for one review.
       the bet's fields repeated) from Settings. Money in major units with the currency
       code, odds as entered. Isolation test. Link the download from the delete-account
       dialog too ("Download your bets first"): it is the only backup a user has.
-- [ ] **4.3 Bankroll.** Deposits and withdrawals per bookmaker, and balances (deposits −
+- [x] **4.3 Bankroll.** Deposits and withdrawals per bookmaker, and balances (deposits −
       withdrawals + settled profit − open cash stakes). Shown per bookmaker and in total.
+      Per "Bankroll" in `docs/spec.md`: `bankroll_transactions`, `App\Domain\Bankroll`
+      (reusing the statistics totals), the Bankroll page, and the bookmaker currency lock.
 - [ ] **4.4 Cash out.** Full and partial cash out of an open bet, recorded as its own
       settlement outcome so statistics stay correct. Reversible like any settlement.
 - [ ] **4.5 Merging list entries.** Merge duplicates (e.g. two spellings of a team) on

@@ -84,6 +84,14 @@ class User extends Authenticatable // implements MustVerifyEmail
     }
 
     /**
+     * @return HasMany<BankrollTransaction, $this>
+     */
+    public function bankrollTransactions(): HasMany
+    {
+        return $this->hasMany(BankrollTransaction::class);
+    }
+
+    /**
      * @return HasMany<Selection, $this>
      */
     public function selections(): HasMany

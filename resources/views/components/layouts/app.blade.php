@@ -15,6 +15,7 @@
                     <x-nav.sidebar-item :href="route('bets.index')" :current="request()->routeIs('bets.index', 'bets.show', 'bets.edit')">Bets</x-nav.sidebar-item>
                     <x-nav.sidebar-item :href="route('statistics')" :current="request()->routeIs('statistics')">Statistics</x-nav.sidebar-item>
                     <x-nav.sidebar-item :href="route('bookmakers.index')" :current="request()->routeIs('bookmakers.*')">Bookmakers</x-nav.sidebar-item>
+                    <x-nav.sidebar-item :href="route('bankroll.index')" :current="request()->routeIs('bankroll.*')">Bankroll</x-nav.sidebar-item>
                     <x-nav.sidebar-item :href="route('lists.index')" :current="request()->routeIs('lists.*')">Lists</x-nav.sidebar-item>
                     <x-nav.sidebar-item :href="route('settings.profile')" :current="request()->routeIs('settings.*')">Settings</x-nav.sidebar-item>
                 </nav>
@@ -99,7 +100,7 @@
             </a>
 
             <x-nav.tab-item :href="route('statistics')" icon="chart-bar" :current="request()->routeIs('statistics')">Stats</x-nav.tab-item>
-            <x-nav.tab-item :href="route('settings.profile')" icon="cog-6-tooth" :current="request()->routeIs('settings.*', 'bookmakers.*', 'lists.*')">Settings</x-nav.tab-item>
+            <x-nav.tab-item :href="route('settings.profile')" icon="cog-6-tooth" :current="request()->routeIs('settings.*', 'bookmakers.*', 'bankroll.*', 'lists.*')">Settings</x-nav.tab-item>
         </nav>
 
         <x-confirm-dialog />

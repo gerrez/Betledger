@@ -82,19 +82,17 @@
                             @else
                                 <ul class="divide-y divide-line border-t border-line">
                                     @foreach ($transactions as $transaction)
-                                        <li wire:key="transaction-{{ $transaction['id'] }}" class="flex flex-wrap items-center gap-x-3 gap-y-1 py-3">
-                                            <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-                                                <span class="text-[15px] font-medium">{{ $transaction['type'] }}</span>
-                                                <span class="truncate text-[13px] text-muted">
-                                                    {{ $transaction['meta'] }}
-                                                </span>
+                                        <li wire:key="transaction-{{ $transaction['id'] }}" class="flex flex-col gap-1 py-3">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="flex min-w-0 flex-col gap-0.5">
+                                                    <span class="text-[15px] font-medium">{{ $transaction['type'] }}</span>
+                                                    <span class="text-[13px] break-words text-muted">{{ $transaction['meta'] }}</span>
+                                                </div>
+
+                                                <span class="shrink-0 text-[15px] font-semibold tabular-nums">{{ $transaction['amount'] }}</span>
                                             </div>
 
-                                            <span class="text-[15px] font-semibold tabular-nums">
-                                                {{ $transaction['amount'] }}
-                                            </span>
-
-                                            <div class="flex gap-1">
+                                            <div class="-ms-3 flex gap-1">
                                                 <flux:button size="sm" variant="ghost" class="max-lg:h-11" wire:click="editTransaction({{ $transaction['id'] }})">Edit</flux:button>
                                                 <flux:button
                                                     size="sm"

@@ -64,12 +64,12 @@ class StatisticsQueryTest extends TestCase
         $this->assertSame(1287, $bet->profit);
     }
 
-    public function test_settled_bets_count_by_settlement_date_and_open_bets_by_placed_date(): void
+    public function test_settled_bets_count_by_event_date_and_open_bets_by_placed_date(): void
     {
-        $this->settledBet(100, placedAt: '2026-09-20 12:00', settledAt: '2026-10-01 00:00');
-        $this->settledBet(200, placedAt: '2026-10-10 12:00', settledAt: '2026-10-21 23:59');
-        $this->settledBet(300, placedAt: '2026-10-10 12:00', settledAt: '2026-10-22 00:00');
-        $this->settledBet(400, placedAt: '2026-09-29 12:00', settledAt: '2026-09-30 23:59');
+        $this->settledBet(100, placedAt: '2026-09-20 12:00', eventAt: '2026-10-01 00:00');
+        $this->settledBet(200, placedAt: '2026-10-10 12:00', eventAt: '2026-10-21 23:59');
+        $this->settledBet(300, placedAt: '2026-10-10 12:00', eventAt: '2026-10-22 00:00');
+        $this->settledBet(400, placedAt: '2026-09-29 12:00', eventAt: '2026-09-30 23:59');
         Bet::factory()->for($this->user)->create(['stake' => 500, 'placed_at' => '2026-10-21 23:00']);
         Bet::factory()->for($this->user)->create(['stake' => 600, 'placed_at' => '2026-09-30 22:00']);
 
@@ -80,8 +80,8 @@ class StatisticsQueryTest extends TestCase
 
     public function test_the_status_filter_keeps_open_or_settled_bets(): void
     {
-        $this->settledBet(100, placedAt: '2026-09-20 12:00', settledAt: '2026-10-01 00:00');
-        $this->settledBet(200, placedAt: '2026-10-10 12:00', settledAt: '2026-10-21 23:59');
+        $this->settledBet(100, placedAt: '2026-09-20 12:00', eventAt: '2026-10-01 00:00');
+        $this->settledBet(200, placedAt: '2026-10-10 12:00', eventAt: '2026-10-21 23:59');
         Bet::factory()->for($this->user)->create(['stake' => 500, 'placed_at' => '2026-10-21 23:00']);
         Bet::factory()->for($this->user)->create(['stake' => 600, 'placed_at' => '2026-09-30 22:00']);
 
@@ -162,14 +162,14 @@ class StatisticsQueryTest extends TestCase
         $this->assertEquals([Group::none()], $figures->groupsIn(Dimension::Tipster));
     }
 
-    public function test_a_settled_bet_has_its_profit_and_settlement_date(): void
+    public function test_a_settled_bet_has_its_profit_and_event_date(): void
     {
-        $bet = $this->settledBet(1000, placedAt: '2026-10-01 12:00', settledAt: '2026-10-02 18:00');
+        $bet = $this->settledBet(1000, placedAt: '2026-10-01 12:00', eventAt: '2026-10-02 18:00');
 
         [$figures] = $this->query->bets($this->user, new StatisticsFilter);
 
         $this->assertSame($bet->profit, $figures->profit);
-        $this->assertSame('2026-10-02 18:00:00', $figures->settledAt?->toDateTimeString());
+        $this->assertSame('2026-10-02 18:00:00', $figures->eventAt?->toDateTimeString());
         $this->assertSame(Decimal::normalize($bet->total_odds), $figures->factor);
     }
 
@@ -185,10 +185,14 @@ class StatisticsQueryTest extends TestCase
         $this->assertSame([true, false], [$figures[0]->isLoss(), $figures[1]->isLoss()]);
     }
 
-    private function settledBet(int $stake, string $placedAt, string $settledAt): Bet
+    /**
+     * A won bet whose event is at the given time, settled (recorded) later than all of them.
+     */
+    private function settledBet(int $stake, string $placedAt, string $eventAt): Bet
     {
         $bet = Bet::factory()->for($this->user)->settled(SelectionResult::Won)->create(['stake' => $stake, 'placed_at' => $placedAt]);
-        $bet->forceFill(['settled_at' => $settledAt])->save();
+        $bet->selections()->update(['event_starts_at' => $eventAt]);
+        $bet->syncEventAt()->forceFill(['settled_at' => '2026-11-20 09:00'])->save();
 
         return $bet;
     }

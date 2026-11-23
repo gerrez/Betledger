@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Bets\EventDate;
 use App\Domain\BetStatus;
 use App\Domain\BetType;
 use App\Domain\Currency;
@@ -24,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $tipster_id
  * @property BetType $type
  * @property Carbon $placed_at
+ * @property Carbon $event_at when the bet was decided, which statistics count it on (see App\Domain\Bets\EventDate); internal, not in the API or the CSV
  * @property int $stake minor units
  * @property Currency $currency copied from the bookmaker when saved
  * @property string $exchange_rate 1 unit of the bet's currency = this many units of the user's base currency, copied from the bookmaker when saved
@@ -92,6 +94,7 @@ class Bet extends Model
         return [
             'type' => BetType::class,
             'placed_at' => 'datetime',
+            'event_at' => 'datetime',
             'stake' => 'integer',
             'currency' => Currency::class,
             'exchange_rate' => 'decimal:8',
@@ -152,5 +155,22 @@ class Bet extends Model
     public function isSettled(): bool
     {
         return $this->status === BetStatus::Settled;
+    }
+
+    /**
+     * Set the event date (without saving) from the placed date and the saved selections'
+     * start times. An imported bet without start times keeps the event date it was
+     * imported with (its game date).
+     */
+    public function syncEventAt(): static
+    {
+        $startTimes = $this->load('selections')->selections
+            ->map(fn (Selection $selection): ?Carbon => $selection->event_starts_at)
+            ->all();
+        $importedAt = $this->external_ref === null ? null : $this->event_at;
+
+        $this->event_at = Carbon::instance(EventDate::forBet($this->placed_at, array_values($startTimes), $importedAt));
+
+        return $this;
     }
 }

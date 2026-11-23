@@ -83,7 +83,7 @@ final readonly class ProfitChart
         $last = $points[$periods - 1];
 
         return new self(
-            caption: "Cumulative, by {$series->period->value} settled",
+            caption: "Cumulative, by {$series->period->value} of the event",
             description: "Cumulative profit over {$periods} ".Str::plural($series->period->value, $periods)
                 .', ending at '.Money::format($last->cumulativeProfit, $currency, signed: true),
             line: $line,

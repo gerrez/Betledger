@@ -24,8 +24,8 @@ use Livewire\Component;
 
 /**
  * The home page: a month's profit with a sparkline, KPI tiles, and a preview of the open
- * bets. The month's figures cover the bets settled in it; open stake and open bets are
- * always the ones open now.
+ * bets. The month's figures cover the settled bets whose event date (`event_at`) is in it;
+ * open stake and open bets are always the ones open now.
  */
 #[Title('Overview')]
 class Index extends Component
@@ -93,14 +93,14 @@ class Index extends Component
 
     /**
      * The months to choose from, newest first: the current month (an empty value) back to
-     * the month of the user's first bet, placed or settled.
+     * the month of the user's first bet, by placed or event date.
      *
      * @return list<array{value: string, label: string}>
      */
     private function months(User $user, CarbonImmutable $now): array
     {
         $current = $now->startOfMonth();
-        $first = collect([$user->bets()->min('placed_at'), $user->bets()->min('settled_at')])
+        $first = collect([$user->bets()->min('placed_at'), $user->bets()->min('event_at')])
             ->filter()
             ->map(fn (string $date): CarbonImmutable => CarbonImmutable::parse($date)->startOfMonth())
             ->push($current)

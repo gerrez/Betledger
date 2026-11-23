@@ -19,6 +19,7 @@ use App\Models\Tag;
 use App\Models\Tipster;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -161,6 +162,12 @@ class DemoDataSeeder extends Seeder
         $this->placeBet($unibet, 2000, daysAgo: 0, tags: [$tags['value']], probability: '56.5', selections: [
             $leg('Arsenal', 'Liverpool', 'Premier League', 'Over/Under', 'Over 2.5', '1.90', null, -3),
         ]);
+        // Decided last month but only settled now: statistics and Home count it in last
+        // month (its event date), the bankroll and "Recently settled" by today.
+        $lastMonthDaysAgo = (int) now()->startOfMonth()->subDays(3)->startOfDay()->diffInDays(now()->startOfDay());
+        $this->placeBet($bet365, 3000, daysAgo: $lastMonthDaysAgo, notes: 'Result entered late.', settledAt: now(), selections: [
+            $leg('Liverpool', 'FC Barcelona', 'Champions League', '1X2', 'Liverpool', '2.40', SelectionResult::Won, $lastMonthDaysAgo),
+        ]);
 
         // Older settled singles, so the bets list has more than one page.
         $history = [
@@ -257,8 +264,9 @@ class DemoDataSeeder extends Seeder
      * @param  list<array<string, mixed>>  $selections  selection attributes plus `teams` (list<Team>)
      * @param  string|null  $probability  percentage; the bet value is calculated from it
      * @param  string|null  $betValue  percentage, for a bet without a probability
+     * @param  Carbon|null  $settledAt  when the result was recorded; by default 2 hours after the last start
      */
-    private function placeBet(Bookmaker $bookmaker, int $stake, int $daysAgo, array $selections, bool $isFreeBet = false, ?Tipster $tipster = null, array $tags = [], ?string $notes = null, ?string $probability = null, ?string $betValue = null): Bet
+    private function placeBet(Bookmaker $bookmaker, int $stake, int $daysAgo, array $selections, bool $isFreeBet = false, ?Tipster $tipster = null, array $tags = [], ?string $notes = null, ?string $probability = null, ?string $betValue = null, ?Carbon $settledAt = null): Bet
     {
         $totalOdds = Odds::total(array_column($selections, 'odds'));
 
@@ -277,6 +285,7 @@ class DemoDataSeeder extends Seeder
             'notes' => $notes,
         ]);
         $bet->user()->associate($bookmaker->user_id);
+        $bet->event_at = $bet->placed_at; // until the selections give it its event date
         $bet->save();
         $bet->tags()->attach($tags);
 
@@ -290,12 +299,13 @@ class DemoDataSeeder extends Seeder
             $legs[] = new Leg($selection->odds, $selection->result);
         }
 
+        $bet->syncEventAt()->save();
         $settlement = (new SettlementCalculator)->settle($stake, $isFreeBet, $legs);
 
         if ($settlement !== null) {
             $bet->forceFill([
                 'status' => BetStatus::Settled,
-                'settled_at' => $bet->selections->max('event_starts_at')?->copy()->addHours(2),
+                'settled_at' => $settledAt ?? $bet->selections->max('event_starts_at')?->copy()->addHours(2),
                 'payout' => $settlement->payout,
                 'profit' => $settlement->profit,
             ])->save();

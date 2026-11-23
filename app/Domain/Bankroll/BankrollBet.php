@@ -6,7 +6,6 @@ use App\Domain\BetType;
 use App\Domain\Currency;
 use App\Domain\ExchangeRate;
 use App\Domain\Statistics\BetFigures;
-use Carbon\CarbonImmutable;
 
 /**
  * A bet as far as the bankroll is concerned: its figures in its own currency (for the
@@ -35,9 +34,8 @@ final readonly class BankrollBet
         BetType $type,
         bool $isFreeBet,
         string $totalOdds,
-        ?CarbonImmutable $settledAt,
     ) {
-        $this->inOwnCurrency = new BetFigures($stake, $profit, $factor, ExchangeRate::SAME_CURRENCY, $type, $isFreeBet, $totalOdds, $settledAt);
-        $this->inBaseCurrency = new BetFigures($stake, $profit, $factor, $exchangeRate, $type, $isFreeBet, $totalOdds, $settledAt);
+        $this->inOwnCurrency = new BetFigures($stake, $profit, $factor, ExchangeRate::SAME_CURRENCY, $type, $isFreeBet, $totalOdds);
+        $this->inBaseCurrency = new BetFigures($stake, $profit, $factor, $exchangeRate, $type, $isFreeBet, $totalOdds);
     }
 }

@@ -6,20 +6,23 @@
         </div>
 
         @if ($hasBets)
-            <div role="group" aria-label="Date range" class="flex flex-wrap gap-1 rounded-[14px] bg-line p-1">
-                @foreach ($ranges as $option)
-                    <button
-                        type="button"
-                        wire:key="range-{{ $option->value }}"
-                        wire:click="useRange('{{ $option->value }}')"
-                        aria-pressed="{{ $option === $selectedRange ? 'true' : 'false' }}"
-                        @class([
-                            'h-11 rounded-[11px] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-                            'bg-surface font-semibold text-ink shadow-sm' => $option === $selectedRange,
-                            'font-medium text-muted hover:text-ink' => $option !== $selectedRange,
-                        ])
-                    >{{ $option->label() }}</button>
-                @endforeach
+            <div class="flex flex-col gap-1.5">
+                <div role="group" aria-label="Date range" class="flex flex-wrap gap-1 rounded-[14px] bg-line p-1">
+                    @foreach ($ranges as $option)
+                        <button
+                            type="button"
+                            wire:key="range-{{ $option->value }}"
+                            wire:click="useRange('{{ $option->value }}')"
+                            aria-pressed="{{ $option === $selectedRange ? 'true' : 'false' }}"
+                            @class([
+                                'h-11 rounded-[11px] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                                'bg-surface font-semibold text-ink shadow-sm' => $option === $selectedRange,
+                                'font-medium text-muted hover:text-ink' => $option !== $selectedRange,
+                            ])
+                        >{{ $option->label() }}</button>
+                    @endforeach
+                </div>
+                <p class="text-xs text-muted">Settled bets count on the date of their event.</p>
             </div>
         @endif
     </div>
@@ -137,7 +140,7 @@
         @if (! $hasMatchingBets)
             <section class="rounded-[20px] border border-line bg-surface p-5">
                 <p class="text-[15px] font-medium">{{ $isFiltered ? 'No bets match these filters' : 'No bets in this date range' }}</p>
-                <p class="mt-1 text-sm text-muted">Settled bets count by the day they were settled, open bets by the day they were placed.</p>
+                <p class="mt-1 text-sm text-muted">Settled bets count by the date of their event, open bets by the day they were placed.</p>
 
                 @if ($isFiltered)
                     <flux:button size="sm" wire:click="clearFilters" class="mt-3">Clear filters</flux:button>

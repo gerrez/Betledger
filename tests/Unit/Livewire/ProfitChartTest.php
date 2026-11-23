@@ -17,7 +17,7 @@ class ProfitChartTest extends TestCase
         $chart = ProfitChart::fromSeries($this->series(Period::Week, '2026-09-28', [21000, 48000, 39000, 82000]), Currency::Dkk);
 
         $this->assertNotNull($chart);
-        $this->assertSame('Cumulative, by week settled', $chart->caption);
+        $this->assertSame('Cumulative, by week of the event', $chart->caption);
         $this->assertSame('Cumulative profit over 4 weeks, ending at +820.00 kr', $chart->description);
         $this->assertSame([
             ['value' => '1,000', 'y' => '0', 'isZero' => false],

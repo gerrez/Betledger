@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Load a user's bets that pass a filter, reduced to what statistics need (BetFigures).
+ * A date range takes settled bets by their event date (`event_at`) and open bets by
+ * their placed date.
  * Only the user's own bets are ever read.
  */
 final class StatisticsQuery
@@ -43,7 +45,7 @@ final class StatisticsQuery
         return $user->bets()->getQuery()
             ->when($filter->status !== null, fn (Builder $query) => $query->where('status', $filter->status))
             ->when($filter->from !== null || $filter->to !== null, fn (Builder $query) => $query->where(fn (Builder $dates) => $dates
-                ->where(fn (Builder $settled) => $this->between($settled->where('status', BetStatus::Settled), 'settled_at', $filter->from, $filter->to))
+                ->where(fn (Builder $settled) => $this->between($settled->where('status', BetStatus::Settled), 'event_at', $filter->from, $filter->to))
                 ->orWhere(fn (Builder $open) => $this->between($open->where('status', BetStatus::Open), 'placed_at', $filter->from, $filter->to))))
             ->when($filter->bookmakerId !== null, fn (Builder $query) => $query->where('bookmaker_id', $filter->bookmakerId))
             ->when($filter->tipsterId !== null, fn (Builder $query) => $query->where('tipster_id', $filter->tipsterId))
@@ -82,7 +84,6 @@ final class StatisticsQuery
             type: $bet->type,
             isFreeBet: $bet->is_free_bet,
             totalOdds: $bet->total_odds,
-            settledAt: $bet->isSettled() ? $bet->settled_at?->toImmutable() : null,
             closingOdds: array_values($selections->map(fn (Selection $selection): ?string => $selection->closing_odds)->all()),
             groups: [
                 Dimension::Bookmaker->value => [new Group($bet->bookmaker->id, $bet->bookmaker->name)],
@@ -93,6 +94,7 @@ final class StatisticsQuery
                 Dimension::Market->value => array_values($selections->map(fn (Selection $selection): Group => $selection->market === null ? Group::none() : new Group($selection->market->id, $selection->market->name))->all()),
                 Dimension::Team->value => array_merge(...array_values($selections->map(fn (Selection $selection): array => $this->teamGroups($selection))->all())),
             ],
+            eventAt: $bet->event_at->toImmutable(),
         );
     }
 

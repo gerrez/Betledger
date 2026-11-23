@@ -167,11 +167,11 @@ class StatisticsPageTest extends TestCase
         $this->actingAs($this->user);
 
         Livewire::test(Index::class)
-            ->assertSeeInOrder(['Profit over time', 'Cumulative, by week settled', 'Cumulative profit over 14 weeks, ending at +€51.50', '20 Jul', '19 Oct', 'Breakdown'])
+            ->assertSeeInOrder(['Profit over time', 'Cumulative, by week of the event', 'Cumulative profit over 14 weeks, ending at +€51.50', '20 Jul', '19 Oct', 'Breakdown'])
             ->call('useRange', '30d')
-            ->assertSee(['Cumulative, by day settled', 'Cumulative profit over 30 days, ending at +€51.50', '22 Sep', '21 Oct'])
+            ->assertSee(['Cumulative, by day of the event', 'Cumulative profit over 30 days, ending at +€51.50', '22 Sep', '21 Oct'])
             ->call('useRange', 'year')
-            ->assertSee(['Cumulative, by month settled', 'Cumulative profit over 10 months, ending at +€71.50', 'Jan 2026', 'Oct 2026'])
+            ->assertSee(['Cumulative, by month of the event', 'Cumulative profit over 10 months, ending at +€71.50', 'Jan 2026', 'Oct 2026'])
             ->call('useRange', 'custom')
             ->set('from', '2026-10-13')
             ->assertSee('The chart shows once bets in this range are settled.')

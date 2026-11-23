@@ -200,7 +200,7 @@ test for anything that reads or changes user data.
 
 ### Correct dates
 
-- [ ] **6.1 Statistics by event date.** Profit over time, the Home month card and the
+- [x] **6.1 Statistics by event date.** Profit over time, the Home month card and the
       statistics date range put a settled bet in the period of its `settled_at`, which
       `SettleBet` stamps with `now()` (`app/Domain/Bets/SettleBet.php`). So a Saturday
       bet settled on Monday, or last month's bets entered today, land in the wrong

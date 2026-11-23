@@ -18,7 +18,7 @@ class SelectionFactory extends Factory
 {
     /**
      * Define the model's default state: a pending selection after the bet's other
-     * selections, on a sport of the bet's owner.
+     * selections, on a sport of the bet's owner, starting 2 hours after the bet was placed.
      *
      * @return array<string, mixed>
      */
@@ -34,7 +34,7 @@ class SelectionFactory extends Factory
             'competition_id' => null,
             'market_id' => null,
             'event_name' => fake()->city().' v '.fake()->city(),
-            'event_starts_at' => fake()->dateTimeBetween('-30 days', '+7 days'),
+            'event_starts_at' => fn (array $attributes) => Bet::findOrFail($attributes['bet_id'])->placed_at->copy()->addHours(2),
             'pick' => fake()->randomElement(['Home', 'Draw', 'Away', 'Over 2.5', 'Under 2.5']),
             'odds' => sprintf('%d.%02d', intdiv($oddsInHundredths, 100), $oddsInHundredths % 100),
             'closing_odds' => null,

@@ -14,6 +14,7 @@ use App\Domain\Statistics\ProfitPoint;
 use App\Domain\Statistics\StatisticsCalculator;
 use App\Domain\Statistics\Totals;
 use Carbon\CarbonImmutable;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -233,6 +234,13 @@ class StatisticsCalculatorTest extends TestCase
         $this->assertSame([], $this->calculator->profitOverTime([])->points);
     }
 
+    public function test_profit_over_time_needs_the_event_date_of_every_settled_bet(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->calculator->profitOverTime([$this->bet('Unibet', 1000, 1000, '2', '2.0000', null, [$this->leg('Football', 'Premier League')])]);
+    }
+
     /**
      * @return list<BetFigures>
      */
@@ -269,7 +277,7 @@ class StatisticsCalculatorTest extends TestCase
      * @param  list<string>  $tags
      * @param  list<string|null>  $closingOdds
      */
-    private function bet(string $bookmaker, int $stake, ?int $profit, ?string $factor, string $totalOdds, ?string $settledAt, array $legs, bool $isFreeBet = false, ?string $tipster = null, array $tags = [], array $closingOdds = []): BetFigures
+    private function bet(string $bookmaker, int $stake, ?int $profit, ?string $factor, string $totalOdds, ?string $eventAt, array $legs, bool $isFreeBet = false, ?string $tipster = null, array $tags = [], array $closingOdds = []): BetFigures
     {
         $group = fn (string $name): Group => new Group(self::IDS[$name], $name);
 
@@ -281,7 +289,6 @@ class StatisticsCalculatorTest extends TestCase
             type: BetType::forSelectionCount(count($legs)),
             isFreeBet: $isFreeBet,
             totalOdds: $totalOdds,
-            settledAt: $settledAt === null ? null : CarbonImmutable::parse($settledAt),
             closingOdds: $closingOdds,
             groups: [
                 Dimension::Bookmaker->value => [$group($bookmaker)],
@@ -292,6 +299,7 @@ class StatisticsCalculatorTest extends TestCase
                 Dimension::Market->value => array_map(fn (array $leg): Group => $leg['market'] === null ? Group::none() : $group($leg['market']), $legs),
                 Dimension::Team->value => array_merge(...array_map(fn (array $leg): array => array_map($group, $leg['teams']), $legs)),
             ],
+            eventAt: $eventAt === null ? null : CarbonImmutable::parse($eventAt),
         );
     }
 

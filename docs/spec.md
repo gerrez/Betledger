@@ -796,9 +796,11 @@ same items. Touch targets ≥ 44 px.
   notes. Owner: what causes these, and should the extra loss count in the profit?
 - **From the November 2026 review (owner).** Questions behind the Phase 6 tasks in
   `docs/roadmap.md`; each task builds its stated default until these are answered.
-  - *Settlement date default (6.1).* When a bet is settled after the event, should the
-    settled date default to the event's start (when known and in the past) or to the
-    moment of settling? Default: the event's start.
+  - *Which date statistics use (6.1).* Owner: statistics should follow the event date,
+    not the settlement date. Assumed for 6.1: an accumulator counts on its last leg's
+    start; a bet without start times counts on its placed date; open bets are still
+    filtered by placed date; the bankroll keeps the settlement date. Confirm, or say if
+    an accumulator should count on its first leg instead.
   - *Existing times after a time zone setting (6.2).* Bets entered by hand so far were
     typed as local time but stored as UTC, so they are one or two hours off once a time
     zone is set. Shift them once, or leave them? Default: leave them.

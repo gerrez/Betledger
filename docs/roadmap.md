@@ -200,26 +200,38 @@ test for anything that reads or changes user data.
 
 ### Correct dates
 
-- [ ] **6.1 Editable settlement date.** `SettleBet` stamps `settled_at` with `now()`
-      (`app/Domain/Bets/SettleBet.php`), and nothing in the app can change it. Profit
-      over time, the Home month card and every date range group by `settled_at`, so a
-      Saturday bet settled on Monday, or last month's bets entered today, land in the
-      wrong period.
-      - Domain: give `SettleBet` an optional "settled at" argument for the moment a bet
-        becomes settled, and a method that changes the date of an already settled bet.
-        Keep the current rules: un-settling clears it, a bet that stays settled through
-        a result change keeps it. Reject a date before `placed_at` or in the future.
-      - Default when none is given: the latest `event_starts_at` of the bet's selections
-        when every selection has one and it is in the past, else now (the owner mostly
-        settles after the event; see the open question).
-      - UI: a "Settled" row in the facts list on the bet detail page with an edit
-        control, and a "Settled" date + 24-hour time pair (the 3.3 inputs) on the edit
-        form, shown only while the bet is settled.
-      - Update the 2.9 and 3.4 notes in `docs/spec.md` ("settled at the time of the
-        change/saving").
-      - Tests: unit tests for the default and the validation; feature tests for
-        changing the date from both pages and for the bet moving between months on the
-        statistics page; isolation.
+- [ ] **6.1 Statistics by event date.** Profit over time, the Home month card and the
+      statistics date range put a settled bet in the period of its `settled_at`, which
+      `SettleBet` stamps with `now()` (`app/Domain/Bets/SettleBet.php`). So a Saturday
+      bet settled on Monday, or last month's bets entered today, land in the wrong
+      period. Performance belongs to when the bet was decided, not to when its result
+      was typed in. `settled_at` keeps its meaning (when the result was recorded) and
+      keeps driving the bankroll (4.3), where a balance follows the money.
+      - Schema: a new migration adds `bets.event_at` (datetime, indexed with
+        `user_id`), fills it for existing bets by the rule below with the query
+        builder (must hold on SQLite and Postgres), then makes it not null.
+      - Rule, as one class in `app/Domain/Bets/`: the latest `event_starts_at` among
+        the bet's selections (an accumulator is decided by its last leg), else
+        `placed_at`; never before `placed_at`. Sportmarket imports have only a game
+        date, so they use the same instant as their `settled_at` (the game date at
+        23:59 UTC). Recompute whenever a bet is recorded, edited or imported (bet
+        form, `POST /api/v1/bets`, Sportmarket import); settling doesn't change it.
+      - Statistics: `StatisticsQuery` filters settled bets by `event_at` (open bets
+        still by `placed_at`); profit over time, the Home month card and its month
+        selector (`Overview\Index`) group by `event_at`. `BankrollQuery` and the
+        "Recently settled" sort keep `settled_at`.
+      - Page: one line under the statistics range picker: "Settled bets count on the
+        date of their event."
+      - The API's bet response is unchanged (`event_at` is internal); the CSV export
+        (4.2) is unchanged.
+      - Update `docs/spec.md`: the Statistics filters line ("by settlement date"), the
+        profit-over-time note (2.12), the Home overview note (2.15) and the bet fields
+        table; answer the open question below.
+      - Tests: unit tests for the rule (single with and without a start, an
+        accumulator, a start before `placed_at`, an import); feature tests that a bet
+        settled after its event counts in the event's month on the statistics page and
+        on Home, that changing a start time in the edit form moves it, that the
+        bankroll still uses `settled_at`; isolation.
 - [ ] **6.2 Per-user time zone.** Everything is entered, shown and grouped in UTC
       (`config/app.php`), so a user in Denmark sees "now" one or two hours behind and a
       bet settled at 23:30 UTC counts on the wrong day. Answers the 2.6 open question.
@@ -235,8 +247,8 @@ test for anything that reads or changes user data.
         `StatisticsFilter` (a "from/to" day means that day in the user's zone), in the
         profit-over-time buckets and in the Home month selector. No `->format()` on a
         UTC date in a component or view after this task.
-      - Sportmarket import: `settled_at` becomes the end of the game date in the user's
-        zone instead of 23:59 UTC; `placed_at` in the file is already UTC.
+      - Sportmarket import: `settled_at` (and with it the 6.1 `event_at`) becomes the
+        end of the game date in the user's zone instead of 23:59 UTC; `placed_at` in the file is already UTC.
       - Existing bets are not shifted (see the open question); say so in the PR.
       - Tests with `Europe/Copenhagen`: a bet on each side of local midnight, a day on
         each side of a daylight-saving change, date-range boundaries, and that two
@@ -281,8 +293,8 @@ test for anything that reads or changes user data.
 
 - [ ] **6.5 Risk figures (domain and page).** `Totals` has no measure of variance, so the
       page can't say whether a bad run is normal or how much bankroll the staking needs.
-      - Domain, in `app/Domain/Statistics/`: over the settled bets in `settled_at`
-        order (ties by id), in base currency — **max drawdown** (largest fall of
+      - Domain, in `app/Domain/Statistics/`: over the settled bets in `event_at`
+        order (6.1; ties by id), in base currency — **max drawdown** (largest fall of
         cumulative profit from an earlier peak, with the dates of the peak and the
         low), **current drawdown**, **longest winning and losing streak** and the
         current streak (pushes neither extend nor break a streak; use the existing
@@ -294,8 +306,7 @@ test for anything that reads or changes user data.
       - Define each figure in the Statistics section of `docs/spec.md`.
       - Unit tests against the 2.12 fixture set with hand-checked numbers, including:
         no settled bets, only wins, a drawdown that has recovered, free bets.
-      - Depends on 6.1 (the order of settlement must be right for streaks to mean
-        anything).
+      - Depends on 6.1 (bets must be in event order for streaks to mean anything).
 - [ ] **6.6 Break-even strike rate.** A strike rate of 45 % says nothing without the
       odds, and "average odds" is an arithmetic mean of `total_odds`
       (`StatisticsCalculator`), which one accumulator at 50.0 among twenty bets at 2.0
@@ -440,6 +451,19 @@ test for anything that reads or changes user data.
         user's bets changes. Do not move the calculations into SQL: they must stay in
         `app/Domain/` and unit-tested.
       - Add a query-count test on the statistics page so regressions show up.
+- [ ] **6.18 Editable settlement date.** Since 6.1 statistics no longer depend on
+      `settled_at`, it only matters for the bankroll balance by date (4.3) and the
+      "Recently settled" sort. Build when the owner wants the bankroll to match a
+      bookmaker statement to the day.
+      - Domain: `SettleBet` takes an optional "settled at" for the moment a bet
+        becomes settled (default now, as today) and gets a method that changes the date
+        of an already settled bet. Un-settling still clears it, a bet that stays settled
+        keeps it. Reject a date before `placed_at` or in the future.
+      - UI: a "Settled" date + 24-hour time pair (the 3.3 inputs) on the edit form, shown
+        only while the bet is settled; the bet detail's "Settled" row links to it.
+      - Update the 2.9 and 3.4 notes in `docs/spec.md`.
+      - Tests: unit tests for the validation; a feature test for changing the date and
+        the bankroll moving with it; isolation.
 
 ### Considered and left out
 

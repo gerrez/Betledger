@@ -9,6 +9,7 @@ use App\Domain\Import\Sportmarket\InvalidOrdersFile;
 use App\Domain\Import\Sportmarket\OrderOutcome;
 use App\Domain\Import\Sportmarket\RecordOrders;
 use App\Domain\Import\Sportmarket\SportmarketImport;
+use App\Domain\LocalTime;
 use App\Domain\Money;
 use App\Domain\Odds;
 use App\Models\Bookmaker;
@@ -122,6 +123,7 @@ class Import extends Component
         $orders = $this->previewing ? ($this->readOrders(app(SportmarketImport::class)) ?? []) : [];
         $currency = $bookmakers->firstWhere('id', (int) $this->bookmaker)?->currency;
 
+        $localTime = $this->user()->localTime();
         $bets = array_values(array_filter(array_map(fn (ImportedOrder $order): ?ImportedBet => $order->bet, $orders)));
         $errorOrders = $this->withOutcome($orders, OrderOutcome::Error);
         $skippedOrders = $this->withOutcome($orders, OrderOutcome::Skip);
@@ -129,7 +131,7 @@ class Import extends Component
         return view('livewire.settings.import', [
             'bookmakers' => $bookmakers,
             'summary' => $this->summary(count($orders), count($bets), count($skippedOrders), count($errorOrders)),
-            'bets' => $currency === null ? [] : array_map(fn (ImportedBet $bet): array => $this->previewRow($bet, $currency), $bets),
+            'bets' => $currency === null ? [] : array_map(fn (ImportedBet $bet): array => $this->previewRow($bet, $currency, $localTime), $bets),
             'errorOrders' => $errorOrders,
             'skippedOrders' => $skippedOrders,
         ]);
@@ -168,7 +170,7 @@ class Import extends Component
         $importedRefs = $user->bets()->whereNotNull('external_ref')->pluck('external_ref')->all();
 
         try {
-            return $import->read($this->file->get(), $this->selectedBookmaker()->currency, $importedRefs);
+            return $import->read($this->file->get(), $this->selectedBookmaker()->currency, $importedRefs, $user->localTime());
         } catch (InvalidOrdersFile $exception) {
             $this->addError('file', $exception->getMessage());
 
@@ -187,14 +189,14 @@ class Import extends Component
     /**
      * @return array{event: string, pick: string, placed: string, stake: string, result: string, profit: string, tone: string, isManual: bool, warning: string|null}
      */
-    private function previewRow(ImportedBet $bet, Currency $currency): array
+    private function previewRow(ImportedBet $bet, Currency $currency, LocalTime $localTime): array
     {
         $profit = $bet->payout - $bet->stake;
 
         return [
             'event' => $bet->eventName,
             'pick' => $bet->pick.' @ '.Odds::format($bet->odds),
-            'placed' => $bet->placedAt->format('j M Y H:i'),
+            'placed' => $localTime->toLocal($bet->placedAt)->format('j M Y H:i'),
             'stake' => Money::format($bet->stake, $currency),
             'result' => $bet->result->label(),
             'profit' => Money::format($profit, $currency, signed: true),

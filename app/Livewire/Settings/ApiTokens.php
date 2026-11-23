@@ -5,6 +5,7 @@ namespace App\Livewire\Settings;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -41,8 +42,15 @@ class ApiTokens extends Component
 
     public function render(): View
     {
+        $localTime = $this->user()->localTime();
+
         return view('livewire.settings.api-tokens', [
-            'tokens' => $this->user()->tokens()->latest()->latest('id')->get(),
+            'tokens' => $this->user()->tokens()->latest()->latest('id')->get()->map(fn (PersonalAccessToken $token): array => [
+                'id' => $token->id,
+                'name' => $token->name,
+                'meta' => 'Created '.($token->created_at === null ? '—' : $localTime->toLocal($token->created_at)->format('j M Y'))
+                    .' · '.($token->last_used_at === null ? 'Never used' : 'Last used '.$token->last_used_at->diffForHumans()),
+            ]),
         ]);
     }
 

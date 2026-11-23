@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Auth;
 
+use App\Domain\LocalTime;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Contracts\View\View;
@@ -23,6 +24,13 @@ class Register extends Component
     public string $password_confirmation = '';
 
     /**
+     * The browser's time zone, set by the form (no visible field). A missing or unknown
+     * one, including a legacy name such as Europe/Kiev, becomes UTC without an error: the
+     * user can't act on it here and can choose a zone in Settings.
+     */
+    public string $timezone = 'UTC';
+
+    /**
      * Handle an incoming registration request.
      */
     public function register(): void
@@ -34,6 +42,7 @@ class Register extends Component
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
+        $validated['timezone'] = in_array($this->timezone, LocalTime::identifiers(), true) ? $this->timezone : 'UTC';
 
         event(new Registered(($user = User::create($validated))));
 

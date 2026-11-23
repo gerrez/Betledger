@@ -157,7 +157,7 @@ class Index extends Component
     {
         $user = $this->user();
         $tab = $this->tab();
-        $now = now();
+        $localTime = $user->localTime();
         $bets = $this->bets();
         $shown = $this->pinned === [] ? $bets->getCollection() : $this->pinnedBets($user);
 
@@ -172,7 +172,7 @@ class Index extends Component
             'sorts' => $tab->sorts(),
             'bets' => $bets,
             'results' => SelectionResult::cases(),
-            'cards' => $shown->map(fn (Bet $bet): BetCard => BetCard::fromBet($bet, $now, $this->undoableSelection($bet))),
+            'cards' => $shown->map(fn (Bet $bet): BetCard => BetCard::fromBet($bet, $localTime, $this->undoableSelection($bet))),
             'hasBets' => $user->bets()->exists(),
             'isFiltered' => $isFiltered,
             'emptyMessage' => match ($tab) {

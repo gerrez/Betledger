@@ -3,6 +3,7 @@
 namespace App\Domain\Statistics;
 
 use App\Domain\BetStatus;
+use App\Domain\LocalTime;
 use App\Domain\Settlement\Leg;
 use App\Domain\Settlement\SettlementCalculator;
 use App\Models\Bet;
@@ -16,7 +17,9 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Load a user's bets that pass a filter, reduced to what statistics need (BetFigures).
  * A date range takes settled bets by their event date (`event_at`) and open bets by
- * their placed date.
+ * their placed date, each day being that day in the user's time zone. The event date
+ * handed to BetFigures is in the user's zone too, so profit over time buckets by local
+ * days without knowing about zones.
  * Only the user's own bets are ever read.
  */
 final class StatisticsQuery
@@ -32,7 +35,9 @@ final class StatisticsQuery
             ->with(['bookmaker', 'tipster', 'tags', 'selections.sport', 'selections.competition', 'selections.market', 'selections.teams'])
             ->get();
 
-        return array_values($bets->map(fn (Bet $bet): BetFigures => $this->figures($bet))->all());
+        $localTime = $user->localTime();
+
+        return array_values($bets->map(fn (Bet $bet): BetFigures => $this->figures($bet, $localTime))->all());
     }
 
     /**
@@ -41,12 +46,15 @@ final class StatisticsQuery
     private function filtered(User $user, StatisticsFilter $filter): Builder
     {
         $hasSelection = fn (string $column, ?int $id) => fn (Builder $query) => $query->whereHas('selections', fn (Builder $selections) => $selections->where($column, $id));
+        $localTime = $user->localTime();
+        $from = $filter->from === null ? null : $localTime->dayStart($filter->from);
+        $until = $filter->to === null ? null : $localTime->dayStart($filter->to->addDay());
 
         return $user->bets()->getQuery()
             ->when($filter->status !== null, fn (Builder $query) => $query->where('status', $filter->status))
             ->when($filter->from !== null || $filter->to !== null, fn (Builder $query) => $query->where(fn (Builder $dates) => $dates
-                ->where(fn (Builder $settled) => $this->between($settled->where('status', BetStatus::Settled), 'event_at', $filter->from, $filter->to))
-                ->orWhere(fn (Builder $open) => $this->between($open->where('status', BetStatus::Open), 'placed_at', $filter->from, $filter->to))))
+                ->where(fn (Builder $settled) => $this->between($settled->where('status', BetStatus::Settled), 'event_at', $from, $until))
+                ->orWhere(fn (Builder $open) => $this->between($open->where('status', BetStatus::Open), 'placed_at', $from, $until))))
             ->when($filter->bookmakerId !== null, fn (Builder $query) => $query->where('bookmaker_id', $filter->bookmakerId))
             ->when($filter->tipsterId !== null, fn (Builder $query) => $query->where('tipster_id', $filter->tipsterId))
             ->when($filter->type !== null, fn (Builder $query) => $query->where('type', $filter->type))
@@ -59,19 +67,20 @@ final class StatisticsQuery
     }
 
     /**
-     * Limit the column to whole days from one date to another, both included.
+     * Limit the column to instants from one (included) to another (excluded), both UTC:
+     * the start of the first local day and the start of the local day after the last.
      *
      * @param  Builder<Bet>  $query
      * @return Builder<Bet>
      */
-    private function between(Builder $query, string $column, ?CarbonImmutable $from, ?CarbonImmutable $to): Builder
+    private function between(Builder $query, string $column, ?CarbonImmutable $from, ?CarbonImmutable $until): Builder
     {
         return $query
             ->when($from !== null, fn (Builder $query) => $query->where($column, '>=', $from))
-            ->when($to !== null, fn (Builder $query) => $query->where($column, '<', $to?->addDay()));
+            ->when($until !== null, fn (Builder $query) => $query->where($column, '<', $until));
     }
 
-    private function figures(Bet $bet): BetFigures
+    private function figures(Bet $bet, LocalTime $localTime): BetFigures
     {
         $selections = $bet->selections;
         $legs = array_values($selections->map(fn (Selection $selection): Leg => new Leg($selection->odds, $selection->result))->all());
@@ -94,7 +103,7 @@ final class StatisticsQuery
                 Dimension::Market->value => array_values($selections->map(fn (Selection $selection): Group => $selection->market === null ? Group::none() : new Group($selection->market->id, $selection->market->name))->all()),
                 Dimension::Team->value => array_merge(...array_values($selections->map(fn (Selection $selection): array => $this->teamGroups($selection))->all())),
             ],
-            eventAt: $bet->event_at->toImmutable(),
+            eventAt: $localTime->toLocal($bet->event_at),
         );
     }
 

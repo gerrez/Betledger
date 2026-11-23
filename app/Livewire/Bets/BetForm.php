@@ -21,7 +21,6 @@ use App\Models\User;
 use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -450,11 +449,17 @@ abstract class BetForm extends Component
         }
     }
 
+    /**
+     * The form's values as a bet. Placed and Starts are typed in the user's time zone and
+     * stored as UTC instants.
+     */
     private function betData(): BetData
     {
+        $localTime = $this->user()->localTime();
+
         return new BetData(
             bookmakerId: (int) $this->bookmaker_id,
-            placedAt: Carbon::parse($this->placed_date.' '.$this->placed_time),
+            placedAt: $localTime->toUtc($this->placed_date, $this->placed_time),
             stake: Money::toMinorUnits($this->stake),
             exchangeRate: $this->exchange_rate,
             isFreeBet: $this->is_free_bet,
@@ -467,7 +472,7 @@ abstract class BetForm extends Component
                 market: $this->nullIfBlank($selection['market']),
                 teams: $selection['teams'],
                 eventName: $selection['event_name'],
-                eventStartsAt: $selection['event_starts_date'] === '' ? null : Carbon::parse($selection['event_starts_date'].' '.$selection['event_starts_time']),
+                eventStartsAt: $selection['event_starts_date'] === '' ? null : $localTime->toUtc($selection['event_starts_date'], $selection['event_starts_time']),
                 pick: trim($selection['pick']),
                 odds: $selection['odds'],
                 closingOdds: $this->nullIfBlank($selection['closing_odds']),

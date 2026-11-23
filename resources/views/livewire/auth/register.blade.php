@@ -4,7 +4,8 @@
     <!-- Session Status -->
     <x-auth-session-status class="text-center" :status="session('status')" />
 
-    <form wire:submit="register" class="flex flex-col gap-6">
+    {{-- The time zone comes from the browser; Register falls back to UTC when it is missing or unknown. --}}
+    <form wire:submit="register" class="flex flex-col gap-6" x-data x-init="$wire.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'">
         <!-- Name -->
         <div class="grid gap-2">
             <flux:input wire:model="name" id="name" label="{{ __('Name') }}" type="text" name="name" required autofocus autocomplete="name" placeholder="Full name" />

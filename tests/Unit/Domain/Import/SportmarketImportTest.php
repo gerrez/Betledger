@@ -8,6 +8,7 @@ use App\Domain\Import\Sportmarket\ImportedOrder;
 use App\Domain\Import\Sportmarket\InvalidOrdersFile;
 use App\Domain\Import\Sportmarket\OrderOutcome;
 use App\Domain\Import\Sportmarket\SportmarketImport;
+use App\Domain\LocalTime;
 use App\Domain\Settlement\SelectionResult;
 use App\Domain\Settlement\SettlementCalculator;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -356,6 +357,26 @@ class SportmarketImportTest extends TestCase
         $this->assertSame('2026-10-21 22:30:15 UTC', $bet->settledAt->format('Y-m-d H:i:s e'));
     }
 
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function gameDatesInZones(): array
+    {
+        return [
+            'Copenhagen in summer time' => ['Europe/Copenhagen', '2026-10-21', '2026-10-21 21:59:00'],
+            'Copenhagen in winter time' => ['Europe/Copenhagen', '2026-11-20', '2026-11-20 22:59:00'],
+            'UTC' => ['UTC', '2026-11-20', '2026-11-20 23:59:00'],
+        ];
+    }
+
+    #[DataProvider('gameDatesInZones')]
+    public function test_a_bet_is_settled_at_2359_on_the_game_date_in_the_users_zone(string $timezone, string $gameDate, string $settledAtUtc): void
+    {
+        $bet = $this->onlyBet($this->csv([['Order Placed' => '2026-10-13 18:00:00+00:00', 'Game Date' => $gameDate]]), new LocalTime($timezone));
+
+        $this->assertSame($settledAtUtc, $bet->settledAt->utc()->format('Y-m-d H:i:s'));
+    }
+
     public function test_a_tie_between_two_results_goes_to_the_first_in_order(): void
     {
         // At odds 3, won pays 300.00 and half won 200.00; 250.00 is just as near to both.
@@ -476,9 +497,9 @@ class SportmarketImportTest extends TestCase
         return $order->bet ?? $this->fail('An order to import has a bet.');
     }
 
-    private function onlyBet(string $csv): ImportedBet
+    private function onlyBet(string $csv, ?LocalTime $localTime = null): ImportedBet
     {
-        $orders = $this->import()->read($csv, Currency::Eur);
+        $orders = $this->import()->read($csv, Currency::Eur, localTime: $localTime);
         $this->assertCount(1, $orders);
         $this->assertSame(OrderOutcome::Import, $orders[0]->outcome, (string) $orders[0]->reason);
 

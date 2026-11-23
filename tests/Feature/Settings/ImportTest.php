@@ -276,6 +276,24 @@ class ImportTest extends TestCase
         $this->assertSame(1, $other->bets()->count());
     }
 
+    public function test_imported_bets_are_settled_at_the_end_of_the_game_date_in_the_users_zone(): void
+    {
+        $user = User::factory()->create(['timezone' => 'Europe/Copenhagen']);
+        $sportmarket = Bookmaker::factory()->for($user)->create(['name' => 'Sportmarket']);
+
+        $this->preview($user, $sportmarket)
+            // Placed 2026-10-21 20:26:44 UTC, shown in summer time.
+            ->assertSee('21 Oct 2026 22:26')
+            ->assertDontSee('21 Oct 2026 20:26')
+            ->call('import')
+            ->assertHasNoErrors();
+
+        $bet = $user->bets()->where('external_ref', 'sportmarket:2384017276')->sole();
+        $this->assertSame('2026-10-21 20:26:44', $bet->getRawOriginal('placed_at'));
+        $this->assertSame('2026-10-21 21:59:00', $bet->getRawOriginal('settled_at'));
+        $this->assertSame('2026-10-21 21:59:00', $bet->getRawOriginal('event_at'));
+    }
+
     /**
      * Upload a file (the fixture unless given) for the bookmaker and preview it.
      */

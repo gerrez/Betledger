@@ -2,13 +2,13 @@
 
 namespace App\Livewire\Overview;
 
+use App\Domain\LocalTime;
 use App\Domain\Money;
 use App\Domain\Odds;
 use App\Domain\Settlement\SelectionResult;
 use App\Livewire\Bets\BetCard;
 use App\Models\Bet;
 use App\Models\Selection;
-use Carbon\CarbonInterface;
 
 /**
  * An open bet as the overview's preview shows it, as display strings. Expects the bet's
@@ -29,15 +29,16 @@ final readonly class OpenBetRow
      * 18:30"); an accumulator how far it has got and its bookmaker ("2 of 3 won ·
      * Bet365"). A free bet says so last.
      */
-    public static function fromBet(Bet $bet, CarbonInterface $now): self
+    public static function fromBet(Bet $bet, LocalTime $localTime): self
     {
+        $now = $localTime->now();
         $selections = $bet->selections;
         $first = $selections->firstOrFail();
         $isAccumulator = $selections->count() > 1;
 
         $meta = $isAccumulator
             ? [self::progress(array_values($selections->all())), $bet->bookmaker->name]
-            : [$first->pick, $bet->bookmaker->name, $first->event_starts_at === null ? null : BetCard::formatTime($first->event_starts_at, $now)];
+            : [$first->pick, $bet->bookmaker->name, $first->event_starts_at === null ? null : BetCard::formatTime($localTime->toLocal($first->event_starts_at), $now)];
 
         return new self(
             id: $bet->id,

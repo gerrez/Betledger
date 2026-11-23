@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Domain\Currency;
 use App\Domain\ExchangeRate;
+use App\Domain\LocalTime;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,6 +18,7 @@ use LogicException;
 
 /**
  * @property Currency $base_currency
+ * @property string $timezone an IANA time zone name (LocalTime::identifiers()); stored times stay UTC
  */
 class User extends Authenticatable // implements MustVerifyEmail
 {
@@ -30,6 +32,7 @@ class User extends Authenticatable // implements MustVerifyEmail
      */
     protected $attributes = [
         'base_currency' => 'EUR',
+        'timezone' => 'UTC',
     ];
 
     /**
@@ -41,6 +44,7 @@ class User extends Authenticatable // implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'timezone',
     ];
 
     /**
@@ -180,6 +184,14 @@ class User extends Authenticatable // implements MustVerifyEmail
                 ->where('currency', $currency)
                 ->update(['exchange_rate' => ExchangeRate::SAME_CURRENCY]);
         });
+    }
+
+    /**
+     * Converts between stored UTC instants and the user's own time zone.
+     */
+    public function localTime(): LocalTime
+    {
+        return new LocalTime($this->timezone);
     }
 
     /**

@@ -161,6 +161,27 @@ class ManageTransactionsTest extends TestCase
         $this->assertSame(99999999999, $this->user->bankrollTransactions()->sole()->amount);
     }
 
+    public function test_today_is_the_users_local_today(): void
+    {
+        $this->travelTo('2026-11-23 23:30'); // 24 November in Copenhagen
+        $this->user->forceFill(['timezone' => 'Europe/Copenhagen'])->save();
+
+        Livewire::test(Index::class)
+            ->assertSee('max="2026-11-24"', escape: false)
+            ->call('addTransaction', $this->bookmaker->id, 'deposit')
+            ->assertSet('occurred_on', '2026-11-24')
+            ->set('amount', '10')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->call('addTransaction', $this->bookmaker->id, 'deposit')
+            ->set('amount', '10')
+            ->set('occurred_on', '2026-11-25')
+            ->call('save')
+            ->assertHasErrors(['occurred_on' => 'before_or_equal']);
+
+        $this->assertSame('2026-11-24', $this->bookmaker->bankrollTransactions()->sole()->occurred_on->toDateString());
+    }
+
     public function test_the_date_cannot_be_in_the_future_or_missing(): void
     {
         Livewire::test(Index::class)

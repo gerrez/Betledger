@@ -8,8 +8,10 @@ use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 
 /**
- * Which bets statistics cover. Dates are whole days, both included: settled bets count by
- * their settlement date, open bets by the date they were placed. Selection-level filters
+ * Which bets statistics cover. Dates are calendar days, both included, each meaning that
+ * whole day in the user's time zone (StatisticsQuery turns them into UTC instants with
+ * the user's LocalTime): settled bets count by their event date (`event_at`), open bets
+ * by the date they were placed. Selection-level filters
  * (sport, competition, team, market) match a bet when any of its selections matches.
  * A status limits the bets to open or settled ones. Null means no filter.
  */

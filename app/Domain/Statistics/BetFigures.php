@@ -33,7 +33,7 @@ final readonly class BetFigures
      * @param  string  $exchangeRate  the bet's own rate: 1 unit of its currency = this many units of the base currency
      * @param  list<string|null>  $closingOdds  one per selection, null when it has none
      * @param  array<value-of<Dimension>, list<Group>>  $groups  what the bet counts under per dimension (bet type excepted, which follows from $type); a dimension left out counts it under none
-     * @param  CarbonImmutable|null  $eventAt  when the bet was decided (`bets.event_at`), which profit over time counts a settled bet on; the bankroll, which has no periods, leaves it out
+     * @param  CarbonImmutable|null  $eventAt  when the bet was decided (`bets.event_at`), in the user's time zone (StatisticsQuery converts it), so its date is the local day profit over time counts a settled bet on; the bankroll, which has no periods, leaves it out
      */
     public function __construct(
         int $stake,

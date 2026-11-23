@@ -159,7 +159,7 @@ is too big for one review.
       upload and confirm the fixture, re-importing it creates nothing, a file with
       another currency is rejected, and isolation (list entries and `external_ref`
       duplicates are per user).
-- [ ] **4.2 CSV export.** Download all of the user's bets (one row per selection, with
+- [x] **4.2 CSV export.** Download all of the user's bets (one row per selection, with
       the bet's fields repeated) from Settings. Money in major units with the currency
       code, odds as entered. Isolation test. Link the download from the delete-account
       dialog too ("Download your bets first"): it is the only backup a user has.

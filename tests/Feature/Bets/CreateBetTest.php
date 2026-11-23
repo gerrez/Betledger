@@ -266,6 +266,58 @@ class CreateBetTest extends TestCase
             ->assertSet('selections.0.event_name', 'FA Cup final');
     }
 
+    public function test_a_team_or_tag_with_a_bar_is_not_added(): void
+    {
+        $user = User::factory()->create();
+        Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        Livewire::test(Create::class)
+            ->set('selections.0.team_name', 'Arsenal | Chelsea')
+            ->call('addTeam', 0)
+            ->assertHasErrors(['selections.0.teams' => 'Names can’t contain “|”.'])
+            ->assertSet('selections.0.teams', [])
+            ->assertSet('selections.0.team_name', 'Arsenal | Chelsea')
+            ->assertSee('Names can’t contain “|”.')
+            ->set('selections.0.team_name', 'Arsenal')
+            ->call('addTeam', 0)
+            ->assertHasNoErrors()
+            ->assertSet('selections.0.teams', ['Arsenal'])
+            ->set('showDetails', true)
+            ->set('tag_name', 'Live|Value')
+            ->call('addTag')
+            ->assertHasErrors(['tags' => 'Names can’t contain “|”.'])
+            ->assertSet('tags', [])
+            ->assertSee('Names can’t contain “|”.');
+    }
+
+    public function test_names_with_a_bar_are_refused_when_saving(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        $this->actingAs($user);
+
+        Livewire::test(Create::class)
+            ->set('bookmaker_id', (string) $bookmaker->id)
+            ->set('selections.0.sport', 'Football | Soccer')
+            ->set('selections.0.competition', 'EPL | Premier League')
+            ->set('selections.0.market', '1X2 | Match result')
+            ->set('selections.0.event_name', 'Arsenal v Chelsea')
+            ->set('selections.0.pick', 'Arsenal')
+            ->set('selections.0.odds', '2')
+            ->set('stake', '20')
+            ->set('tipster', 'Me | Model')
+            ->call('save')
+            ->assertHasErrors([
+                'selections.0.sport' => 'Names can’t contain “|”.',
+                'selections.0.competition' => 'Names can’t contain “|”.',
+                'selections.0.market' => 'Names can’t contain “|”.',
+                'tipster' => 'Names can’t contain “|”.',
+            ]);
+
+        $this->assertSame(0, $user->bets()->count());
+    }
+
     public function test_a_team_and_tag_still_being_typed_are_saved_too(): void
     {
         $user = User::factory()->create();

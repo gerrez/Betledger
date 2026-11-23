@@ -318,7 +318,8 @@ and `bet_id` groups the rows of an accumulator. Bets are ordered by `placed_at`,
 - *Enums:* the stored values: `type` `single`/`accumulator`, `status` `open`/`settled`,
   `result` `won`/`lost`/`void`/`half_won`/`half_lost` (empty = pending).
 - *Lists of names* (tags, teams): names joined with ` | ` (space, bar, space), sorted by
-  byte value. List entries are exported by name, never by internal id.
+  byte value. List entries are exported by name, never by internal id. List names can't
+  contain `|`, so splitting on ` | ` gives the names back.
 
 **Columns**, in order:
 
@@ -788,8 +789,12 @@ same items. Touch targets ≥ 44 px.
   - *`base_currency` column* added to the suggested columns: without it the exchange rate
     can't be interpreted when the file is imported into an account with another base
     currency.
-  - *Names joined with ` | `.* List names may themselves contain ` | `, which would make
-    tags and teams ambiguous on import (4.6). Should list names refuse `|`?
+  - *Names joined with ` | `.* Answered by the owner: list names (sports, competitions,
+    teams, markets, tipsters, tags) can't contain `|` (`App\Domain\ListName`), so tags and
+    teams split unambiguously on import (4.6). The bet form, the Lists page and the API
+    refuse it (API contract 1.2.0, kept in v1 by agreement with the owner), and a
+    Sportmarket order with `|` in a name is an error. Entries saved before this keep
+    their names; renaming one on the Lists page requires removing the `|`.
   - *No email verification needed.* The page and the download are in the `auth` group,
     not `auth` + `verified`, because the delete-account dialog (also only `auth`) links to
     the download and the backup must always work.

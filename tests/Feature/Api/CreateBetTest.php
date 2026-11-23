@@ -339,6 +339,40 @@ class CreateBetTest extends TestCase
         $this->assertSame(0, $otherUser->bets()->count());
     }
 
+    public function test_names_with_a_bar_are_rejected(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->create();
+        Sanctum::actingAs($user);
+
+        $this->postJson(route('api.v1.bets.store'), [
+            'bookmaker_id' => $bookmaker->id,
+            'stake' => '25',
+            'tipster' => 'Me | Model',
+            'tags' => ['Value', 'Live | Value'],
+            'selections' => [[
+                'sport' => 'Football | Soccer',
+                'competition' => 'EPL | Premier League',
+                'market' => '1X2 | Match result',
+                'teams' => ['Arsenal | Chelsea'],
+                'pick' => 'Arsenal',
+                'odds' => '1.95',
+            ]],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'tipster' => 'Names can’t contain “|”.',
+                'tags.1' => 'Names can’t contain “|”.',
+                'selections.0.sport' => 'Names can’t contain “|”.',
+                'selections.0.competition' => 'Names can’t contain “|”.',
+                'selections.0.market' => 'Names can’t contain “|”.',
+                'selections.0.teams.0' => 'Names can’t contain “|”.',
+            ])
+            ->assertJsonMissingValidationErrors(['tags.0']);
+
+        $this->assertSame(0, Bet::query()->count());
+    }
+
     public function test_an_empty_request_names_the_required_fields(): void
     {
         Sanctum::actingAs(User::factory()->create());

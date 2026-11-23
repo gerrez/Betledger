@@ -4,6 +4,7 @@ namespace App\Domain\Import\Sportmarket;
 
 use App\Domain\Currency;
 use App\Domain\Decimal;
+use App\Domain\ListName;
 use App\Domain\Money;
 use App\Domain\Odds;
 use App\Domain\Settlement\Leg;
@@ -160,6 +161,8 @@ final class SportmarketImport
         if ($teams === []) {
             throw new InvalidOrder("Line {$main->line}: the order has no Home or Away team.");
         }
+
+        $this->assertValidListNames($main);
 
         return new ImportedBet(
             externalRef: self::externalRef($orderId),
@@ -329,6 +332,22 @@ final class SportmarketImport
         }
 
         return array_key_exists(strtolower($fill->sport), self::FOOTBALL_PERIODS) ? 'Football' : $fill->sport;
+    }
+
+    /**
+     * The values that become list entries may not contain "|" (see ListName).
+     *
+     * @throws InvalidOrder
+     */
+    private function assertValidListNames(OrderRow $fill): void
+    {
+        $names = ['Sport' => $fill->sport, 'Competition' => $fill->competition, 'Market' => $fill->market, 'Home' => $fill->home, 'Away' => $fill->away];
+
+        foreach ($names as $column => $name) {
+            if (! ListName::isValid($name)) {
+                throw new InvalidOrder("Line {$fill->line}: the {$column} \"{$name}\" contains “|”, which BetLedger doesn’t allow in names.");
+            }
+        }
     }
 
     private function market(OrderRow $fill): ?string

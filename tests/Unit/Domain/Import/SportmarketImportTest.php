@@ -257,6 +257,28 @@ class SportmarketImportTest extends TestCase
         );
     }
 
+    public function test_an_order_with_a_bar_in_a_name_is_an_error(): void
+    {
+        $orders = $this->import()->read($this->csv([
+            ['Order Id' => '1', 'Home' => 'Arsenal | Gunners'],
+            ['Order Id' => '2', 'Away' => 'Chelsea|FC'],
+            ['Order Id' => '3', 'Competition' => 'EPL | Premier League'],
+            ['Order Id' => '4', 'Sport' => 'fb | soccer'],
+            ['Order Id' => '5', 'Market' => 'ah|1x2'],
+            ['Order Id' => '6'],
+        ]), Currency::Eur);
+
+        $this->assertSame([
+            'Line 2: the Home "Arsenal | Gunners" contains “|”, which BetLedger doesn’t allow in names.',
+            'Line 3: the Away "Chelsea|FC" contains “|”, which BetLedger doesn’t allow in names.',
+            'Line 4: the Competition "EPL | Premier League" contains “|”, which BetLedger doesn’t allow in names.',
+            'Line 5: the Sport "fb | soccer" contains “|”, which BetLedger doesn’t allow in names.',
+            'Line 6: the Market "ah|1x2" contains “|”, which BetLedger doesn’t allow in names.',
+            null,
+        ], array_map(fn (ImportedOrder $order): ?string => $order->reason, $orders));
+        $this->assertSame(OrderOutcome::Import, $orders[5]->outcome);
+    }
+
     public function test_an_order_with_an_unreadable_value_is_an_error_and_the_others_are_imported(): void
     {
         $orders = $this->import()->read($this->csv([

@@ -25,9 +25,13 @@ how they are actually performing.
   ranges, and closing line value (CLV).
 - Odds are entered and shown in **decimal** format.
 
+### After v1
+
+- **Bankroll** (4.3): deposits and withdrawals per bookmaker, and balances, per bookmaker
+  and in total (see "Bankroll").
+
 ### Later (not v1, but the model must not block them)
 
-- Bankroll: deposits/withdrawals and balances per bookmaker.
 - Cash out (full and partial), each-way, system bets.
 - CSV export and import.
 - Automatic exchange rates.
@@ -70,6 +74,10 @@ data has a `user_id` (directly, or via its parent bet) and is scoped by policies
 | `exchange_rate` | decimal(18,8) | 1 unit of `currency` = this many units of base currency; `1` when same as base |
 | `is_active` | bool | inactive bookmakers are hidden from the bet form but keep their history |
 | timestamps | | |
+
+The **currency** can't be changed once the bookmaker has bets or bankroll transactions
+(both are amounts in its currency): the Bookmakers page shows it read-only with the reason,
+and saving another currency is refused with a validation error. The rate stays editable.
 
 ### Lists: `sports`, `competitions`, `teams`, `markets`, `tipsters`, `tags`
 
@@ -130,6 +138,22 @@ data has a `user_id` (directly, or via its parent bet) and is scoped by policies
 | timestamps | | |
 
 `selection_team` pivot: `selection_id`, `team_id`, `user_id` (the selection's owner).
+
+### `bankroll_transactions`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | pk | |
+| `user_id` | fk users, cascade delete | |
+| `bookmaker_id` | | composite fk `(bookmaker_id, user_id)` → `bookmakers(id, user_id)`, so the database refuses another user's bookmaker |
+| `type` | enum `deposit`, `withdrawal` | `App\Domain\TransactionType` |
+| `amount` | bigint | minor units of `currency`, > 0 |
+| `currency` | char(3) | copied from the bookmaker when saved |
+| `occurred_on` | date | a calendar date, not a datetime, so per-user time zones (6.2) don't move it |
+| `note` | string(255), nullable | |
+| timestamps | | |
+
+Index `(user_id, bookmaker_id, occurred_on)`. No exchange rate is stored (see "Bankroll").
 
 ## Settlement rules
 
@@ -225,6 +249,58 @@ odds, average CLV, open stake.
 3. **Odds ranges:** totals grouped by `total_odds` bands: 1.01–1.50, 1.51–2.00, 2.01–3.00,
    3.01–5.00, 5.01–10.00, 10.01+.
 4. **CLV:** average CLV, share of bets that beat the closing line, and CLV by breakdown.
+
+## Bankroll
+
+The Bankroll page (`/bankroll`) shows, per bookmaker and in total: **number of bets**,
+**in open bets**, **turnover**, **ROI**, **profit** and **balance**. Per bookmaker it also
+shows the sums deposited and withdrawn, and lists its transactions (newest first by date,
+then by id), which can be added, edited and deleted.
+
+**Definitions.** All figures are all-time (no date filter) and free bets are always
+included. The bet figures are the ones Statistics uses (`StatisticsCalculator::totals()`,
+reused in `App\Domain\Bankroll\BankrollCalculator`), so changes to how profit is
+calculated (e.g. cash out, 4.4) carry over.
+
+- **Number of bets** = settled + open bets, shown with the open count ("42 · 3 open").
+- **In open bets** (open stake) = stakes of open **cash** bets; an open free bet's stake
+  isn't the user's money.
+- **Turnover** = stakes of settled cash bets.
+- **Profit** = the stored `bets.profit` of settled bets, free bets included (it already
+  reflects manual payouts and half results).
+- **ROI** = profit ÷ turnover; "—" when turnover is 0.
+- **Balance** = deposits − withdrawals + profit − open stake. It may be negative (a
+  withdrawal is never blocked); a negative balance is shown with `−` in the loss colour.
+
+**Currencies.**
+
+- **Per bookmaker:** every figure is in the bookmaker's own currency, unconverted, so the
+  balance can be compared with the user's account at that bookmaker. Transactions are
+  always in the bookmaker's currency, which is why a bookmaker's currency is locked once it
+  has bets or transactions.
+- **A bookmaker with bets in another currency** (possible before the lock): its row is
+  shown in the base currency with "Bets in more than one currency, shown in EUR". Bets
+  are converted with their own rate, deposits and withdrawals with the bookmaker's
+  current rate (each sum rounded once), and its balance counts as is in the total.
+- **Total:** in the base currency. Bets, turnover, profit, ROI and open stake are
+  converted per bet with the bet's own `exchange_rate`, exactly as Statistics does, so the
+  total turnover, profit and ROI equal the Statistics page's all-time figures with free
+  bets included.
+- **Total balance** = the sum of each bookmaker's balance converted with the bookmaker's
+  **current** `exchange_rate` (`Money::convert`, rounded once per bookmaker, negatives
+  half away from zero), since it is money held now. So when rates have changed, the total
+  balance need not equal total deposits − withdrawals + profit − open stake.
+- Transactions store **no exchange rate**, and the base currency lock (bets only) is
+  unchanged.
+
+**Which bookmakers are listed:** active ones always (so the user can deposit), inactive
+ones only when they have bets or transactions, marked "(inactive)"; active first, then by
+name. New transactions can only be added at active bookmakers; existing ones stay
+editable after a bookmaker is deactivated.
+
+**Transactions:** type deposit or withdrawal; amount above 0 with the same limits as a
+stake (`Money::isValidStake`, decimal comma accepted); date required and not after today
+(default today); optional note up to 255 characters.
 
 ## Import from Sportmarket
 
@@ -401,9 +477,10 @@ They are the reference for layout and copy; sample numbers in them are illustrat
 | Bets list | `Bets.dc.html` | Open/Settled/All tabs, filter chips; **inline settle buttons** per pending selection (Won, Lost, Void, ½ Won, ½ Lost) with Undo |
 | Bet detail | `BetDetail.dc.html` | Result, profit in bet + base currency, CLV, result buttons, clear result, **manual payout override**, facts, delete |
 | Statistics | `Statistics.dc.html` | Date range, filter chips, include-free-bets toggle, KPI tiles, cumulative profit chart, breakdown table by dimension, odds-range ROI bars, CLV panel |
+| Bankroll | not mocked | Total card (balance, then bets, in open bets, turnover, ROI, profit tiles); one card per bookmaker with the same figures in its currency plus deposited/withdrawn, Add deposit / Add withdrawal, expandable transaction list with Edit and Delete |
 
 Not mocked (build plainly in the same style): bookmakers management, lists management,
-settings (base currency).
+settings (base currency), bankroll.
 
 **Layout:** phone first for everything except statistics. Phone: bottom tab bar (Home,
 Bets, centre "+" New bet, Stats, Settings). Desktop (≥ 1024 px): left sidebar with the
@@ -804,3 +881,24 @@ same items. Touch targets ≥ 44 px.
   - *`bet_id`* is the database id, only meaningful within one export; a re-import should
     use it to group rows, not to match existing bets (`external_ref` does that for
     imported bets).
+- **Bankroll (assumed in 4.3).** See "Bankroll"; the definitions, currency rules and
+  scope were decided by the owner. Assumed while building it:
+  - *Navigation.* Desktop sidebar after Bookmakers; on phones it is linked from the
+    Settings page next to Bookmakers and Lists (as in 2.1), with the Settings tab
+    highlighted. The Bookmakers page links to it.
+  - *Cards on desktop too.* Bookmakers are cards in a two-column grid at ≥ 1024 px rather
+    than a table, at the full content width (as in 3.5), so one layout serves both.
+  - *A transaction keeps its bookmaker.* Editing changes type, amount, date and note; the
+    bookmaker is shown read-only. To move one, delete it and add it at the other
+    bookmaker. This keeps the currency lock simple (a transaction's currency is always its
+    bookmaker's).
+  - *Inactive bookmakers*: an inactive bookmaker's card has no "Add deposit/withdrawal"
+    buttons; its transactions are still listed with Edit and Delete.
+  - *Mixed-currency rows*: a row falls back to the base currency when any of its bets is in
+    a currency other than the bookmaker's (also if all its bets are in one other currency).
+    Its deposits and withdrawals are each converted with the bookmaker's current rate.
+  - *Confirmation* after a change is an inline success callout on the page ("Deposit added
+    at Bet365."), as on the bet pages, kept until the next change.
+  - *Possible follow-ups (out of scope for 4.3):* transfers between bookmakers as their own
+    type; bonuses or adjustments as their own type (for now a deposit with a note);
+    transactions in the CSV export (that format is a contract) and in the API.

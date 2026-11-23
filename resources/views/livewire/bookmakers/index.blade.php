@@ -46,6 +46,11 @@
         </ul>
 
         <p class="mt-3 text-sm text-muted">Inactive bookmakers are hidden when you record a bet, but their bets stay in your history and statistics.</p>
+
+        <p class="mt-3 text-sm text-muted">
+            Record deposits and withdrawals, and see the balance at each bookmaker, on the
+            <flux:link :href="route('bankroll.index')" wire:navigate>Bankroll</flux:link> page.
+        </p>
     @endif
 
     <flux:modal wire:model.self="showForm" class="w-full md:w-[28rem]">
@@ -54,11 +59,21 @@
 
             <flux:input wire:model="name" label="Name" required autocomplete="off" />
 
-            <x-select wire:model.live="currency" label="Currency">
-                @foreach ($currencies as $option)
-                    <x-select.option :value="$option->value">{{ $option->label() }}</x-select.option>
-                @endforeach
-            </x-select>
+            @if ($currencyLocked)
+                <flux:input
+                    label="Currency"
+                    :value="$currencyLabel"
+                    disabled
+                    description="It can’t change once the bookmaker has bets or transactions: they are amounts in this currency."
+                />
+                <flux:error name="currency" />
+            @else
+                <x-select wire:model.live="currency" label="Currency">
+                    @foreach ($currencies as $option)
+                        <x-select.option :value="$option->value">{{ $option->label() }}</x-select.option>
+                    @endforeach
+                </x-select>
+            @endif
 
             @if ($currency === $baseCurrency->value)
                 <flux:input

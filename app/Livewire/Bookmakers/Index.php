@@ -85,7 +85,21 @@ class Index extends Component
                     ->where('user_id', $this->user()->id)
                     ->ignore($this->editingId),
             ],
-            'currency' => ['required', Rule::enum(Currency::class)],
+            'currency' => [
+                'required',
+                Rule::enum(Currency::class),
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if ($this->editingId === null) {
+                        return;
+                    }
+
+                    $bookmaker = $this->findBookmaker($this->editingId);
+
+                    if ($value !== $bookmaker->currency->value && ! $bookmaker->canChangeCurrency()) {
+                        $fail('The currency can’t be changed once the bookmaker has bets or transactions.');
+                    }
+                },
+            ],
             'exchange_rate' => [
                 'required',
                 'string',
@@ -130,6 +144,8 @@ class Index extends Component
             'bookmakers' => $user->bookmakers()->orderByDesc('is_active')->orderBy('name')->get(),
             'baseCurrency' => $user->base_currency,
             'currencies' => Currency::cases(),
+            'currencyLabel' => Currency::tryFrom($this->currency)?->label() ?? $this->currency,
+            'currencyLocked' => $this->editingId !== null && $user->bookmakers()->find($this->editingId)?->canChangeCurrency() === false,
         ]);
     }
 

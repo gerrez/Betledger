@@ -4,6 +4,8 @@ namespace Tests\Feature\Bookmakers;
 
 use App\Domain\Currency;
 use App\Livewire\Bookmakers\Index;
+use App\Models\BankrollTransaction;
+use App\Models\Bet;
 use App\Models\Bookmaker;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -177,6 +179,76 @@ class ManageBookmakersTest extends TestCase
             ->assertSee('The selected currency is invalid.');
 
         $this->assertDatabaseCount('bookmakers', 0);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function lockingActivity(): array
+    {
+        return [
+            'a bet' => ['bet'],
+            'a transaction' => ['transaction'],
+        ];
+    }
+
+    #[DataProvider('lockingActivity')]
+    public function test_the_currency_is_locked_once_the_bookmaker_has_bets_or_transactions_but_the_rate_is_not(string $activity): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->inCurrency(Currency::Gbp, '1.17')->create(['name' => 'Bet365']);
+        match ($activity) {
+            'bet' => Bet::factory()->forBookmaker($bookmaker)->single()->create(),
+            'transaction' => BankrollTransaction::factory()->forBookmaker($bookmaker)->deposit()->create(),
+        };
+        $this->actingAs($user);
+
+        Livewire::test(Index::class)
+            ->call('edit', $bookmaker->id)
+            ->assertSee('It can’t change once the bookmaker has bets or transactions')
+            ->set('currency', 'USD')
+            ->set('exchange_rate', '1.2')
+            ->call('save')
+            ->assertHasErrors(['currency'])
+            ->assertSee('The currency can’t be changed once the bookmaker has bets or transactions.')
+            ->set('currency', 'GBP')
+            ->set('exchange_rate', '1.2')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $bookmaker->refresh();
+        $this->assertSame(Currency::Gbp, $bookmaker->currency);
+        $this->assertSame('1.20000000', $bookmaker->exchange_rate);
+    }
+
+    public function test_the_currency_can_change_while_the_bookmaker_has_no_bets_or_transactions(): void
+    {
+        $user = User::factory()->create();
+        $bookmaker = Bookmaker::factory()->for($user)->inCurrency(Currency::Gbp, '1.17')->create(['name' => 'Bet365']);
+        // Another bookmaker's activity doesn't lock this one.
+        BankrollTransaction::factory()->forBookmaker(Bookmaker::factory()->for($user)->create())->deposit()->create();
+        $this->actingAs($user);
+
+        Livewire::test(Index::class)
+            ->call('edit', $bookmaker->id)
+            ->assertDontSee('It can’t change once the bookmaker has bets or transactions')
+            ->set('currency', 'USD')
+            ->set('exchange_rate', '0.92')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame(Currency::Usd, $bookmaker->refresh()->currency);
+    }
+
+    public function test_the_page_links_to_the_bankroll(): void
+    {
+        $user = User::factory()->create();
+        Bookmaker::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->get(route('bookmakers.index'))
+            ->assertOk()
+            ->assertSee(route('bankroll.index'));
     }
 
     public function test_names_are_unique_per_user(): void

@@ -440,6 +440,21 @@ The rows are built by `App\Domain\Export\BetsCsv` and written by
 `App\Http\Controllers\Settings\ExportBetsController`, which reads the bets through the
 user's own relation in chunks with every relation eager loaded.
 
+## Reset account
+
+Settings → Profile has a "Reset Account" section above "Delete Account" (roadmap 6.19).
+It permanently deletes all of the user's bets, with their selections, selection teams,
+tag links and results, and keeps the account itself, bookmakers, list entries (sports,
+teams, tags, …), bankroll deposits and withdrawals, settings and API tokens. Statistics
+are then empty and bankroll balances only include deposits and withdrawals.
+
+The button opens a dialog with a danger callout: how many bets will be deleted, what is
+kept, and that it cannot be undone. Like the delete-account dialog, it links to the CSV
+export ("Download your bets first") as the only backup and asks for the password. The
+button is disabled while the user has no bets. Built by
+`App\Livewire\Settings\ResetAccountForm`, which deletes through the user's own `bets()`
+relation in one transaction; the cascading foreign keys remove the rest.
+
 ## API
 
 A JSON API under `/api/v1` for scripts and apps that record bets on the user's account.
@@ -941,3 +956,9 @@ same items. Touch targets ≥ 44 px.
   - *Possible follow-ups (out of scope for 4.3):* transfers between bookmakers as their own
     type; bonuses or adjustments as their own type (for now a deposit with a note);
     transactions in the CSV export (that format is a contract) and in the API.
+- **Reset account (assumed in 6.19).** See "Reset account". The request was "all bets
+  will be deleted", so only bets go: bookmakers, list entries and bankroll deposits and
+  withdrawals are kept (a user who wants those gone too can delete them on their pages,
+  or delete the account). The reset asks for the password, as deleting the account does,
+  so a stray click can't wipe the ledger. A "delete everything but the login" option can
+  be added later if the owner wants it.

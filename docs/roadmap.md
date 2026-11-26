@@ -464,6 +464,14 @@ test for anything that reads or changes user data.
       - Update the 2.9 and 3.4 notes in `docs/spec.md`.
       - Tests: unit tests for the validation; a feature test for changing the date and
         the bankroll moving with it; isolation.
+- [x] **6.19 Reset account.** Asked for by the owner: delete all of one's bets and start
+      over without deleting the account. Settings → Profile gets a "Reset Account"
+      section above "Delete Account"; its dialog warns that the bets (with their
+      selections, results and tags) are permanently deleted and that it cannot be
+      undone, says what is kept, links to the CSV export as a backup and asks for the
+      password. Design in "Reset account" in `docs/spec.md`.
+      - Tests: bets, selections and tags deleted and everything else kept; a wrong
+        password keeps the bets; another user's bets untouched.
 
 ### Considered and left out
 

@@ -123,10 +123,14 @@ final class StatisticsCalculator
      */
     public function oddsBands(array $bets): array
     {
-        return array_map(fn (OddsBand $band): OddsBandRow => new OddsBandRow($band, $this->totals(array_values(array_filter(
-            $bets,
-            fn (BetFigures $bet): bool => OddsBand::forOdds($bet->totalOdds) === $band,
-        )))), OddsBand::cases());
+        /** @var array<string, list<BetFigures>> $byBand */
+        $byBand = [];
+
+        foreach ($bets as $bet) {
+            $byBand[OddsBand::forOdds($bet->totalOdds)->value][] = $bet;
+        }
+
+        return array_map(fn (OddsBand $band): OddsBandRow => new OddsBandRow($band, $this->totals($byBand[$band->value] ?? [])), OddsBand::cases());
     }
 
     /**

@@ -3,7 +3,9 @@
 namespace App\Livewire\Overview;
 
 use App\Domain\BetStatus;
+use App\Domain\Currency;
 use App\Domain\Money;
+use App\Domain\Statistics\OpenStake;
 use App\Domain\Statistics\Period;
 use App\Domain\Statistics\StatisticsCalculator;
 use App\Domain\Statistics\StatisticsFilter;
@@ -52,12 +54,12 @@ class Index extends Component
 
         $settled = $query->bets($user, new StatisticsFilter($month, $lastDay, status: BetStatus::Settled));
         $monthTotals = $calculator->totals($settled);
-        $openTotals = $calculator->totals($query->bets($user, new StatisticsFilter(status: BetStatus::Open)));
+        $open = $query->openStake($user);
         $totals = TotalsDisplay::fromTotals($monthTotals, $currency);
         $monthName = $month->format('F Y');
 
         return view('livewire.overview.index', [
-            'hasBets' => $settled !== [] || $openTotals->openBets > 0 || $user->bets()->exists(),
+            'hasBets' => $settled !== [] || $open->bets > 0 || $user->bets()->exists(),
             'months' => $this->months($user, $today),
             'monthName' => $monthName,
             'profitLabel' => $isCurrentMonth ? 'Profit this month' : "Profit in {$monthName}",
@@ -67,8 +69,8 @@ class Index extends Component
             'summary' => $monthTotals->settledBets === 0
                 ? ($isCurrentMonth ? 'No bets settled this month yet' : "No bets settled in {$monthName}")
                 : "{$monthTotals->settledBets} ".Str::plural('bet', $monthTotals->settledBets).' settled · turnover '.Money::format($monthTotals->turnover, $currency),
-            'kpis' => $this->kpis($monthTotals, $totals, TotalsDisplay::fromTotals($openTotals, $currency)),
-            'openBets' => $openTotals->openBets,
+            'kpis' => $this->kpis($monthTotals, $totals, $open, $currency),
+            'openBets' => $open->bets,
             'previews' => BetSort::StartsSoonest->apply($user->bets()->getQuery()->where('status', BetStatus::Open))
                 ->with(['bookmaker', 'selections'])
                 ->limit(self::PREVIEW_SIZE)
@@ -83,13 +85,13 @@ class Index extends Component
      *
      * @return list<array{label: string, value: string, tone: 'profit'|'loss'|'even', sub: string}>
      */
-    private function kpis(Totals $month, TotalsDisplay $monthDisplay, TotalsDisplay $open): array
+    private function kpis(Totals $month, TotalsDisplay $monthDisplay, OpenStake $open, Currency $currency): array
     {
         return [
             ['label' => 'Strike rate', 'value' => $monthDisplay->strikeRate, 'tone' => 'even', 'sub' => "{$month->winningBets} of ".($month->winningBets + $month->losingBets).' decided'],
             ['label' => 'Average odds', 'value' => $monthDisplay->averageOdds, 'tone' => 'even', 'sub' => 'settled bets'],
             ['label' => 'Closing line', 'value' => $monthDisplay->averageClv, 'tone' => $monthDisplay->clvTone, 'sub' => "CLV on {$month->clvBets} ".Str::plural('bet', $month->clvBets)],
-            ['label' => 'Open stake', 'value' => $open->openStake, 'tone' => 'even', 'sub' => "{$open->openBets} ".Str::plural('bet', $open->openBets).' pending'],
+            ['label' => 'Open stake', 'value' => Money::format($open->stake, $currency), 'tone' => 'even', 'sub' => "{$open->bets} ".Str::plural('bet', $open->bets).' pending'],
         ];
     }
 

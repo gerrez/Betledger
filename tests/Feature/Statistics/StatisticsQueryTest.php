@@ -10,6 +10,7 @@ use App\Domain\Settlement\SelectionResult;
 use App\Domain\Statistics\BetFigures;
 use App\Domain\Statistics\Dimension;
 use App\Domain\Statistics\Group;
+use App\Domain\Statistics\StatisticsCalculator;
 use App\Domain\Statistics\StatisticsFilter;
 use App\Domain\Statistics\StatisticsQuery;
 use App\Models\Bet;
@@ -160,6 +161,24 @@ class StatisticsQueryTest extends TestCase
         $this->assertEquals([new Group($arsenal->id, 'Arsenal'), new Group($chelsea->id, 'Chelsea'), Group::none()], $figures->groupsIn(Dimension::Team));
         $this->assertEquals([new Group($value->id, 'value')], $figures->groupsIn(Dimension::Tag));
         $this->assertEquals([Group::none()], $figures->groupsIn(Dimension::Tipster));
+    }
+
+    public function test_the_open_stake_counts_the_users_open_bets_and_converts_each_stake_on_its_own(): void
+    {
+        $pounds = Bookmaker::factory()->for($this->user)->inCurrency(Currency::Gbp, '1.5')->create();
+        Bet::factory()->forBookmaker($pounds)->count(3)->create(['stake' => 1]);
+        Bet::factory()->forBookmaker($pounds)->freeBet()->create(['stake' => 1000]);
+        Bet::factory()->forBookmaker($pounds)->settled()->create(['stake' => 5000]);
+        Bet::factory()->create(['stake' => 7000]);
+
+        $open = $this->query->openStake($this->user);
+
+        // 3 × (0.01 × 1.5 = 0.015 → 0.02); the free bet's stake isn't at risk.
+        $this->assertSame(4, $open->bets);
+        $this->assertSame(6, $open->stake);
+
+        $totals = app(StatisticsCalculator::class)->totals($this->query->bets($this->user, new StatisticsFilter(status: BetStatus::Open)));
+        $this->assertSame([$totals->openBets, $totals->openStake], [$open->bets, $open->stake]);
     }
 
     public function test_a_settled_bet_has_its_profit_and_event_date(): void

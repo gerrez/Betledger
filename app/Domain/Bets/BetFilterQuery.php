@@ -59,12 +59,13 @@ final class BetFilterQuery
 
     /**
      * Limit the bets to those whose notes, or any selection's event name, pick, team or
-     * competition, contain the term, ignoring case. `%` and `_` in the term are matched
-     * literally. A blank term changes nothing.
+     * competition, contain the term, ignoring case. `%`, `_`, `!` and `\` in the term are
+     * matched literally. A blank term changes nothing.
      *
      * The comparison is `LOWER(column) LIKE ?` with a lower-cased term on every
      * database, so SQLite and Postgres agree (no `ILIKE`); SQLite's `LOWER` only folds
-     * ASCII letters.
+     * ASCII letters. The escape character is `!`, not a backslash: PDO's Postgres
+     * driver reads `'\'` as an escaped quote and loses the placeholders after it.
      *
      * @param  Builder<Bet>  $query
      * @return Builder<Bet>
@@ -77,8 +78,8 @@ final class BetFilterQuery
             return $query;
         }
 
-        $pattern = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_strtolower($term)).'%';
-        $contains = fn (Builder $query, string $column): Builder => $query->orWhereRaw("LOWER({$column}) LIKE ? ESCAPE '\\'", [$pattern]);
+        $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($term)).'%';
+        $contains = fn (Builder $query, string $column): Builder => $query->orWhereRaw("LOWER({$column}) LIKE ? ESCAPE '!'", [$pattern]);
 
         return $query->where(function (Builder $matches) use ($contains): void {
             $contains($matches, 'bets.notes');

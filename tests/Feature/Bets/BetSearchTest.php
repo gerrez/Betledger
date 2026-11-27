@@ -57,16 +57,19 @@ class BetSearchTest extends TestCase
         $this->assertSame([$accumulator->id], $this->search('Odense'));
     }
 
-    public function test_percent_underscore_and_backslash_are_matched_literally(): void
+    public function test_percent_underscore_exclamation_mark_and_backslash_are_matched_literally(): void
     {
         $percent = $this->bet(pick: 'Over 50% possession');
         $underscore = $this->bet(notes: 'ref_42');
         $backslash = $this->bet(notes: 'Home\\Away');
+        $exclamation = $this->bet(notes: 'Sure thing!%');
         $this->bet(pick: 'Over 500 corners', notes: 'refs 42');
 
         $this->assertSame([$percent->id], $this->search('50%'));
         $this->assertSame([$underscore->id], $this->search('ref_'));
         $this->assertSame([$backslash->id], $this->search('e\\a'));
+        $this->assertSame([$exclamation->id], $this->search('thing!%'));
+        $this->assertSame([], $this->search('!%x'));
         $this->assertSame([], $this->search('%%'));
     }
 

@@ -256,7 +256,7 @@ test for anything that reads or changes user data.
 
 ### Finding and entering bets
 
-- [ ] **6.3 Bets list: search and more filters.** `App\Livewire\Bets\Index` filters by
+- [x] **6.3 Bets list: search and more filters.** `App\Livewire\Bets\Index` filters by
       bookmaker and sport only, 20 bets per page; after an import of ~600 bets a single
       bet can't be found.
       - Add a text search (event name, pick, team, competition and notes) and filters

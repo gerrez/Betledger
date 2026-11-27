@@ -14,6 +14,33 @@
         </section>
     @else
         <div class="flex flex-col gap-3.5">
+            <div class="flex gap-2">
+                <div role="search" class="min-w-0 grow">
+                    <flux:input
+                        type="text"
+                        enterkeyhint="search"
+                        wire:model.live.debounce.300ms="search"
+                        icon="magnifying-glass"
+                        placeholder="Search events, picks, teams, notes"
+                        aria-label="Search bets"
+                        maxlength="{{ $this::MAX_SEARCH_LENGTH }}"
+                        autocomplete="off"
+                        clearable
+                        class="max-lg:*:h-11"
+                    />
+                </div>
+
+                <flux:modal.trigger name="bet-filters">
+                    <button
+                        type="button"
+                        class="flex h-11 shrink-0 items-center gap-2 rounded-full border border-line bg-surface px-4 text-sm font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:h-10"
+                    >
+                        <flux:icon.adjustments-horizontal variant="mini" />
+                        Filters{{ $chips === [] ? '' : ' · '.count($chips) }}
+                    </button>
+                </flux:modal.trigger>
+            </div>
+
             <div role="tablist" aria-label="Bet status" class="grid grid-cols-3 gap-1 rounded-[14px] bg-line p-1">
                 @foreach ($tabs as $value => $label)
                     <button
@@ -31,35 +58,51 @@
                 @endforeach
             </div>
 
-            <div class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-0.5 lg:mx-0 lg:flex-wrap lg:px-0">
-                <x-select variant="pill" wire:model.live="bookmaker" label="Bookmaker">
-                    <x-select.option value="">All bookmakers</x-select.option>
-                    @foreach ($bookmakers as $option)
-                        <x-select.option value="{{ $option->id }}" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }}</x-select.option>
-                    @endforeach
-                </x-select>
-
-                <x-select variant="pill" wire:model.live="sport" label="Sport">
-                    <x-select.option value="">All sports</x-select.option>
-                    @foreach ($sports as $option)
-                        <x-select.option value="{{ $option->id }}" wire:key="sport-{{ $option->id }}">{{ $option->name }}</x-select.option>
-                    @endforeach
-                </x-select>
-
+            <div class="-mx-5 flex items-center gap-2 overflow-x-auto px-5 pb-0.5 lg:mx-0 lg:flex-wrap lg:px-0">
                 <x-select variant="pill" wire:model.live="sort" label="Order">
                     @foreach ($sorts as $option)
                         {{-- The tab's default order is the empty value, so a new tab shows it selected. --}}
                         <x-select.option value="{{ $loop->first ? '' : $option->value }}" wire:key="sort-{{ $tab->value }}-{{ $option->value }}">{{ $option->label() }}</x-select.option>
                     @endforeach
                 </x-select>
+
+                @if ($chips !== [])
+                    <ul aria-label="Active filters" class="flex shrink-0 gap-2 lg:flex-wrap">
+                        @foreach ($chips as $chip)
+                            <li wire:key="chip-{{ $chip['filter'] }}" class="flex h-11 shrink-0 items-center gap-1 rounded-full bg-accent-soft pr-1.5 pl-4 text-sm font-medium whitespace-nowrap text-accent-soft-content lg:h-10">
+                                {{ $chip['label'] }}
+                                <button
+                                    type="button"
+                                    wire:click="removeFilter('{{ $chip['filter'] }}')"
+                                    aria-label="Remove filter {{ $chip['label'] }}"
+                                    class="relative flex size-7 items-center justify-center rounded-full after:absolute after:-inset-2 hover:bg-accent/15 focus-visible:outline-2 focus-visible:outline-accent"
+                                >
+                                    <flux:icon.x-mark variant="micro" />
+                                </button>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+
+                @if ($isNarrowed)
+                    <button
+                        type="button"
+                        wire:click="clearAll"
+                        class="h-11 shrink-0 rounded-full px-3 text-sm font-medium whitespace-nowrap text-accent-content hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:h-10"
+                    >{{ $clearLabel }}</button>
+                @endif
             </div>
+
+            @if ($isNarrowed && $cards->isNotEmpty())
+                <p class="text-[13px] text-muted" aria-live="polite">{{ $matchCount }}</p>
+            @endif
 
             @if ($cards->isEmpty())
                 <section class="rounded-[20px] border border-line bg-surface p-5">
                     <p class="text-[15px] font-medium">{{ $emptyMessage }}</p>
 
-                    @if ($isFiltered)
-                        <flux:button size="sm" wire:click="clearFilters" class="mt-3">Clear filters</flux:button>
+                    @if ($isNarrowed)
+                        <flux:button size="sm" wire:click="clearAll" class="mt-3">{{ $clearLabel }}</flux:button>
                     @endif
                 </section>
             @else
@@ -162,5 +205,84 @@
                 <flux:pagination :paginator="$bets" scroll-to />
             @endif
         </div>
+
+        <flux:modal name="bet-filters" flyout class="w-full max-w-none md:w-[26rem]">
+            <div class="flex flex-col gap-5">
+                <flux:heading size="lg">Filters</flux:heading>
+
+                <x-select wire:model.live="bookmaker" label="Bookmaker">
+                    <x-select.option value="">All bookmakers</x-select.option>
+                    @foreach ($bookmakers as $option)
+                        <x-select.option value="{{ $option->id }}" wire:key="bookmaker-{{ $option->id }}">{{ $option->name }}</x-select.option>
+                    @endforeach
+                </x-select>
+
+                <x-select wire:model.live="sport" label="Sport">
+                    <x-select.option value="">All sports</x-select.option>
+                    @foreach ($sports as $option)
+                        <x-select.option value="{{ $option->id }}" wire:key="sport-{{ $option->id }}">{{ $option->name }}</x-select.option>
+                    @endforeach
+                </x-select>
+
+                <x-select wire:model.live="competition" label="Competition">
+                    <x-select.option value="">All competitions</x-select.option>
+                    @foreach ($competitions as $sportName => $options)
+                        <x-select.group heading="{{ $sportName }}" wire:key="competition-group-{{ $loop->index }}">
+                            @foreach ($options as $option)
+                                <x-select.option value="{{ $option->id }}" wire:key="competition-{{ $option->id }}">{{ $option->name }}</x-select.option>
+                            @endforeach
+                        </x-select.group>
+                    @endforeach
+                </x-select>
+
+                <x-select wire:model.live="market" label="Market">
+                    <x-select.option value="">All markets</x-select.option>
+                    @foreach ($markets as $option)
+                        <x-select.option value="{{ $option->id }}" wire:key="market-{{ $option->id }}">{{ $option->name }}</x-select.option>
+                    @endforeach
+                </x-select>
+
+                <x-select wire:model.live="tipster" label="Tipster">
+                    <x-select.option value="">All tipsters</x-select.option>
+                    @foreach ($tipsters as $option)
+                        <x-select.option value="{{ $option->id }}" wire:key="tipster-{{ $option->id }}">{{ $option->name }}</x-select.option>
+                    @endforeach
+                </x-select>
+
+                <x-select wire:model.live="tag" label="Tag">
+                    <x-select.option value="">All tags</x-select.option>
+                    @foreach ($tags as $option)
+                        <x-select.option value="{{ $option->id }}" wire:key="tag-{{ $option->id }}">{{ $option->name }}</x-select.option>
+                    @endforeach
+                </x-select>
+
+                <x-select wire:model.live="type" label="Bet type">
+                    <x-select.option value="">All bet types</x-select.option>
+                    @foreach ($types as $value => $label)
+                        <x-select.option value="{{ $value }}" wire:key="type-{{ $value }}">{{ $label }}</x-select.option>
+                    @endforeach
+                </x-select>
+
+                <div class="flex flex-col gap-2">
+                    <div class="grid grid-cols-2 gap-3">
+                        <flux:input type="date" wire:model.live="from" label="From" :max="$to !== '' ? $to : null" />
+                        <flux:input type="date" wire:model.live="to" label="To" :min="$from !== '' ? $from : null" />
+                    </div>
+                    <p class="text-xs text-muted">Settled bets count on the date of their event, open bets on the day they were placed.</p>
+                </div>
+
+                <div class="flex gap-2">
+                    @if ($chips !== [])
+                        <flux:button wire:click="clearFilters">Clear filters</flux:button>
+                    @endif
+
+                    <flux:spacer />
+
+                    <flux:modal.close>
+                        <flux:button variant="primary">Show {{ $matchCount }}</flux:button>
+                    </flux:modal.close>
+                </div>
+            </div>
+        </flux:modal>
     @endif
 </div>

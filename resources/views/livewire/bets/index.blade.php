@@ -5,6 +5,10 @@
         <flux:callout variant="success" icon="check-circle" class="mb-4" :heading="session('status')" />
     @endif
 
+    @if ($notice !== null)
+        <flux:callout variant="success" icon="check-circle" class="mb-4" :heading="$notice" />
+    @endif
+
     @if (! $hasBets)
         <section class="rounded-[20px] border border-line bg-surface p-5">
             <p class="text-[15px] font-medium">No bets yet</p>
@@ -66,6 +70,20 @@
                     @endforeach
                 </x-select>
 
+                <button
+                    type="button"
+                    wire:click="{{ $selecting ? 'stopSelecting' : 'startSelecting' }}"
+                    aria-pressed="{{ $selecting ? 'true' : 'false' }}"
+                    @class([
+                        'flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:h-10',
+                        'border-line bg-surface text-ink' => ! $selecting,
+                        'border-accent bg-accent-soft text-accent-soft-content' => $selecting,
+                    ])
+                >
+                    <flux:icon.check-circle variant="mini" />
+                    {{ $selecting ? 'Done' : 'Select' }}
+                </button>
+
                 @if ($chips !== [])
                     <ul aria-label="Active filters" class="flex shrink-0 gap-2 lg:flex-wrap">
                         @foreach ($chips as $chip)
@@ -97,6 +115,38 @@
                 <p class="text-[13px] text-muted" aria-live="polite">{{ $matchCount }}</p>
             @endif
 
+            @if ($selecting && $cards->isNotEmpty())
+                <section aria-label="Selected bets" class="sticky top-2 z-10 flex flex-col gap-3 rounded-[18px] border border-line bg-surface p-3 shadow-sm">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span class="grow text-sm font-semibold" aria-live="polite">{{ $hasSelection ? "{$selectedCount} selected" : 'Tick the bets to change' }}</span>
+
+                        @if ($selectsAllMatching)
+                            <button type="button" wire:click="clearSelection" class="h-11 text-sm font-medium text-accent-content hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:h-8">Clear selection</button>
+                        @else
+                            <button type="button" wire:click="selectAllMatching" class="h-11 text-sm font-medium text-accent-content hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:h-8">Select all {{ $matchingTotal }}</button>
+                        @endif
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <flux:modal.trigger name="bulk-tag">
+                            <flux:button icon="tag" :disabled="! $hasSelection" class="w-full max-lg:h-11">Add or remove tag</flux:button>
+                        </flux:modal.trigger>
+
+                        <flux:button
+                            variant="danger"
+                            icon="trash"
+                            wire:click="deleteSelected"
+                            :disabled="! $hasSelection"
+                            data-confirm="Their selections, results and tags are deleted too. This can’t be undone."
+                            data-confirm-title="Delete {{ $selectedCount }}?"
+                            data-confirm-button="Delete {{ $selectedCount }}"
+                            data-confirm-danger
+                            class="w-full max-lg:h-11"
+                        >Delete</flux:button>
+                    </div>
+                </section>
+            @endif
+
             @if ($cards->isEmpty())
                 <section class="rounded-[20px] border border-line bg-surface p-5">
                     <p class="text-[15px] font-medium">{{ $emptyMessage }}</p>
@@ -108,17 +158,30 @@
             @else
                 @foreach ($cards as $card)
                     <article wire:key="bet-{{ $card->id }}" class="flex flex-col gap-3 rounded-[18px] border border-line bg-surface p-4">
-                        <a href="{{ route('bets.show', $card->id) }}" wire:navigate class="flex items-start gap-3 rounded-lg text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-                            <div class="flex min-w-0 grow flex-col gap-0.5">
-                                <span class="text-base font-semibold">{{ $card->title }}</span>
-                                <span class="text-[13px] text-muted">{{ $card->meta }}</span>
-                            </div>
+                        <div class="flex items-start gap-3">
+                            @if ($selecting)
+                                <label class="relative mt-0.5 flex size-6 shrink-0 cursor-pointer items-center justify-center after:absolute after:-inset-2.5">
+                                    @if ($selectsAllMatching)
+                                        <input type="checkbox" checked disabled class="size-5 accent-accent" />
+                                    @else
+                                        <input type="checkbox" wire:model.live="selected" value="{{ $card->id }}" class="size-5 accent-accent" />
+                                    @endif
+                                    <span class="sr-only">Select {{ $card->title }}</span>
+                                </label>
+                            @endif
 
-                            <div class="flex shrink-0 flex-col items-end gap-0.5">
-                                <span class="text-base font-semibold">{{ $card->stake }}</span>
-                                <span class="text-[13px] text-muted">@ {{ $card->totalOdds }}</span>
-                            </div>
-                        </a>
+                            <a href="{{ route('bets.show', $card->id) }}" wire:navigate class="flex min-w-0 grow items-start gap-3 rounded-lg text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                                <div class="flex min-w-0 grow flex-col gap-0.5">
+                                    <span class="text-base font-semibold">{{ $card->title }}</span>
+                                    <span class="text-[13px] text-muted">{{ $card->meta }}</span>
+                                </div>
+
+                                <div class="flex shrink-0 flex-col items-end gap-0.5">
+                                    <span class="text-base font-semibold">{{ $card->stake }}</span>
+                                    <span class="text-[13px] text-muted">@ {{ $card->totalOdds }}</span>
+                                </div>
+                            </a>
+                        </div>
 
                         @if ($card->isFreeBet)
                             <span class="self-start rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-soft-content">FREE BET</span>
@@ -158,14 +221,14 @@
                             </div>
                         @endif
 
-                        @if ($card->lastResult !== null)
+                        @if ($card->lastResult !== null && ! $selecting)
                             <div class="flex items-center gap-3 rounded-xl bg-canvas px-3 py-2.5">
                                 <span class="grow text-sm font-semibold">{{ $card->lastResult }}</span>
                                 <button type="button" wire:click="undo({{ $card->id }})" class="h-11 shrink-0 rounded-[10px] border border-ink/12 bg-surface px-3.5 text-sm font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Undo</button>
                             </div>
                         @endif
 
-                        @if ($card->settle !== null)
+                        @if ($card->settle !== null && ! $selecting)
                             <div role="group" aria-labelledby="settle-{{ $card->id }}" class="flex flex-col gap-2">
                                 <span id="settle-{{ $card->id }}" class="text-[13px] text-muted">{{ $card->settle['prompt'] }}</span>
 
@@ -194,7 +257,7 @@
                                     <span class="text-[13px]">Payout {{ $card->result['payout'] }} · profit {{ $card->result['profit'] }}</span>
                                 </div>
 
-                                @if ($card->canUndo)
+                                @if ($card->canUndo && ! $selecting)
                                     <button type="button" wire:click="undo({{ $card->id }})" class="h-11 shrink-0 rounded-[10px] border border-ink/12 bg-surface px-3.5 text-sm font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Undo</button>
                                 @endif
                             </div>
@@ -271,6 +334,15 @@
                     <p class="text-xs text-muted">Settled bets count on the date of their event, open bets on the day they were placed.</p>
                 </div>
 
+                @if ($importBatches !== [] || $importBatch !== '')
+                    <x-select wire:model.live="importBatch" label="Import">
+                        <x-select.option value="">All bets</x-select.option>
+                        @foreach ($importBatches as $option)
+                            <x-select.option value="{{ $option['id'] }}" wire:key="import-{{ $option['id'] }}">{{ $option['label'] }}</x-select.option>
+                        @endforeach
+                    </x-select>
+                @endif
+
                 <div class="flex gap-2">
                     @if ($chips !== [])
                         <flux:button wire:click="clearFilters">Clear filters</flux:button>
@@ -282,6 +354,38 @@
                         <flux:button variant="primary">Show {{ $matchCount }}</flux:button>
                     </flux:modal.close>
                 </div>
+            </div>
+        </flux:modal>
+
+        <flux:modal name="bulk-tag" class="w-full max-w-lg">
+            <div class="flex flex-col gap-5">
+                <flux:heading size="lg">Tag {{ $selectedCount }}</flux:heading>
+
+                @if ($tags->isEmpty())
+                    <flux:text>You have no tags yet. Add them under Lists, or on a bet.</flux:text>
+
+                    <div class="flex justify-end">
+                        <flux:modal.close>
+                            <flux:button variant="filled">Close</flux:button>
+                        </flux:modal.close>
+                    </div>
+                @else
+                    <x-select wire:model="bulkTag" label="Tag to add or remove">
+                        <x-select.option value="">Choose a tag</x-select.option>
+                        @foreach ($tags as $option)
+                            <x-select.option value="{{ $option->id }}" wire:key="bulk-tag-{{ $option->id }}">{{ $option->name }}</x-select.option>
+                        @endforeach
+                    </x-select>
+
+                    <div class="flex flex-wrap justify-end gap-2">
+                        <flux:modal.close>
+                            <flux:button variant="filled">Cancel</flux:button>
+                        </flux:modal.close>
+
+                        <flux:button wire:click="removeTagFromSelected">Remove from {{ $selectedCount }}</flux:button>
+                        <flux:button variant="primary" wire:click="addTagToSelected">Add to {{ $selectedCount }}</flux:button>
+                    </div>
+                @endif
             </div>
         </flux:modal>
     @endif

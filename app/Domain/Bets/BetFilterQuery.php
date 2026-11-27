@@ -8,6 +8,7 @@ use App\Models\Bet;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use stdClass;
 
 /**
  * The conditions that pick a user's bets: the filters statistics and the bets list share
@@ -103,6 +104,42 @@ final class BetFilterQuery
                 });
             }
         });
+    }
+
+    /**
+     * Limit the bets to those of one import (`import_batch`). An empty batch id changes
+     * nothing; an id that isn't one of the user's imports matches no bets.
+     *
+     * @param  Builder<Bet>  $query
+     * @return Builder<Bet>
+     */
+    public function inImportBatch(Builder $query, string $batchId): Builder
+    {
+        return $batchId === '' ? $query : $query->where('bets.import_batch', $batchId);
+    }
+
+    /**
+     * The user's imports that still have bets, newest first: each batch with the time its
+     * first bet was saved and its number of bets.
+     *
+     * @return list<ImportBatch>
+     */
+    public function importBatches(User $user): array
+    {
+        return $user->bets()->getQuery()->toBase()
+            ->whereNotNull('import_batch')
+            ->groupBy('import_batch')
+            ->selectRaw('import_batch, MIN(created_at) AS imported_at, COUNT(*) AS bet_count')
+            ->orderByDesc('imported_at')
+            ->orderBy('import_batch')
+            ->get()
+            ->map(fn (stdClass $row): ImportBatch => new ImportBatch(
+                (string) $row->import_batch,
+                CarbonImmutable::parse((string) $row->imported_at, 'UTC'),
+                (int) $row->bet_count,
+            ))
+            ->values()
+            ->all();
     }
 
     /**

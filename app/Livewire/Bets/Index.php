@@ -3,6 +3,8 @@
 namespace App\Livewire\Bets;
 
 use App\Domain\Bets\BetFilterQuery;
+use App\Domain\Bets\BulkBetActions;
+use App\Domain\Bets\ImportBatch;
 use App\Domain\Bets\SettleBet;
 use App\Domain\BetStatus;
 use App\Domain\BetType;
@@ -13,8 +15,10 @@ use App\Domain\Statistics\StatisticsFilter;
 use App\Models\Bet;
 use App\Models\Competition;
 use App\Models\Selection;
+use App\Models\Tag;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -32,7 +36,9 @@ use Livewire\WithPagination;
  * The bets list: a text search, Open / Settled / All tabs, filters (the statistics
  * page's conditions, through BetFilterQuery) shown as removable chips, sorting, and
  * result buttons that settle open bets in place, with Undo. The search and every filter
- * are in the URL, so a filtered list can be linked to.
+ * are in the URL, so a filtered list can be linked to. A Select mode ticks bets (or every
+ * bet that matches) to delete them or add or remove a tag at once; with the import batch
+ * filter that undoes an import.
  */
 #[Title('Bets')]
 class Index extends Component
@@ -50,7 +56,7 @@ class Index extends Component
      * The filter properties (the search not included). Team, odds band and free bets are
      * set only by a link (from a statistics row), so they have a chip but no field.
      */
-    public const FILTERS = ['bookmaker', 'sport', 'competition', 'team', 'market', 'tipster', 'tag', 'type', 'odds', 'freeBets', 'from', 'to'];
+    public const FILTERS = ['bookmaker', 'sport', 'competition', 'team', 'market', 'tipster', 'tag', 'type', 'odds', 'freeBets', 'from', 'to', 'importBatch'];
 
     /**
      * The URL value of an entry filter that picks the bets without such an entry.
@@ -133,6 +139,44 @@ class Index extends Component
     public string $to = '';
 
     /**
+     * The id of an import (`bets.import_batch`): only the bets of that import; empty for
+     * every bet. The import page links to the list with its new batch.
+     */
+    #[Url(as: 'batch')]
+    public string $importBatch = '';
+
+    /**
+     * Whether the cards have checkboxes, for the bulk actions.
+     */
+    public bool $selecting = false;
+
+    /**
+     * Ids of the ticked bets, as the browser sent them; every action looks them up again
+     * through the user's own bets. Checkbox values arrive as strings, but nothing stops a
+     * request from sending anything else.
+     *
+     * @var array<int, mixed>
+     */
+    public array $selected = [];
+
+    /**
+     * Whether every bet that matches the tab, search and filters is selected (on every
+     * page), instead of the ticked ones.
+     */
+    public bool $selectsAllMatching = false;
+
+    /**
+     * The id of the tag to add to or remove from the selected bets.
+     */
+    public string $bulkTag = '';
+
+    /**
+     * What the last bulk action did ("3 bets deleted."), shown until the next one.
+     */
+    #[Locked]
+    public ?string $notice = null;
+
+    /**
      * The latest result set from this page on each bet, which its card offers to undo:
      * bet id => the selection and the result it was given.
      *
@@ -153,7 +197,8 @@ class Index extends Component
 
     /**
      * Every change of tab, search, filter or order starts again at page 1; a new tab also
-     * starts with its own default order.
+     * starts with its own default order. A new tab, search or filter changes which bets
+     * there are to select, so it clears the selection.
      */
     public function updated(string $property): void
     {
@@ -163,6 +208,10 @@ class Index extends Component
 
         if ($property === 'status') {
             $this->sort = '';
+        }
+
+        if ($property !== 'sort') {
+            $this->clearSelection();
         }
 
         $this->resetPage();
@@ -235,6 +284,7 @@ class Index extends Component
         }
 
         $this->reset(...$properties);
+        $this->clearSelection();
         $this->resetPage();
     }
 
@@ -244,6 +294,7 @@ class Index extends Component
     public function clearFilters(): void
     {
         $this->reset(...self::FILTERS);
+        $this->clearSelection();
         $this->resetPage();
     }
 
@@ -253,7 +304,97 @@ class Index extends Component
     public function clearAll(): void
     {
         $this->reset('search', ...self::FILTERS);
+        $this->clearSelection();
         $this->resetPage();
+    }
+
+    /**
+     * Show the checkboxes, with nothing ticked.
+     */
+    public function startSelecting(): void
+    {
+        $this->clearSelection();
+        $this->selecting = true;
+        $this->notice = null;
+    }
+
+    /**
+     * Leave the Select mode, forgetting the selection.
+     */
+    public function stopSelecting(): void
+    {
+        $this->clearSelection();
+        $this->selecting = false;
+    }
+
+    /**
+     * Select every bet that matches the tab, search and filters, on every page.
+     */
+    public function selectAllMatching(): void
+    {
+        $this->selecting = true;
+        $this->selectsAllMatching = true;
+    }
+
+    /**
+     * Untick every bet, staying in the Select mode.
+     */
+    public function clearSelection(): void
+    {
+        $this->reset('selected', 'selectsAllMatching', 'bulkTag');
+        $this->resetValidation('bulkTag');
+    }
+
+    /**
+     * Delete the selected bets. An import batch filter whose bets are all gone is
+     * cleared, as nothing is left of that import.
+     */
+    public function deleteSelected(BulkBetActions $actions): void
+    {
+        $user = $this->user();
+        $deleted = $actions->delete($user, $this->selectedIds($user));
+
+        if ($this->importBatch !== '' && $user->bets()->where('import_batch', $this->importBatch)->doesntExist()) {
+            $this->reset('importBatch');
+        }
+
+        $this->finishBulkAction(Str::ucfirst(self::betCount($deleted)).' deleted.');
+    }
+
+    /**
+     * Give the selected bets the chosen tag.
+     */
+    public function addTagToSelected(BulkBetActions $actions): void
+    {
+        $user = $this->user();
+        $tag = $this->chosenTag($user);
+
+        if ($tag === null) {
+            return;
+        }
+
+        $changed = $actions->addTag($user, $tag, $this->selectedIds($user));
+
+        Flux::modal('bulk-tag')->close();
+        $this->finishBulkAction("Tag {$tag->name} added to ".self::betCount($changed).'.');
+    }
+
+    /**
+     * Take the chosen tag off the selected bets.
+     */
+    public function removeTagFromSelected(BulkBetActions $actions): void
+    {
+        $user = $this->user();
+        $tag = $this->chosenTag($user);
+
+        if ($tag === null) {
+            return;
+        }
+
+        $changed = $actions->removeTag($user, $tag, $this->selectedIds($user));
+
+        Flux::modal('bulk-tag')->close();
+        $this->finishBulkAction("Tag {$tag->name} removed from ".self::betCount($changed).'.');
     }
 
     public function render(): View
@@ -264,7 +405,9 @@ class Index extends Component
         $bets = $this->bets();
         $shown = $this->pinned === [] ? $bets->getCollection() : $this->pinnedBets($user);
 
-        $chips = $this->chips($user);
+        $importBatches = app(BetFilterQuery::class)->importBatches($user);
+        $chips = $this->chips($user, $importBatches);
+        $tickedCount = count($this->tickedIds());
         $isSearching = $this->searchTerm() !== '';
         $isFiltered = $chips !== [];
         $openCount = $this->matchingBets($user, BetStatus::Open)->count();
@@ -306,6 +449,13 @@ class Index extends Component
             'tipsters' => $user->tipsters()->orderBy('name')->get(['id', 'name']),
             'tags' => $user->tags()->orderBy('name')->get(['id', 'name']),
             'types' => self::typeLabels(),
+            'importBatches' => array_map(fn (ImportBatch $batch): array => [
+                'id' => $batch->id,
+                'label' => $localTime->toLocal($batch->importedAt)->format('j M Y H:i').' · '.self::betCount($batch->betCount),
+            ], $importBatches),
+            'hasSelection' => $this->selectsAllMatching || $tickedCount > 0,
+            'selectedCount' => self::betCount($this->selectsAllMatching ? $bets->total() : $tickedCount),
+            'matchingTotal' => $bets->total(),
         ]);
     }
 
@@ -379,7 +529,7 @@ class Index extends Component
             oddsBand: OddsBand::tryFrom($this->odds),
         );
 
-        return $query->search($query->filtered($user, $filter), $this->searchTerm());
+        return $query->inImportBatch($query->search($query->filtered($user, $filter), $this->searchTerm()), $this->importBatch);
     }
 
     /**
@@ -420,11 +570,12 @@ class Index extends Component
     /**
      * A removable chip for each filter in use, naming the entry ("No competition" for
      * none). An id that isn't one of the user's entries still filters (so no bets match)
-     * and shows as "unknown".
+     * and shows as "unknown", as does an import batch that isn't one of the user's.
      *
+     * @param  list<ImportBatch>  $importBatches  the user's imports
      * @return list<array{filter: string, label: string}>
      */
-    private function chips(User $user): array
+    private function chips(User $user, array $importBatches): array
     {
         $entries = [
             'bookmaker' => [Dimension::Bookmaker, $user->bookmakers()],
@@ -474,7 +625,80 @@ class Index extends Component
             $chips[] = ['filter' => 'dates', 'label' => 'Until '.$to->format('j M Y')];
         }
 
+        if ($this->importBatch !== '') {
+            $batch = collect($importBatches)->first(fn (ImportBatch $batch): bool => $batch->id === $this->importBatch);
+            $chips[] = ['filter' => 'importBatch', 'label' => $batch === null
+                ? 'Import: unknown'
+                : 'Imported '.$user->localTime()->toLocal($batch->importedAt)->format('j M Y H:i')];
+        }
+
         return $chips;
+    }
+
+    /**
+     * The ids of the bets to change: every bet that matches, or the ticked ones.
+     *
+     * @return list<int>
+     */
+    private function selectedIds(User $user): array
+    {
+        if (! $this->selectsAllMatching) {
+            return $this->tickedIds();
+        }
+
+        return array_values(array_map(
+            fn (mixed $id): int => (int) $id,
+            $this->matchingBets($user, $this->tab()->status())->pluck('bets.id')->all(),
+        ));
+    }
+
+    /**
+     * The ticked ids that look like ids; whether they are the user's bets is up to the
+     * query that uses them.
+     *
+     * @return list<int>
+     */
+    private function tickedIds(): array
+    {
+        $ids = array_filter($this->selected, fn (mixed $id): bool => is_int($id) || (is_string($id) && ctype_digit($id)));
+
+        return array_values(array_unique(array_map(fn (mixed $id): int => (int) $id, $ids)));
+    }
+
+    /**
+     * The tag chosen for adding or removing, if it is one of the user's; else null, with
+     * an error on the field.
+     */
+    private function chosenTag(User $user): ?Tag
+    {
+        $tag = ctype_digit($this->bulkTag) ? $user->tags()->find((int) $this->bulkTag) : null;
+
+        if ($tag === null) {
+            $this->addError('bulkTag', 'Choose one of your tags.');
+        }
+
+        return $tag;
+    }
+
+    /**
+     * Leave the Select mode after a bulk action and say what it did. The page starts again
+     * at page 1 and forgets what could be undone, as bets may have gone.
+     */
+    private function finishBulkAction(string $notice): void
+    {
+        $this->stopSelecting();
+        $this->undoable = [];
+        $this->pinned = [];
+        $this->notice = $notice;
+        $this->resetPage();
+    }
+
+    /**
+     * "1 bet", "12 bets".
+     */
+    private static function betCount(int $count): string
+    {
+        return $count.' '.Str::plural('bet', $count);
     }
 
     /**

@@ -423,7 +423,7 @@ test for anything that reads or changes user data.
         selection.
       - Tests: existing bet-form tests keep passing; a query-count test for a 10-leg
         accumulator; isolation (suggestions never include another user's entries).
-- [ ] **6.15 Bulk actions and undoing an import.** A wrong import of 500 bets can only be
+- [x] **6.15 Bulk actions and undoing an import.** A wrong import of 500 bets can only be
       removed one bet at a time (the 4.1b note says so).
       - Bets list: a "Select" mode with checkboxes, "Select all n matching", and the
         actions Delete and Add/Remove tag. Every action re-queries the ids through

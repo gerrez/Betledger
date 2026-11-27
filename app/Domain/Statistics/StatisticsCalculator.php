@@ -24,8 +24,10 @@ final class StatisticsCalculator
 
         $turnover = $this->sumOfStakes(array_filter($settled, fn (BetFigures $bet): bool => ! $bet->isFreeBet));
         $profit = array_sum(array_map(fn (BetFigures $bet): int => $bet->profit ?? 0, $settled));
-        $winners = count(array_filter($settled, fn (BetFigures $bet): bool => $bet->isWin()));
-        $losers = count(array_filter($settled, fn (BetFigures $bet): bool => $bet->isLoss()));
+        $decided = array_values(array_filter($settled, fn (BetFigures $bet): bool => $bet->isWin() || $bet->isLoss()));
+        $winners = count(array_filter($decided, fn (BetFigures $bet): bool => $bet->isWin()));
+        $losers = count($decided) - $winners;
+        $settledOdds = array_map(fn (BetFigures $bet): string => $bet->totalOdds, $settled);
         $beatClose = count(array_filter($clvs, fn (string $clv): bool => Decimal::compare($clv, '0') > 0));
 
         return new Totals(
@@ -37,7 +39,9 @@ final class StatisticsCalculator
             strikeRate: $this->ratio($winners, $winners + $losers),
             winningBets: $winners,
             losingBets: $losers,
-            averageOdds: $this->mean(array_map(fn (BetFigures $bet): string => $bet->totalOdds, $settled)),
+            breakEvenStrikeRate: $this->mean(array_map(fn (BetFigures $bet): string => Decimal::divide('1', $bet->totalOdds), $decided)),
+            averageOdds: $this->mean($settledOdds),
+            medianOdds: $this->median($settledOdds),
             averageClv: $this->mean($clvs),
             clvBets: count($clvs),
             beatCloseBets: $beatClose,
@@ -251,6 +255,25 @@ final class StatisticsCalculator
         }
 
         return Decimal::divide($sum, (string) count($values));
+    }
+
+    /**
+     * The middle value, or the mean of the middle two for an even number of values.
+     *
+     * @param  list<string>  $values  decimal strings
+     */
+    private function median(array $values): ?string
+    {
+        if ($values === []) {
+            return null;
+        }
+
+        usort($values, fn (string $a, string $b): int => Decimal::compare($a, $b));
+        $middle = intdiv(count($values), 2);
+
+        return count($values) % 2 === 1
+            ? $values[$middle]
+            : $this->mean([$values[$middle - 1], $values[$middle]]);
     }
 
     private function earliest(?CarbonImmutable $a, ?CarbonImmutable $b): ?CarbonImmutable

@@ -290,7 +290,7 @@
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full min-w-[560px] border-collapse text-sm">
+                        <table class="w-full min-w-[640px] border-collapse text-sm">
                             <thead>
                                 <tr class="text-right text-xs text-muted">
                                     <th scope="col" class="border-b border-line py-2 pr-2 text-left font-medium">{{ $breakdownBy->label() }}</th>
@@ -299,6 +299,7 @@
                                     <th scope="col" class="border-b border-line p-2 font-medium">Profit</th>
                                     <th scope="col" class="border-b border-line p-2 font-medium">ROI</th>
                                     <th scope="col" class="border-b border-line p-2 font-medium">Strike</th>
+                                    <th scope="col" class="border-b border-line p-2 font-medium">Break-even</th>
                                     <th scope="col" class="border-b border-line py-2 pl-2 font-medium">CLV</th>
                                 </tr>
                             </thead>
@@ -327,6 +328,7 @@
                                             'text-loss' => $row['totals']->roiTone === 'loss',
                                         ])>{{ $row['totals']->roi }}</td>
                                         <td class="border-b border-line p-2">{{ $row['totals']->strikeRate }}</td>
+                                        <td class="border-b border-line p-2 text-muted">{{ $row['totals']->breakEvenStrikeRate }}</td>
                                         <td class="border-b border-line py-2 pl-2">{{ $row['totals']->averageClv }}</td>
                                     </tr>
                                 @endforeach
@@ -343,12 +345,12 @@
                     <section class="flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-5">
                         <div class="flex flex-col gap-1">
                             <h2 class="text-[17px] font-semibold">Odds ranges</h2>
-                            <p class="text-[13px] text-muted">ROI by total odds of the bet</p>
+                            <p class="text-[13px] text-muted">ROI and strike rate by total odds of the bet, with the strike rate those odds need to break even</p>
                         </div>
 
                         <ul class="flex flex-col gap-3">
                             @foreach ($oddsBands as $band)
-                                <li wire:key="band-{{ $loop->index }}" class="grid grid-cols-[88px_minmax(0,1fr)_64px] items-center gap-2.5 text-[13px]">
+                                <li wire:key="band-{{ $loop->index }}" class="grid grid-cols-[80px_minmax(0,1fr)_56px_76px] items-center gap-2.5 text-[13px]">
                                     <span class="flex flex-col">
                                         <span class="font-semibold">{{ $band['label'] }}</span>
                                         <span class="text-xs text-muted">{{ $band['totals']->settledBets }} {{ Str::plural('bet', $band['totals']->settledBets) }}</span>
@@ -373,6 +375,13 @@
                                         'text-loss' => $band['totals']->roiTone === 'loss',
                                         'text-muted' => $band['totals']->roiTone === 'even',
                                     ])>{{ $band['totals']->roi }}</span>
+
+                                    <span class="flex flex-col text-right">
+                                        <span>{{ $band['totals']->strikeRate }}</span>
+                                        @if ($band['breakEven'] !== null)
+                                            <span class="text-xs whitespace-nowrap text-muted">{{ $band['breakEven'] }}</span>
+                                        @endif
+                                    </span>
                                 </li>
                             @endforeach
                         </ul>

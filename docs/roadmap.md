@@ -307,7 +307,7 @@ test for anything that reads or changes user data.
       - Unit tests against the 2.12 fixture set with hand-checked numbers, including:
         no settled bets, only wins, a drawdown that has recovered, free bets.
       - Depends on 6.1 (bets must be in event order for streaks to mean anything).
-- [ ] **6.6 Break-even strike rate.** A strike rate of 45 % says nothing without the
+- [x] **6.6 Break-even strike rate.** A strike rate of 45 % says nothing without the
       odds, and "average odds" is an arithmetic mean of `total_odds`
       (`StatisticsCalculator`), which one accumulator at 50.0 among twenty bets at 2.0
       turns into 4.3.

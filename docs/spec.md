@@ -225,8 +225,8 @@ the bet's own `exchange_rate` (rounded half up to minor units per bet).
 `event_at`; open bets by placed date), bookmaker, sport, competition, team, market, tipster, tag, bet type, and
 **include/exclude free bets**.
 
-**Totals:** number of bets (settled/open), turnover, profit, ROI, strike rate, average
-odds, average CLV, open stake.
+**Totals:** number of bets (settled/open), turnover, profit, ROI, strike rate,
+break-even strike rate, average and median odds, average CLV, open stake.
 
 - **Turnover** = sum of stakes of settled **cash** bets (free bet stakes aren't money risked).
 - **ROI** = profit ÷ turnover. Free bet profit is included in profit when free bets are
@@ -235,7 +235,14 @@ odds, average CLV, open stake.
   > 0 and loses when its profit is < 0, or when it is a free bet whose bet factor is below
   1 (lost or ½ lost: it pays 0, profit 0, but it lost). Pushes (void) are excluded
   (decided).
-- **Average odds** = mean `total_odds` of settled bets.
+- **Break-even strike rate** (6.6) = mean of `1 ÷ total_odds` over the bets the strike
+  rate counts (wins and losses; no pushes), worked out with bcmath (each `1 ÷ total_odds`
+  to 10 places) and rounded half up once, for display. The strike rate those bets need
+  to make neither a profit nor a loss at level stakes: a strike rate above it means a
+  profit.
+- **Average odds** = mean `total_odds` of settled bets; an arithmetic mean, so one long
+  shot pulls it up. **Median odds** = the middle `total_odds` of settled bets (the mean
+  of the middle two for an even number).
 - **CLV** per bet = `total_odds ÷ product(closing_odds) − 1`, only for bets where every
   selection has closing odds. Average CLV = mean over those bets; show how many bets it
   covers.
@@ -901,6 +908,15 @@ same items. Touch targets ≥ 44 px.
     tiles: max and current drawdown, longest winning and losing streak, current streak,
     biggest win and loss (each with a "View bet" link and its event date) and average
     stake. While no bet in the range is settled it shows a line instead.
+  - *Break-even strike rate (assumed in 6.6).* It covers exactly the bets the strike
+    rate counts, so a lost free bet is in it at its odds, although a free bet (stake not
+    returned) needs no strike rate to break even; exclude free bets with the toggle for
+    the cash-bet figure. On the statistics page it replaces the strike-rate tile's
+    "pushes excluded" line ("needs 51.3% to break even"; that line comes back while no
+    bet is a win or a loss), is a "Break-even" column in the breakdown table and a
+    "needs …" line under each odds range's strike rate. The median odds fit the
+    average-odds tile as its second line ("median 2.05"), in place of "settled bets".
+    Home's tiles are unchanged.
   - *Roadmap order.* 4.5 (merging list entries) is suggested ahead of 4.4 (cash out),
     since the import creates differently spelled entries; 4.7 (automatic exchange
     rates) and 4.8 (each-way and system bets) are suggested last, and 4.7 could be

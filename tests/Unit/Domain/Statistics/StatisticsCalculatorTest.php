@@ -6,12 +6,15 @@ use App\Domain\BetType;
 use App\Domain\Statistics\BetFigures;
 use App\Domain\Statistics\BreakdownRow;
 use App\Domain\Statistics\Dimension;
+use App\Domain\Statistics\Drawdown;
 use App\Domain\Statistics\Group;
 use App\Domain\Statistics\OddsBand;
 use App\Domain\Statistics\OddsBandRow;
 use App\Domain\Statistics\Period;
 use App\Domain\Statistics\ProfitPoint;
+use App\Domain\Statistics\RiskFigures;
 use App\Domain\Statistics\StatisticsCalculator;
+use App\Domain\Statistics\Streak;
 use App\Domain\Statistics\Totals;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
@@ -239,6 +242,158 @@ class StatisticsCalculatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $this->calculator->profitOverTime([$this->bet('Unibet', 1000, 1000, '2', '2.0000', null, [$this->leg('Football', 'Premier League')])]);
+    }
+
+    /**
+     * In event order the cumulative profit runs 2200, 1322, 3022, 5362, 4021, 4021 (void),
+     * 4021 (lost free bet), 4524, 7024: the largest fall is 5362 → 4021 and it has
+     * recovered by the last bet. Win/loss run: W L W W L (push) L W W.
+     */
+    public function test_risk_figures_of_the_fixture(): void
+    {
+        $bets = $this->bets();
+        $risk = $this->calculator->risk($bets);
+
+        $this->assertEquals(new Drawdown(1341, $this->date('2026-10-05 23:30'), $this->date('2026-10-08 15:00')), $risk->maxDrawdown);
+        $this->assertNull($risk->currentDrawdown);
+        $this->assertSame([2, 2], [$risk->longestWinningStreak, $risk->longestLosingStreak]);
+        $this->assertEquals(new Streak(true, 2), $risk->currentStreak);
+        $this->assertSame($bets[8], $risk->biggestWin);
+        $this->assertSame($bets[4], $risk->biggestLoss);
+        // Settled cash stakes 14431 over 7 bets = 2061.57…
+        $this->assertSame(2062, $risk->averageStake);
+    }
+
+    /**
+     * Without the two free bets: 2200, 1322, 3022, 1681, 1681 (void), 2184, 4684. The
+     * peak before the largest fall is now 3 October, and the losing run is only one.
+     */
+    public function test_risk_figures_count_free_bets_only_when_they_are_in_the_set(): void
+    {
+        $cash = array_values(array_filter($this->bets(), fn (BetFigures $bet): bool => ! $bet->isFreeBet));
+        $risk = $this->calculator->risk($cash);
+
+        $this->assertEquals(new Drawdown(1341, $this->date('2026-10-03 22:00'), $this->date('2026-10-08 15:00')), $risk->maxDrawdown);
+        $this->assertSame([2, 1], [$risk->longestWinningStreak, $risk->longestLosingStreak]);
+        $this->assertSame(2062, $risk->averageStake);
+    }
+
+    public function test_risk_figures_without_settled_bets(): void
+    {
+        $open = array_values(array_filter($this->bets(), fn (BetFigures $bet): bool => ! $bet->isSettled()));
+
+        $this->assertEquals(new RiskFigures(null, null, 0, 0, null, null, null, null), $this->calculator->risk($open));
+    }
+
+    public function test_risk_figures_with_only_wins_have_no_drawdown_or_loss(): void
+    {
+        $risk = $this->calculator->risk([
+            $this->settled(1000, 500, '2026-10-01'),
+            $this->settled(1000, 1200, '2026-10-02'),
+            $this->settled(1000, 300, '2026-10-03'),
+        ]);
+
+        $this->assertNull($risk->maxDrawdown);
+        $this->assertNull($risk->currentDrawdown);
+        $this->assertSame([3, 0], [$risk->longestWinningStreak, $risk->longestLosingStreak]);
+        $this->assertEquals(new Streak(true, 3), $risk->currentStreak);
+        $this->assertSame(1200, $risk->biggestWin?->profit);
+        $this->assertNull($risk->biggestLoss);
+    }
+
+    /**
+     * Cumulative 1000, 200, 700, 600: the largest fall (800) is over, but the profit is
+     * still 400 below the peak of 1 October.
+     */
+    public function test_current_drawdown_is_the_fall_from_the_peak_to_the_last_bet(): void
+    {
+        $risk = $this->calculator->risk([
+            $this->settled(1000, 1000, '2026-10-01'),
+            $this->settled(800, -800, '2026-10-02'),
+            $this->settled(500, 500, '2026-10-03'),
+            $this->settled(100, -100, '2026-10-04'),
+        ]);
+
+        $this->assertEquals(new Drawdown(800, $this->date('2026-10-01'), $this->date('2026-10-02')), $risk->maxDrawdown);
+        $this->assertEquals(new Drawdown(400, $this->date('2026-10-01'), $this->date('2026-10-04')), $risk->currentDrawdown);
+        $this->assertEquals(new Streak(false, 1), $risk->currentStreak);
+    }
+
+    public function test_a_drawdown_from_the_first_bet_has_no_peak_date(): void
+    {
+        $risk = $this->calculator->risk([
+            $this->settled(500, -500, '2026-10-01'),
+            $this->settled(200, 200, '2026-10-02'),
+        ]);
+
+        $this->assertEquals(new Drawdown(500, null, $this->date('2026-10-01')), $risk->maxDrawdown);
+        $this->assertEquals(new Drawdown(300, null, $this->date('2026-10-02')), $risk->currentDrawdown);
+    }
+
+    /**
+     * In event order, ties by id: +100 (id 2), −300 (id 3), +50 (id 1): cumulative 100,
+     * −200, −150. Taken in the order given, or by time alone, the peak would differ.
+     */
+    public function test_risk_figures_take_bets_in_event_order_with_ties_by_id(): void
+    {
+        $risk = $this->calculator->risk([
+            $this->settled(50, 50, '2026-10-02 12:00', betId: 1),
+            $this->settled(300, -300, '2026-10-01 18:00', betId: 3),
+            $this->settled(100, 100, '2026-10-01 18:00', betId: 2),
+        ]);
+
+        $this->assertEquals(new Drawdown(300, $this->date('2026-10-01 18:00'), $this->date('2026-10-01 18:00')), $risk->maxDrawdown);
+        $this->assertEquals(new Drawdown(250, $this->date('2026-10-01 18:00'), $this->date('2026-10-02 12:00')), $risk->currentDrawdown);
+        $this->assertEquals(new Streak(true, 1), $risk->currentStreak);
+    }
+
+    public function test_pushes_neither_extend_nor_break_a_streak(): void
+    {
+        $risk = $this->calculator->risk([
+            $this->settled(100, -100, '2026-10-01'),
+            $this->settled(100, 0, '2026-10-02', factor: '1'),
+            $this->settled(100, -100, '2026-10-03'),
+        ]);
+
+        $this->assertSame(2, $risk->longestLosingStreak);
+        $this->assertEquals(new Streak(false, 2), $risk->currentStreak);
+    }
+
+    public function test_average_stake_leaves_out_free_bets_and_rounds_half_up_once(): void
+    {
+        $risk = $this->calculator->risk([
+            $this->settled(1000, 1000, '2026-10-01'),
+            $this->settled(1001, -1001, '2026-10-02'),
+            $this->settled(5000, 5000, '2026-10-03', isFreeBet: true),
+        ]);
+
+        $this->assertSame(1001, $risk->averageStake);
+    }
+
+    public function test_risk_figures_need_the_event_date_of_every_settled_bet(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->calculator->risk([$this->bet('Unibet', 1000, 1000, '2', '2.0000', null, [$this->leg('Football', 'Premier League')])]);
+    }
+
+    /**
+     * A settled single at Unibet (EUR) on football; the factor follows from the profit
+     * unless given.
+     */
+    private function settled(int $stake, int $profit, string $eventAt, ?string $factor = null, bool $isFreeBet = false, ?int $betId = null): BetFigures
+    {
+        return new BetFigures(
+            stake: $stake,
+            profit: $profit,
+            factor: $factor ?? ($profit > 0 ? '2' : ($profit < 0 ? '0' : '1')),
+            exchangeRate: '1',
+            type: BetType::Single,
+            isFreeBet: $isFreeBet,
+            totalOdds: '2.0000',
+            eventAt: CarbonImmutable::parse($eventAt),
+            betId: $betId,
+        );
     }
 
     /**

@@ -240,6 +240,24 @@ odds, average CLV, open stake.
   selection has closing odds. Average CLV = mean over those bets; show how many bets it
   covers.
 
+**Risk figures** (6.5) are worked out over the settled bets that pass the filters, taken
+in event order (`event_at`, ties by bet id), free bets included when they are:
+
+- **Max drawdown** = the largest fall of cumulative profit from an earlier peak, with the
+  event dates of the peak and the low. Cumulative profit starts at 0, so a run of losses
+  from the first bet falls from "the start". The peak is the last bet that reached it.
+  0 when cumulative profit never fell; on a tie, the first such fall.
+- **Current drawdown** = the highest cumulative profit so far minus the cumulative
+  profit after the last bet, with the date of that peak; 0 at the peak.
+- **Longest winning / losing streak** = most wins or losses in a row, by the strike
+  rate's win and loss (so a lost free bet is a loss); pushes neither extend nor break a
+  streak. **Current streak** = the streak the last win or loss belongs to.
+- **Biggest win / biggest loss** = the bet with the highest profit above 0 / lowest
+  profit below 0 (a lost free bet loses no money, so it is never the biggest loss);
+  the earliest on a tie. The page links to it.
+- **Average stake** = turnover ÷ the number of settled cash bets, rounded half up to
+  minor units once.
+
 **Views:**
 
 1. **Profit over time:** cumulative profit line, grouped by day/week/month (automatic by
@@ -875,6 +893,14 @@ same items. Touch targets ≥ 44 px.
       competition. An accumulator stays an accumulator with the same number of
       selections. Everything else is cleared, including market, teams, start, free bet,
       notes, probability and bet value. Only the New bet form has the button.
+  - *Risk figures (assumed in 6.5).* Average stake is over **settled** cash bets, like
+    turnover (open stakes are already the "Open" tile). Drawdowns are amounts in the
+    base currency, not percentages of a peak (a peak can be 0 or negative). Drawdowns and
+    streaks run over the bets in the chosen range and filters only, as everything else
+    on the page does, so "All time" gives the lifetime figures. The panel has eight
+    tiles: max and current drawdown, longest winning and losing streak, current streak,
+    biggest win and loss (each with a "View bet" link and its event date) and average
+    stake. While no bet in the range is settled it shows a line instead.
   - *Roadmap order.* 4.5 (merging list entries) is suggested ahead of 4.4 (cash out),
     since the import creates differently spelled entries; 4.7 (automatic exchange
     rates) and 4.8 (each-way and system bets) are suggested last, and 4.7 could be

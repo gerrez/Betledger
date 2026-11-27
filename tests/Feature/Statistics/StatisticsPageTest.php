@@ -178,9 +178,39 @@ class StatisticsPageTest extends TestCase
             ->assertDontSee('Cumulative profit over');
     }
 
+    public function test_the_risk_panel_follows_the_range_and_filters_and_links_to_the_biggest_win_and_loss(): void
+    {
+        ['won' => $won, 'lost' => $lost] = $this->seedBets();
+        $this->actingAs($this->user);
+
+        // Last 90 days: +110.00 on 10 Oct, then −58.50 on 12 Oct; stakes 100.00 and 58.50.
+        Livewire::test(Index::class)
+            ->assertSeeInOrder(['Risk', 'Max drawdown', '−58.50', '10 Oct – 12 Oct 2026'])
+            ->assertSeeInOrder(['Current drawdown', '−58.50', 'Since the peak on 10 Oct 2026'])
+            ->assertSeeInOrder(['Longest winning streak', '1', 'Longest losing streak', '1', 'Current streak', '1 loss'])
+            ->assertSeeInOrder(['Biggest win', '+110.00', route('bets.show', $won), 'View bet · 10 Oct 2026'])
+            ->assertSeeInOrder(['Biggest loss', '−58.50', route('bets.show', $lost), 'View bet · 12 Oct 2026'])
+            ->assertSeeInOrder(['Average stake', '79.25', 'settled cash bets'])
+            ->call('useRange', 'all')
+            ->assertSeeInOrder(['Longest winning streak', '2'])
+            ->set('bookmaker', (string) $this->unibet->id)
+            ->assertSeeInOrder(['Max drawdown', '0.00', 'Never below an earlier peak'])
+            ->assertSeeInOrder(['Biggest loss', 'No losing bets']);
+    }
+
+    public function test_the_risk_panel_waits_for_settled_bets(): void
+    {
+        Bet::factory()->forBookmaker($this->unibet)->single('1.80')->create(['stake' => 2000, 'placed_at' => '2026-10-20 12:00']);
+        $this->actingAs($this->user);
+
+        Livewire::test(Index::class)
+            ->assertSee('Risk figures show once bets in this range are settled.')
+            ->assertDontSee('Max drawdown');
+    }
+
     public function test_users_only_see_their_own_bets_and_lists(): void
     {
-        $this->seedBets();
+        ['won' => $ownWin, 'lost' => $ownLoss] = $this->seedBets();
         $other = User::factory()->create();
         $othersBookmaker = Bookmaker::factory()->for($other)->create(['name' => 'Someone Elses Bookie']);
         Bet::factory()->forBookmaker($othersBookmaker)->single('5.00')->settled()->create(['stake' => 99900, 'placed_at' => '2026-10-15 12:00']);
@@ -198,14 +228,16 @@ class StatisticsPageTest extends TestCase
 
         Livewire::test(Index::class)
             ->assertSee(['+3,996.00', '1 settled bet'])
-            ->assertDontSee(['Unibet', 'Football']);
+            ->assertDontSee(['Unibet', 'Football', route('bets.show', $ownWin), route('bets.show', $ownLoss)]);
     }
 
     /**
      * A won single at Unibet on football and a lost one at Bet365 (GBP) on tennis, both
      * settled this month; a won single settled in May; and an open bet placed yesterday.
+     *
+     * @return array{won: Bet, lost: Bet}
      */
-    private function seedBets(): void
+    private function seedBets(): array
     {
         $won = Bet::factory()->forBookmaker($this->unibet)->single('2.10')->settled()->create(['stake' => 10000, 'placed_at' => '2026-10-10 12:00']);
         $this->firstSelection($won)->update(['sport_id' => $this->football->id]);
@@ -218,6 +250,8 @@ class StatisticsPageTest extends TestCase
 
         $open = Bet::factory()->forBookmaker($this->unibet)->single('1.80')->create(['stake' => 2000, 'placed_at' => '2026-10-20 12:00']);
         $this->firstSelection($open)->update(['sport_id' => $this->football->id]);
+
+        return ['won' => $won, 'lost' => $lost];
     }
 
     private function firstSelection(Bet $bet): Selection

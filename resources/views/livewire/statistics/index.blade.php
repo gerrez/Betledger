@@ -161,6 +161,40 @@
                 @endforeach
             </div>
 
+            <section aria-labelledby="risk-heading" class="flex flex-col gap-3.5 rounded-[20px] border border-line bg-surface p-5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 id="risk-heading" class="text-[17px] font-semibold">Risk</h2>
+                    <span class="text-[13px] text-muted">Settled bets in event order</span>
+                </div>
+
+                @if ($totals->settledBets === 0)
+                    <p class="text-sm text-muted">Risk figures show once bets in this range are settled.</p>
+                @else
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        @foreach ($riskTiles as $tile)
+                            <div wire:key="risk-{{ $loop->index }}" class="flex min-w-0 flex-col gap-0.5 rounded-2xl border border-line p-3">
+                                <span class="text-[13px] text-muted">{{ $tile['label'] }}</span>
+                                <span @class([
+                                    'text-xl font-semibold tracking-tight',
+                                    'text-profit' => $tile['tone'] === 'profit',
+                                    'text-loss' => $tile['tone'] === 'loss',
+                                ])>{{ $tile['value'] }}</span>
+                                @if ($tile['betId'] === null)
+                                    <span class="text-xs text-muted">{{ $tile['sub'] }}</span>
+                                @else
+                                    <a
+                                        href="{{ route('bets.show', $tile['betId']) }}"
+                                        wire:navigate
+                                        aria-label="{{ $tile['label'] }}: view the bet of {{ $tile['sub'] }}"
+                                        class="-mb-3 flex min-h-11 items-center text-xs font-medium text-accent-content hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                                    >View bet · {{ $tile['sub'] }}</a>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </section>
+
             <section class="flex flex-col gap-3.5 rounded-[20px] border border-line bg-surface p-5">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h2 class="text-[17px] font-semibold">Profit over time</h2>

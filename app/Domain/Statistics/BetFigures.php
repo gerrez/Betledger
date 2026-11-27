@@ -34,6 +34,7 @@ final readonly class BetFigures
      * @param  list<string|null>  $closingOdds  one per selection, null when it has none
      * @param  array<value-of<Dimension>, list<Group>>  $groups  what the bet counts under per dimension (bet type excepted, which follows from $type); a dimension left out counts it under none
      * @param  CarbonImmutable|null  $eventAt  when the bet was decided (`bets.event_at`), in the user's time zone (StatisticsQuery converts it), so its date is the local day profit over time counts a settled bet on; the bankroll, which has no periods, leaves it out
+     * @param  int|null  $betId  the bet's id, which orders bets with the same event time and lets a page link to the bet; the bankroll leaves it out
      */
     public function __construct(
         int $stake,
@@ -46,6 +47,7 @@ final readonly class BetFigures
         array $closingOdds = [],
         public array $groups = [],
         public ?CarbonImmutable $eventAt = null,
+        public ?int $betId = null,
     ) {
         if (($profit === null) !== ($factor === null)) {
             throw new InvalidArgumentException('A settled bet has a profit and a factor; an open bet has neither.');

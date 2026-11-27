@@ -63,6 +63,7 @@ final class StatisticsQuery
                 Dimension::Team->value => array_merge(...array_values($selections->map(fn (Selection $selection): array => $this->teamGroups($selection))->all())),
             ],
             eventAt: $localTime->toLocal($bet->event_at),
+            betId: $bet->id,
         );
     }
 

@@ -273,6 +273,16 @@ in event order (`event_at`, ties by bet id), free bets included when they are:
    tipster, tag and bet type. Selection-level dimensions (sport, competition, team,
    market): an accumulator counts under **every distinct value its selections have**, so
    breakdown rows can add up to more than the overall total (decided). The UI says so.
+   Also by **month** and **weekday** of the event date (`event_at`, in the user's time
+   zone; 6.8), open bets included by their expected event date.
+   **Order** (6.8): months newest first, weekdays Monday to Sunday, every other dimension
+   most settled bets first, then by name, with the "none" row last. The Bets, Turnover,
+   Profit, ROI, Strike and CLV headers sort the table by that column: highest first, a
+   second click lowest first, a third back to the default; kept in the URL as
+   `sort=<column>&dir=asc|desc`. Sorted, the "none" row ranks with the others, rows
+   without a value for the column (no ROI without turnover, no CLV without closing odds)
+   come last in either direction, and ties keep the default order of values (name,
+   month or weekday).
 3. **Odds ranges:** totals grouped by `total_odds` bands: 1.01–1.50, 1.51–2.00, 2.01–3.00,
    3.01–5.00, 5.01–10.00, 10.01+.
 4. **CLV:** average CLV, share of bets that beat the closing line, and CLV by breakdown.
@@ -284,7 +294,8 @@ choice plus the row's value, so the list shows exactly the bets the row counts. 
 `none` (a selection without one, as in the breakdown). Odds ranges link with
 `odds=<band>` (above the band below's upper bound, up to and including its own). Team,
 `none`, odds range and `free=exclude` are URL-only filters on the list, shown as
-removable chips.
+removable chips. A month links with the days of that month inside the page's range as
+the list's `from`/`to`; weekdays are not linked (the list has no weekday filter).
 
 ## Bankroll
 
@@ -748,10 +759,11 @@ same items. Touch targets ≥ 44 px.
   heading names the base currency; KPI tiles show the symbol), ratios with one decimal,
   "Beat the close" as a whole percentage, and "—" where there is nothing to divide by.
   The breakdown has tabs for sport, bookmaker, tipster and bet type, and "More" for
-  competition, team, market and tag. Its "Bets" column counts settled bets, with "+n
-  open" below when the row has open bets. The note under the table explains that
-  accumulators count under every value (sport, competition, team, market), or that a bet
-  counts under each of its tags. Odds-range bars are full width at ±25 % ROI, as in the
+  competition, team, market, tag, month and weekday (6.8). Its "Bets" column counts
+  settled bets, with "+n open" below when the row has open bets. The note under the
+  table explains that accumulators count under every value (sport, competition, team,
+  market), that a bet counts under each of its tags, or (month, weekday) that bets count
+  on their event date. Odds-range bars are full width at ±25 % ROI, as in the
   mockup. A user without bets sees "No statistics yet" with a New bet button; a range or
   filters that match no bets say so (with Clear filters).
 - **Profit-over-time chart (assumed in 2.14).** Plain SVG, no chart library. The line
@@ -926,6 +938,24 @@ same items. Touch targets ≥ 44 px.
     "needs …" line under each odds range's strike rate. The median odds fit the
     average-odds tile as its second line ("median 2.05"), in place of "settled bets".
     Home's tiles are unchanged.
+  - *Sortable breakdown; month and weekday (assumed in 6.8).*
+    - *Which date.* The task says "settlement month", but since 6.1 statistics count a
+      bet on its event date, so month and weekday are of `event_at` (as profit over
+      time and the date range are). Open bets count under their expected event date,
+      so a future month can have a row with only "+n open".
+    - *Where.* Month and Weekday are under "More" (after Tag); the four main tabs are
+      unchanged. Only months and weekdays with bets have rows, like other dimensions.
+    - *Sorting.* Six columns sort (the task's list); Break-even does not. A first click
+      sorts highest first, the second lowest first, the third returns to the default
+      order. The sort stays when the dimension changes. Sorted, the "none" row (No
+      tipster, …) is ranked with the other rows rather than kept last, since it is a
+      real set of bets worth comparing. Ties go by name (months: newest first;
+      weekdays: Monday first) in both directions, as the task asks for a label
+      tie-breaker; for months and weekdays the label order would be alphabetical,
+      so the calendar order is used instead.
+    - *Weekday links.* The bets list has no weekday filter, and a weekday in the user's
+      time zone can't be filtered the same way on SQLite and Postgres, so weekday rows
+      are not linked. A month links with its days in the page's range as `from`/`to`.
   - *Roadmap order.* 4.5 (merging list entries) is suggested ahead of 4.4 (cash out),
     since the import creates differently spelled entries; 4.7 (automatic exchange
     rates) and 4.8 (each-way and system bets) are suggested last, and 4.7 could be

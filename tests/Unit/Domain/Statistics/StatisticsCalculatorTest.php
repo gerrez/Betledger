@@ -5,6 +5,7 @@ namespace Tests\Unit\Domain\Statistics;
 use App\Domain\BetType;
 use App\Domain\Statistics\BetFigures;
 use App\Domain\Statistics\BreakdownRow;
+use App\Domain\Statistics\BreakdownSort;
 use App\Domain\Statistics\Dimension;
 use App\Domain\Statistics\Drawdown;
 use App\Domain\Statistics\Group;
@@ -18,6 +19,7 @@ use App\Domain\Statistics\Streak;
 use App\Domain\Statistics\Totals;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -236,6 +238,115 @@ class StatisticsCalculatorTest extends TestCase
         $this->assertEquals([new Group('single', 'Singles'), new Group('accumulator', 'Accumulators')], array_map(fn (BreakdownRow $row): Group => $row->group, $rows));
         $this->assertSame([8, 2], [$rows[0]->totals->settledBets, $rows[0]->totals->openBets]);
         $this->assertSame([1, 1], [$rows[1]->totals->settledBets, $rows[1]->totals->openBets]);
+    }
+
+    public function test_breakdown_by_month_of_the_event_date_is_newest_first(): void
+    {
+        $rows = $this->calculator->breakdown([
+            $this->settled(1000, 500, '2026-09-30 23:59'),
+            $this->settled(1000, -1000, '2026-10-01 00:00'),
+            $this->settled(2000, 1000, '2026-11-15 12:00'),
+            $this->settled(1000, 900, '2026-09-01 00:00'),
+            $this->open(1000, '2026-12-05 18:00'),
+        ], Dimension::Month);
+
+        $this->assertEquals(
+            [new Group('2026-12', 'Dec 2026'), new Group('2026-11', 'Nov 2026'), new Group('2026-10', 'Oct 2026'), new Group('2026-09', 'Sep 2026')],
+            array_map(fn (BreakdownRow $row): Group => $row->group, $rows),
+        );
+        $this->assertSame([0, 1, 1, 2], array_map(fn (BreakdownRow $row): int => $row->totals->settledBets, $rows));
+        $this->assertSame([0, 1000, -1000, 1400], array_map(fn (BreakdownRow $row): int => $row->totals->profit, $rows));
+        $this->assertSame(1, $rows[0]->totals->openBets);
+    }
+
+    public function test_breakdown_by_weekday_of_the_event_date_runs_monday_to_sunday(): void
+    {
+        $rows = $this->calculator->breakdown([
+            $this->settled(1000, 1000, '2026-11-22 23:59'), // Sunday
+            $this->settled(1000, -1000, '2026-11-23 00:00'), // Monday
+            $this->settled(1000, 500, '2026-11-25 12:00'), // Wednesday
+            $this->settled(1000, 2000, '2026-11-16 20:00'), // Monday
+        ], Dimension::Weekday);
+
+        $this->assertEquals(
+            [new Group(1, 'Monday'), new Group(3, 'Wednesday'), new Group(7, 'Sunday')],
+            array_map(fn (BreakdownRow $row): Group => $row->group, $rows),
+        );
+        $this->assertSame([2, 1, 1], array_map(fn (BreakdownRow $row): int => $row->totals->settledBets, $rows));
+        $this->assertSame([1000, 500, 1000], array_map(fn (BreakdownRow $row): int => $row->totals->profit, $rows));
+    }
+
+    public function test_a_breakdown_by_month_or_weekday_needs_the_event_date_of_every_bet(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->calculator->breakdown($this->bets(), Dimension::Weekday);
+    }
+
+    /**
+     * Bookmakers in the fixture: Unibet 5 settled, turnover 110.00, profit +64.00, ROI
+     * 58.2 %, strike 75 %, CLV +6.0 %; Bet365 2, 17.55, +14.62, 83.3 %, 50 %, −3.5 %;
+     * Danske Spil 2, 16.76, −8.38, −50 %, 50 %, +2.9 %.
+     *
+     * @return array<string, array{BreakdownSort, list<string>, list<string>}>
+     */
+    public static function sorts(): array
+    {
+        return [
+            // Ties (2 bets, 50 % strike rate) go by label in both directions.
+            'bets' => [BreakdownSort::Bets, ['Unibet', 'Bet365', 'Danske Spil'], ['Bet365', 'Danske Spil', 'Unibet']],
+            'turnover' => [BreakdownSort::Turnover, ['Unibet', 'Bet365', 'Danske Spil'], ['Danske Spil', 'Bet365', 'Unibet']],
+            'profit' => [BreakdownSort::Profit, ['Unibet', 'Bet365', 'Danske Spil'], ['Danske Spil', 'Bet365', 'Unibet']],
+            'ROI' => [BreakdownSort::Roi, ['Bet365', 'Unibet', 'Danske Spil'], ['Danske Spil', 'Unibet', 'Bet365']],
+            'strike rate' => [BreakdownSort::StrikeRate, ['Unibet', 'Bet365', 'Danske Spil'], ['Bet365', 'Danske Spil', 'Unibet']],
+            'CLV' => [BreakdownSort::Clv, ['Unibet', 'Danske Spil', 'Bet365'], ['Bet365', 'Danske Spil', 'Unibet']],
+        ];
+    }
+
+    /**
+     * @param  list<string>  $descending
+     * @param  list<string>  $ascending
+     */
+    #[DataProvider('sorts')]
+    public function test_breakdown_sorted_by_a_column_with_ties_by_label(BreakdownSort $sort, array $descending, array $ascending): void
+    {
+        $this->assertSame($descending, $this->labels($this->calculator->breakdown($this->bets(), Dimension::Bookmaker, $sort)));
+        $this->assertSame($ascending, $this->labels($this->calculator->breakdown($this->bets(), Dimension::Bookmaker, $sort, ascending: true)));
+    }
+
+    public function test_rows_without_a_value_for_the_sorted_column_come_last_either_way(): void
+    {
+        // Basketball has only a free bet: no turnover, so no ROI, and no closing odds.
+        // ROI: football 46.0 %, tennis 15.3 %; CLV: football +3.6 %, tennis +6.6 %.
+        $this->assertSame(['Football', 'Tennis', 'Basketball'], $this->labels($this->calculator->breakdown($this->bets(), Dimension::Sport, BreakdownSort::Roi)));
+        $this->assertSame(['Tennis', 'Football', 'Basketball'], $this->labels($this->calculator->breakdown($this->bets(), Dimension::Sport, BreakdownSort::Roi, ascending: true)));
+        $this->assertSame(['Tennis', 'Football', 'Basketball'], $this->labels($this->calculator->breakdown($this->bets(), Dimension::Sport, BreakdownSort::Clv)));
+        $this->assertSame(['Football', 'Tennis', 'Basketball'], $this->labels($this->calculator->breakdown($this->bets(), Dimension::Sport, BreakdownSort::Clv, ascending: true)));
+    }
+
+    public function test_a_sorted_breakdown_ranks_the_none_row_with_the_others(): void
+    {
+        $tipsters = $this->calculator->breakdown($this->bets(), Dimension::Tipster, BreakdownSort::Bets);
+
+        $this->assertSame([null, 'Own model'], $this->labels($tipsters));
+        $this->assertSame([6, 3], array_map(fn (BreakdownRow $row): int => $row->totals->settledBets, $tipsters));
+    }
+
+    public function test_a_sorted_breakdown_by_month_or_weekday_breaks_ties_in_calendar_order(): void
+    {
+        $bets = [
+            $this->settled(1000, 1000, '2026-09-07 12:00'), // Monday
+            $this->settled(1000, 1000, '2026-11-04 12:00'), // Wednesday
+            $this->settled(1000, -500, '2026-10-05 12:00'), // Monday
+            $this->settled(1000, -500, '2026-10-07 12:00'), // Wednesday
+        ];
+
+        // September and November both made +10.00: newest first in either direction.
+        $this->assertSame(['Nov 2026', 'Sep 2026', 'Oct 2026'], $this->labels($this->calculator->breakdown($bets, Dimension::Month, BreakdownSort::Profit)));
+        $this->assertSame(['Oct 2026', 'Nov 2026', 'Sep 2026'], $this->labels($this->calculator->breakdown($bets, Dimension::Month, BreakdownSort::Profit, ascending: true)));
+        // Monday and Wednesday are alike in every column.
+        $this->assertSame(['Monday', 'Wednesday'], $this->labels($this->calculator->breakdown($bets, Dimension::Weekday, BreakdownSort::Profit)));
+        $this->assertSame(['Monday', 'Wednesday'], $this->labels($this->calculator->breakdown($bets, Dimension::Weekday, BreakdownSort::Bets, ascending: true)));
     }
 
     public function test_odds_bands(): void
@@ -460,6 +571,23 @@ class StatisticsCalculatorTest extends TestCase
             totalOdds: $totalOdds,
             eventAt: CarbonImmutable::parse($eventAt),
             betId: $betId,
+        );
+    }
+
+    /**
+     * An open single at Unibet (EUR) on football, its event on the given date.
+     */
+    private function open(int $stake, string $eventAt): BetFigures
+    {
+        return new BetFigures(
+            stake: $stake,
+            profit: null,
+            factor: null,
+            exchangeRate: '1',
+            type: BetType::Single,
+            isFreeBet: false,
+            totalOdds: '2.0000',
+            eventAt: CarbonImmutable::parse($eventAt),
         );
     }
 

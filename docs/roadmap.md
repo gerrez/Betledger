@@ -327,7 +327,7 @@ test for anything that reads or changes user data.
         feature test per dimension. Odds bands need a total-odds range filter on the
         list (URL only, shown as a chip).
       - Depends on 6.3.
-- [ ] **6.8 Sortable breakdown; month and weekday.** Breakdown rows are always ordered by
+- [x] **6.8 Sortable breakdown; month and weekday.** Breakdown rows are always ordered by
       settled count, then label, so the best and worst rows can't be ranked, and there
       is no profit-per-month table.
       - Sorting: column headers on the breakdown table sort by bets, turnover, profit,

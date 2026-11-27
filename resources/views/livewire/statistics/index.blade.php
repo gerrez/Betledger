@@ -294,13 +294,34 @@
                             <thead>
                                 <tr class="text-right text-xs text-muted">
                                     <th scope="col" class="border-b border-line py-2 pr-2 text-left font-medium">{{ $breakdownBy->label() }}</th>
-                                    <th scope="col" class="border-b border-line p-2 font-medium">Bets</th>
-                                    <th scope="col" class="border-b border-line p-2 font-medium">Turnover</th>
-                                    <th scope="col" class="border-b border-line p-2 font-medium">Profit</th>
-                                    <th scope="col" class="border-b border-line p-2 font-medium">ROI</th>
-                                    <th scope="col" class="border-b border-line p-2 font-medium">Strike</th>
-                                    <th scope="col" class="border-b border-line p-2 font-medium">Break-even</th>
-                                    <th scope="col" class="border-b border-line py-2 pl-2 font-medium">CLV</th>
+                                    @foreach ($breakdownColumns as $column)
+                                        @if ($column['sort'] === null)
+                                            <th scope="col" class="border-b border-line p-2 font-medium">{{ $column['label'] }}</th>
+                                        @else
+                                            <th
+                                                scope="col"
+                                                wire:key="sort-{{ $column['sort'] }}"
+                                                aria-sort="{{ $column['ariaSort'] }}"
+                                                @class(['border-b border-line font-medium', 'p-2' => ! $loop->last, 'py-2 pl-2' => $loop->last])
+                                            >
+                                                <button
+                                                    type="button"
+                                                    wire:click="sortBreakdown('{{ $column['sort'] }}')"
+                                                    @class([
+                                                        '-my-2 inline-flex min-h-11 items-center gap-0.5 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                                                        'font-semibold text-ink' => $column['ariaSort'] !== 'none',
+                                                    ])
+                                                >
+                                                    {{ $column['label'] }}
+                                                    @if ($column['ariaSort'] === 'ascending')
+                                                        <flux:icon.chevron-up variant="micro" />
+                                                    @elseif ($column['ariaSort'] === 'descending')
+                                                        <flux:icon.chevron-down variant="micro" />
+                                                    @endif
+                                                </button>
+                                            </th>
+                                        @endif
+                                    @endforeach
                                 </tr>
                             </thead>
                             <tbody>

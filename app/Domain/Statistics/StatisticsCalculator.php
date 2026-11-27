@@ -51,14 +51,19 @@ final class StatisticsCalculator
     }
 
     /**
-     * The totals per value of the dimension, most settled bets first (then by label);
-     * bets without a value come last. An accumulator counts under every distinct value
-     * its selections have, a bet with several tags under each tag.
+     * The totals per value of the dimension. An accumulator counts under every distinct
+     * value its selections have, a bet with several tags under each tag.
+     *
+     * Unsorted, rows come in the dimension's own order: months newest first, weekdays
+     * Monday to Sunday, other dimensions most settled bets first (then by label), with
+     * the bets without a value last. Sorted by a column, rows go by its value, ascending
+     * or descending, the "none" row among them; rows without a value for the column come
+     * last, and ties keep the dimension's order of values (label, month, weekday).
      *
      * @param  list<BetFigures>  $bets
      * @return list<BreakdownRow>
      */
-    public function breakdown(array $bets, Dimension $dimension): array
+    public function breakdown(array $bets, Dimension $dimension, ?BreakdownSort $sort = null, bool $ascending = false): array
     {
         /** @var array<int|string, array{group: Group, bets: list<BetFigures>}> $groups */
         $groups = [];
@@ -72,10 +77,42 @@ final class StatisticsCalculator
 
         $rows = array_map(fn (array $entry): BreakdownRow => new BreakdownRow($entry['group'], $this->totals($entry['bets'])), array_values($groups));
 
-        usort($rows, fn (BreakdownRow $a, BreakdownRow $b): int => [$a->group->isNone(), $b->totals->settledBets, mb_strtolower($a->group->label ?? '')]
-            <=> [$b->group->isNone(), $a->totals->settledBets, mb_strtolower($b->group->label ?? '')]);
+        usort($rows, fn (BreakdownRow $a, BreakdownRow $b): int => match (true) {
+            $sort !== null => $this->bySortedColumn($a, $b, $sort, $ascending) ?: $this->byValue($a->group, $b->group, $dimension),
+            $dimension->isCalendar() => $this->byValue($a->group, $b->group, $dimension),
+            default => [$a->group->isNone(), $b->totals->settledBets] <=> [$b->group->isNone(), $a->totals->settledBets]
+                ?: $this->byValue($a->group, $b->group, $dimension),
+        });
 
         return $rows;
+    }
+
+    /**
+     * Rows by the column's value in the direction; a row without a value after one with.
+     */
+    private function bySortedColumn(BreakdownRow $a, BreakdownRow $b, BreakdownSort $sort, bool $ascending): int
+    {
+        $first = $sort->valueOf($a->totals);
+        $second = $sort->valueOf($b->totals);
+
+        if ($first === null || $second === null) {
+            return ($first === null) <=> ($second === null);
+        }
+
+        return $ascending ? $sort->compare($first, $second) : $sort->compare($second, $first);
+    }
+
+    /**
+     * The dimension's own order of values: months newest first, weekdays Monday to
+     * Sunday, names by label ignoring case; none last.
+     */
+    private function byValue(Group $a, Group $b, Dimension $dimension): int
+    {
+        return match ($dimension) {
+            Dimension::Month => [$a->isNone(), $b->key] <=> [$b->isNone(), $a->key],
+            Dimension::Weekday => [$a->isNone(), $a->key] <=> [$b->isNone(), $b->key],
+            default => [$a->isNone(), mb_strtolower($a->label ?? '')] <=> [$b->isNone(), mb_strtolower($b->label ?? '')],
+        };
     }
 
     /**

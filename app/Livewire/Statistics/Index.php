@@ -6,6 +6,7 @@ use App\Domain\BetStatus;
 use App\Domain\BetType;
 use App\Domain\Currency;
 use App\Domain\Statistics\BreakdownRow;
+use App\Domain\Statistics\BreakdownSort;
 use App\Domain\Statistics\Dimension;
 use App\Domain\Statistics\OddsBandRow;
 use App\Domain\Statistics\StatisticsCalculator;
@@ -26,9 +27,9 @@ use Livewire\Component;
 
 /**
  * The statistics page: date range, filters and the free bets toggle, KPI tiles, risk
- * figures, the profit-over-time chart, the breakdown table by dimension, odds ranges and closing line
- * value. Each breakdown row and odds range with settled bets links to those bets on the
- * bets list.
+ * figures, the profit-over-time chart, the breakdown table by dimension (sortable by its
+ * columns), odds ranges and closing line value. Each breakdown row (weekdays excepted)
+ * and odds range with settled bets links to those bets on the bets list.
  */
 #[Title('Statistics')]
 class Index extends Component
@@ -99,6 +100,41 @@ class Index extends Component
     public string $dimension = 'sport';
 
     /**
+     * The BreakdownSort column the breakdown table is sorted by; empty (or unknown) for
+     * the dimension's own order.
+     */
+    #[Url]
+    public string $sort = '';
+
+    /**
+     * "asc" sorts the breakdown lowest first; anything else highest first.
+     */
+    #[Url(as: 'dir')]
+    public string $direction = 'desc';
+
+    /**
+     * Sort the breakdown by a column: highest first, then lowest first, then back to the
+     * dimension's own order.
+     */
+    public function sortBreakdown(string $column): void
+    {
+        $chosen = BreakdownSort::tryFrom($column);
+
+        if ($chosen === null) {
+            return;
+        }
+
+        if ($chosen !== $this->breakdownSort()) {
+            $this->sort = $chosen->value;
+            $this->direction = 'desc';
+        } elseif (! $this->sortsAscending()) {
+            $this->direction = 'asc';
+        } else {
+            $this->reset('sort', 'direction');
+        }
+    }
+
+    /**
      * Choose a date range. A custom range starts out as the range shown until then.
      */
     public function useRange(string $range): void
@@ -143,11 +179,10 @@ class Index extends Component
                 'isNone' => $row instanceof BreakdownRow && $row->group->isNone(),
                 'totals' => $totals,
                 'breakEven' => $this->breakEvenNote($totals),
-                'href' => $row->totals->settledBets === 0 ? null : $this->settledBetsLink($settledBetsQuery, $row instanceof BreakdownRow
-                    ? [$dimension->value => $row->group->isNone() ? BetsIndex::NONE : (string) $row->group->key]
-                    : ['odds' => $row->band->value]),
+                'href' => $row->totals->settledBets === 0 ? null : $this->rowLink($row, $dimension, $settledBetsQuery),
             ];
         };
+        $sort = $this->breakdownSort();
         $totals = TotalsDisplay::fromTotals($calculator->totals($bets), $currency);
         $moreDimensions = array_values(array_filter(Dimension::cases(), fn (Dimension $option): bool => ! in_array($option, self::MAIN_DIMENSIONS, true)));
 
@@ -169,10 +204,12 @@ class Index extends Component
             'mainDimensions' => self::MAIN_DIMENSIONS,
             'moreDimensions' => $moreDimensions,
             'isMoreDimension' => in_array($dimension, $moreDimensions, true),
-            'breakdown' => array_map($display, $calculator->breakdown($bets, $dimension)),
+            'breakdown' => array_map($display, $calculator->breakdown($bets, $dimension, $sort, $this->sortsAscending())),
+            'breakdownColumns' => $this->breakdownColumns($sort),
             'breakdownNote' => match (true) {
                 $dimension === Dimension::Tag => 'Bets with several tags count under each of them, so rows can add up to more than the total.',
                 $dimension->countsBetsMoreThanOnce() => 'Accumulators count under every value their selections include, so rows can add up to more than the total.',
+                $dimension->isCalendar() => 'Bets count on their event date: the last selection’s start, or the placed date without one.',
                 default => null,
             },
             'oddsBands' => array_map($display, $calculator->oddsBands($bets)),
@@ -204,6 +241,70 @@ class Index extends Component
             ['label' => 'Average odds', 'value' => $totals->averageOdds, 'tone' => 'even', 'sub' => $totals->medianOdds === TotalsDisplay::NONE ? 'settled bets' : "median {$totals->medianOdds}"],
             ['label' => 'Open', 'value' => (string) $totals->openBets, 'tone' => 'even', 'sub' => "{$totals->openStake} at stake"],
         ];
+    }
+
+    /**
+     * The breakdown table's value columns in order; all but "Break-even" sort the table.
+     *
+     * @return list<array{label: string, sort: string|null, ariaSort: 'ascending'|'descending'|'none'}>
+     */
+    private function breakdownColumns(?BreakdownSort $sort): array
+    {
+        $column = fn (BreakdownSort $column): array => [
+            'label' => $column->label(),
+            'sort' => $column->value,
+            'ariaSort' => match (true) {
+                $column !== $sort => 'none',
+                $this->sortsAscending() => 'ascending',
+                default => 'descending',
+            },
+        ];
+
+        return [
+            $column(BreakdownSort::Bets),
+            $column(BreakdownSort::Turnover),
+            $column(BreakdownSort::Profit),
+            $column(BreakdownSort::Roi),
+            $column(BreakdownSort::StrikeRate),
+            ['label' => 'Break-even', 'sort' => null, 'ariaSort' => 'none'],
+            $column(BreakdownSort::Clv),
+        ];
+    }
+
+    /**
+     * Where a row with settled bets links to: the bets list showing exactly those bets.
+     * Null where the list can't: a weekday (the list has no such filter) or a value of a
+     * dimension the page already filters by another value (see settledBetsLink()).
+     *
+     * @param  array<string, string>  $settledBetsQuery  the list's URL parameters for the page's filters
+     */
+    private function rowLink(BreakdownRow|OddsBandRow $row, Dimension $dimension, array $settledBetsQuery): ?string
+    {
+        if ($row instanceof OddsBandRow) {
+            return $this->settledBetsLink($settledBetsQuery, ['odds' => $row->band->value]);
+        }
+
+        return match ($dimension) {
+            Dimension::Month => $this->monthLink((string) $row->group->key),
+            Dimension::Weekday => null,
+            default => $this->settledBetsLink($settledBetsQuery, [$dimension->value => $row->group->isNone() ? BetsIndex::NONE : (string) $row->group->key]),
+        };
+    }
+
+    /**
+     * The bets list's Settled tab with the page's filters and, as its date range, the days
+     * of the month ("2026-11") that are in the page's range.
+     */
+    private function monthLink(string $month): string
+    {
+        [$from, $to] = $this->days();
+        $first = CarbonImmutable::parse("{$month}-01");
+        $last = $first->endOfMonth()->startOfDay();
+
+        return route('bets.index', BetsIndex::queryFor($this->filter(BetStatus::Settled, [
+            $from === null || $first->greaterThan($from) ? $first : $from,
+            $to === null || $last->lessThan($to) ? $last : $to,
+        ])));
     }
 
     /**
@@ -272,11 +373,14 @@ class Index extends Component
     }
 
     /**
-     * The page's filters, limited to bets with the status if one is given.
+     * The page's filters, limited to bets with the status if one is given, and to other
+     * days than the page's range if they are given.
+     *
+     * @param  array{CarbonImmutable|null, CarbonImmutable|null}|null  $days
      */
-    private function filter(?BetStatus $status = null): StatisticsFilter
+    private function filter(?BetStatus $status = null, ?array $days = null): StatisticsFilter
     {
-        [$from, $to] = $this->days();
+        [$from, $to] = $days ?? $this->days();
 
         return new StatisticsFilter(
             from: $from,
@@ -322,6 +426,16 @@ class Index extends Component
     private function breakdownDimension(): Dimension
     {
         return Dimension::tryFrom($this->dimension) ?? Dimension::Sport;
+    }
+
+    private function breakdownSort(): ?BreakdownSort
+    {
+        return BreakdownSort::tryFrom($this->sort);
+    }
+
+    private function sortsAscending(): bool
+    {
+        return $this->direction === 'asc';
     }
 
     private function includesFreeBets(): bool

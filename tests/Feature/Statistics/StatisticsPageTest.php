@@ -12,6 +12,7 @@ use App\Models\Sport;
 use App\Models\Tipster;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -150,6 +151,64 @@ class StatisticsPageTest extends TestCase
             ->assertSee(['No tags', 'Bets with several tags count under each of them'])
             ->set('dimension', 'nonsense')
             ->assertSee('Football');
+    }
+
+    public function test_the_breakdown_by_month_and_weekday(): void
+    {
+        $this->seedBets();
+        $this->actingAs($this->user);
+
+        Livewire::test(Index::class)
+            ->assertSeeInOrder(['More', 'Month', 'Weekday'])
+            ->set('dimension', 'month')
+            ->assertSeeInOrder(['Month', 'Oct 2026', '2', '+1 open', '+51.50'])
+            ->assertSee('Bets count on their event date');
+
+        // Lost on Monday 12 October, won on Saturday 10 October, open on Tuesday 20 October.
+        Livewire::withQueryParams(['by' => 'weekday'])->test(Index::class)
+            ->assertSeeInOrder(['Weekday', 'Monday', '−58.50', 'Tuesday', '+1 open', 'Saturday', '+110.00']);
+    }
+
+    public function test_the_breakdown_sorts_by_a_column_kept_in_the_url(): void
+    {
+        $this->seedBets(); // Football +110.00, Tennis −58.50: one settled bet each
+        $this->actingAs($this->user);
+        $labels = fn (Testable $page): array => array_column($page->viewData('breakdown'), 'label');
+
+        $page = Livewire::test(Index::class)
+            ->assertSet('sort', '')
+            ->assertDontSeeHtml(['aria-sort="descending"', 'aria-sort="ascending"'])
+            ->call('sortBreakdown', 'profit')
+            ->assertSet('sort', 'profit')
+            ->assertSet('direction', 'desc')
+            ->assertSeeHtml('aria-sort="descending"');
+        $this->assertSame(['Football', 'Tennis'], $labels($page));
+
+        $page->call('sortBreakdown', 'profit')
+            ->assertSet('direction', 'asc')
+            ->assertSeeHtml('aria-sort="ascending"');
+        $this->assertSame(['Tennis', 'Football'], $labels($page));
+
+        $page->set('dimension', 'bookmaker')
+            ->assertSet('sort', 'profit')
+            ->set('dimension', 'sport');
+        $this->assertSame(['Tennis', 'Football'], $labels($page), 'The sort stays when the dimension changes.');
+
+        $page->call('sortBreakdown', 'profit')
+            ->assertSet('sort', '')
+            ->assertSet('direction', 'desc')
+            ->assertDontSeeHtml(['aria-sort="descending"', 'aria-sort="ascending"']);
+        $this->assertSame(['Football', 'Tennis'], $labels($page), 'Back to most settled bets, then by name.');
+
+        $page->call('sortBreakdown', 'roi')
+            ->call('sortBreakdown', 'nonsense')
+            ->assertSet('sort', 'roi')
+            ->assertSet('direction', 'desc');
+
+        $this->assertSame(['Tennis', 'Football'], $labels(Livewire::withQueryParams(['sort' => 'profit', 'dir' => 'asc'])->test(Index::class)));
+        $this->assertSame(['Tennis', 'Football'], $labels(Livewire::withQueryParams(['sort' => 'roi', 'dir' => 'asc'])->test(Index::class)));
+        $this->assertSame(['Football', 'Tennis'], $labels(Livewire::withQueryParams(['sort' => 'roi', 'dir' => 'nonsense'])->test(Index::class)));
+        $this->assertSame(['Football', 'Tennis'], $labels(Livewire::withQueryParams(['sort' => 'nonsense', 'dir' => 'asc'])->test(Index::class)));
     }
 
     public function test_odds_ranges_and_closing_line_value(): void

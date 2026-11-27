@@ -30,13 +30,17 @@ final class BetFilterQuery
      * The user's bets that pass the filter. A date range takes settled bets by their
      * event date (`event_at`) and open bets by their placed date, each day being that day
      * in the user's time zone. Selection-level filters match a bet when any of its
-     * selections matches.
+     * selections matches, so "no competition" is a bet with a selection without one, as
+     * in the statistics breakdown. An odds band takes the bets whose total odds are above
+     * its lower bound and up to and including its upper bound.
      *
      * @return Builder<Bet>
      */
     public function filtered(User $user, StatisticsFilter $filter): Builder
     {
-        $hasSelection = fn (string $column, ?int $id) => fn (Builder $query) => $query->whereHas('selections', fn (Builder $selections) => $selections->where($column, $id));
+        $hasSelection = fn (string $column, ?int $id) => fn (Builder $query) => $query->whereHas('selections', fn (Builder $selections) => $id === StatisticsFilter::NONE
+            ? $selections->whereNull($column)
+            : $selections->where($column, $id));
         $localTime = $user->localTime();
         $from = $filter->from === null ? null : $localTime->dayStart($filter->from);
         $until = $filter->to === null ? null : $localTime->dayStart($filter->to->addDay());
@@ -47,14 +51,19 @@ final class BetFilterQuery
                 ->where(fn (Builder $settled) => $this->between($settled->where('status', BetStatus::Settled), 'event_at', $from, $until))
                 ->orWhere(fn (Builder $open) => $this->between($open->where('status', BetStatus::Open), 'placed_at', $from, $until))))
             ->when($filter->bookmakerId !== null, fn (Builder $query) => $query->where('bookmaker_id', $filter->bookmakerId))
-            ->when($filter->tipsterId !== null, fn (Builder $query) => $query->where('tipster_id', $filter->tipsterId))
+            ->when($filter->tipsterId === StatisticsFilter::NONE, fn (Builder $query) => $query->whereNull('tipster_id'))
+            ->when($filter->tipsterId !== null && $filter->tipsterId !== StatisticsFilter::NONE, fn (Builder $query) => $query->where('tipster_id', $filter->tipsterId))
             ->when($filter->type !== null, fn (Builder $query) => $query->where('type', $filter->type))
             ->when(! $filter->includeFreeBets, fn (Builder $query) => $query->where('is_free_bet', false))
-            ->when($filter->tagId !== null, fn (Builder $query) => $query->whereHas('tags', fn (Builder $tags) => $tags->whereKey($filter->tagId)))
+            ->when($filter->tagId === StatisticsFilter::NONE, fn (Builder $query) => $query->whereDoesntHave('tags'))
+            ->when($filter->tagId !== null && $filter->tagId !== StatisticsFilter::NONE, fn (Builder $query) => $query->whereHas('tags', fn (Builder $tags) => $tags->whereKey($filter->tagId)))
             ->when($filter->sportId !== null, $hasSelection('sport_id', $filter->sportId))
             ->when($filter->competitionId !== null, $hasSelection('competition_id', $filter->competitionId))
             ->when($filter->marketId !== null, $hasSelection('market_id', $filter->marketId))
-            ->when($filter->teamId !== null, fn (Builder $query) => $query->whereHas('selections.teams', fn (Builder $teams) => $teams->whereKey($filter->teamId)));
+            ->when($filter->teamId === StatisticsFilter::NONE, fn (Builder $query) => $query->whereHas('selections', fn (Builder $selections) => $selections->whereDoesntHave('teams')))
+            ->when($filter->teamId !== null && $filter->teamId !== StatisticsFilter::NONE, fn (Builder $query) => $query->whereHas('selections.teams', fn (Builder $teams) => $teams->whereKey($filter->teamId)))
+            ->when($filter->oddsBand?->above() !== null, fn (Builder $query) => $query->where('total_odds', '>', $filter->oddsBand?->above()))
+            ->when($filter->oddsBand?->upTo() !== null, fn (Builder $query) => $query->where('total_odds', '<=', $filter->oddsBand?->upTo()));
     }
 
     /**

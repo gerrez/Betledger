@@ -10,6 +10,7 @@ use App\Models\Market;
 use App\Models\Selection;
 use App\Models\Sport;
 use App\Models\Tag;
+use App\Models\Team;
 use App\Models\Tipster;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Sequence;
@@ -228,13 +229,75 @@ class BetsListFiltersTest extends TestCase
             ->assertDontSee(route('bets.show', $theirBet))
             ->set('search', '');
 
-        foreach (['competition' => $theirCompetition, 'market' => $theirMarket, 'tipster' => $theirTipster, 'tag' => $theirTag] as $filter => $entry) {
+        $theirTeam = Team::factory()->for($other)->forSport($theirSport)->create(['name' => 'Their team']);
+        $theirBet->selections[0]->teams()->attach($theirTeam);
+
+        foreach (['competition' => $theirCompetition, 'team' => $theirTeam, 'market' => $theirMarket, 'tipster' => $theirTipster, 'tag' => $theirTag] as $filter => $entry) {
             $component
                 ->set($filter, (string) $entry->id)
                 ->assertSee([ucfirst($filter).': unknown', 'No bets match these filters'])
                 ->assertDontSee(['Their derby', $entry->getAttribute('name')])
                 ->call('removeFilter', $filter);
         }
+
+        Bet::factory()->for($other)->has(Selection::factory()->state(['position' => 1, 'event_name' => 'Their bare bet']), 'selections')->create();
+
+        $component
+            ->set('competition', 'none')
+            ->set('team', 'none')
+            ->set('tipster', 'none')
+            ->set('tag', 'none')
+            ->assertSee(['My derby', '1 bet'])
+            ->assertDontSee(['Their derby', 'Their bare bet']);
+    }
+
+    public function test_link_only_filters_none_values_and_odds_and_free_bets_show_as_chips(): void
+    {
+        $football = Sport::factory()->for($this->user)->create(['name' => 'Football']);
+        $arsenal = Team::factory()->for($this->user)->forSport($football)->create(['name' => 'Arsenal']);
+        $premierLeague = Competition::factory()->for($this->user)->forSport($football)->create(['name' => 'Premier League']);
+        $corners = Market::factory()->for($this->user)->create(['name' => 'Corners']);
+        $tipster = Tipster::factory()->for($this->user)->create(['name' => 'Jens']);
+        $tag = Tag::factory()->for($this->user)->create(['name' => 'Value']);
+
+        $full = $this->bet('Full bet', ['sport_id' => $football->id, 'competition_id' => $premierLeague->id, 'market_id' => $corners->id, 'odds' => '1.50'], ['tipster_id' => $tipster->id, 'is_free_bet' => true]);
+        $full->selections[0]->teams()->attach($arsenal);
+        $full->tags()->attach($tag);
+        $this->bet('Bare bet', ['odds' => '1.501']);
+        $this->actingAs($this->user);
+
+        $filters = [
+            ['competition', 'none', 'No competition', 'Bare bet'],
+            ['team', 'none', 'No teams', 'Bare bet'],
+            ['market', 'none', 'No market', 'Bare bet'],
+            ['tipster', 'none', 'No tipster', 'Bare bet'],
+            ['tag', 'none', 'No tags', 'Bare bet'],
+            ['team', (string) $arsenal->id, 'Team: Arsenal', 'Full bet'],
+            ['odds', '1.01-1.50', 'Total odds 1.01–1.50', 'Full bet'],
+            ['odds', '1.51-2.00', 'Total odds 1.51–2.00', 'Bare bet'],
+            ['freeBets', 'exclude', 'No free bets', 'Bare bet'],
+        ];
+
+        foreach ($filters as [$property, $value, $chip, $match]) {
+            Livewire::test(Index::class)
+                ->set($property, $value)
+                ->assertSee(['Open · 1', 'Filters · 1', "Remove filter {$chip}", $match, '1 bet'])
+                ->assertDontSee($match === 'Full bet' ? 'Bare bet' : 'Full bet')
+                ->call('removeFilter', $property)
+                ->assertSet($property, '')
+                ->assertSee(['Open · 2', 'Full bet', 'Bare bet']);
+        }
+
+        $this->get(route('bets.index', ['team' => 'none', 'odds' => '1.51-2.00', 'free' => 'exclude']))
+            ->assertOk()
+            ->assertSee(['No teams', 'Total odds 1.51–2.00', 'No free bets', 'Bare bet'])
+            ->assertDontSee('Full bet');
+
+        Livewire::test(Index::class)
+            ->set('odds', 'not a band')
+            ->set('sport', 'none')
+            ->assertSee(['Sport: unknown', 'No open bets match these filters'])
+            ->assertDontSee('Total odds');
     }
 
     /**

@@ -41,6 +41,14 @@ class OddsBandTest extends TestCase
         OddsBand::forOdds('1.0000');
     }
 
+    public function test_each_band_starts_above_the_upper_bound_of_the_band_below(): void
+    {
+        $this->assertSame(
+            [null, '1.50', '2.00', '3.00', '5.00', '10.00'],
+            array_map(fn (OddsBand $band): ?string => $band->above(), OddsBand::cases()),
+        );
+    }
+
     public function test_labels_use_an_en_dash(): void
     {
         $this->assertSame(

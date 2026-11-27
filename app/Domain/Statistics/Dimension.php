@@ -28,6 +28,15 @@ enum Dimension: string
     }
 
     /**
+     * Whether a bet can be without a value: no competition, teams, market, tipster or
+     * tags. Every bet has a bookmaker, sport and bet type.
+     */
+    public function hasNone(): bool
+    {
+        return ! in_array($this, [self::Bookmaker, self::Sport, self::BetType], true);
+    }
+
+    /**
      * What the row of bets without a value is called; bookmaker, sport and bet type
      * always have one.
      */

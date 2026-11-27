@@ -7,6 +7,8 @@ use App\Domain\Bets\SettleBet;
 use App\Domain\BetStatus;
 use App\Domain\BetType;
 use App\Domain\Settlement\SelectionResult;
+use App\Domain\Statistics\Dimension;
+use App\Domain\Statistics\OddsBand;
 use App\Domain\Statistics\StatisticsFilter;
 use App\Models\Bet;
 use App\Models\Competition;
@@ -45,9 +47,15 @@ class Index extends Component
     public const MAX_SEARCH_LENGTH = 100;
 
     /**
-     * The filter properties (the search not included).
+     * The filter properties (the search not included). Team, odds band and free bets are
+     * set only by a link (from a statistics row), so they have a chip but no field.
      */
-    public const FILTERS = ['bookmaker', 'sport', 'competition', 'market', 'tipster', 'tag', 'type', 'from', 'to'];
+    public const FILTERS = ['bookmaker', 'sport', 'competition', 'team', 'market', 'tipster', 'tag', 'type', 'odds', 'freeBets', 'from', 'to'];
+
+    /**
+     * The URL value of an entry filter that picks the bets without such an entry.
+     */
+    public const NONE = 'none';
 
     /**
      * The open tab, a BetListTab value.
@@ -69,8 +77,10 @@ class Index extends Component
     public string $search = '';
 
     /**
-     * Ids of the list entries to show bets with (sport, competition and market match a
-     * bet when any of its selections does); empty for all.
+     * Ids of the list entries to show bets with (sport, competition, team and market
+     * match a bet when any of its selections does); empty for all. "none" (NONE) shows
+     * the bets without one: no tipster, no tags, or a selection without a competition,
+     * market or teams.
      */
     #[Url]
     public string $bookmaker = '';
@@ -80,6 +90,9 @@ class Index extends Component
 
     #[Url]
     public string $competition = '';
+
+    #[Url]
+    public string $team = '';
 
     #[Url]
     public string $market = '';
@@ -95,6 +108,18 @@ class Index extends Component
      */
     #[Url]
     public string $type = '';
+
+    /**
+     * An OddsBand value: the bets whose total odds are in that band; empty for any.
+     */
+    #[Url]
+    public string $odds = '';
+
+    /**
+     * "exclude" leaves free bets out, as on the statistics page; empty shows them.
+     */
+    #[Url(as: 'free')]
+    public string $freeBets = '';
 
     /**
      * First and last day (Y-m-d, days in the user's time zone) of the date range, as on
@@ -344,40 +369,82 @@ class Index extends Component
             bookmakerId: $this->entryId($this->bookmaker),
             sportId: $this->entryId($this->sport),
             competitionId: $this->entryId($this->competition),
+            teamId: $this->entryId($this->team),
             marketId: $this->entryId($this->market),
             tipsterId: $this->entryId($this->tipster),
             tagId: $this->entryId($this->tag),
             type: BetType::tryFrom($this->type),
+            includeFreeBets: $this->freeBets !== 'exclude',
             status: $status,
+            oddsBand: OddsBand::tryFrom($this->odds),
         );
 
         return $query->search($query->filtered($user, $filter), $this->searchTerm());
     }
 
     /**
-     * A removable chip for each filter in use, naming the entry. An id that isn't one of
-     * the user's entries still filters (so no bets match) and shows as "unknown".
+     * The URL parameters of the list showing the bets that pass the filter: its tab
+     * (Settled or Open for a status, else All) and each filter in use.
+     *
+     * @return array<string, string>
+     */
+    public static function queryFor(StatisticsFilter $filter): array
+    {
+        $entry = fn (?int $id): ?string => match ($id) {
+            null => null,
+            StatisticsFilter::NONE => self::NONE,
+            default => (string) $id,
+        };
+
+        return array_filter([
+            'status' => match ($filter->status) {
+                BetStatus::Open => BetListTab::Open->value,
+                BetStatus::Settled => BetListTab::Settled->value,
+                null => BetListTab::All->value,
+            },
+            'from' => $filter->from?->toDateString(),
+            'to' => $filter->to?->toDateString(),
+            'bookmaker' => $entry($filter->bookmakerId),
+            'sport' => $entry($filter->sportId),
+            'competition' => $entry($filter->competitionId),
+            'team' => $entry($filter->teamId),
+            'market' => $entry($filter->marketId),
+            'tipster' => $entry($filter->tipsterId),
+            'tag' => $entry($filter->tagId),
+            'type' => $filter->type?->value,
+            'odds' => $filter->oddsBand?->value,
+            'free' => $filter->includeFreeBets ? null : 'exclude',
+        ], fn (?string $value): bool => $value !== null);
+    }
+
+    /**
+     * A removable chip for each filter in use, naming the entry ("No competition" for
+     * none). An id that isn't one of the user's entries still filters (so no bets match)
+     * and shows as "unknown".
      *
      * @return list<array{filter: string, label: string}>
      */
     private function chips(User $user): array
     {
         $entries = [
-            'bookmaker' => ['Bookmaker', $user->bookmakers()],
-            'sport' => ['Sport', $user->sports()],
-            'competition' => ['Competition', $user->competitions()],
-            'market' => ['Market', $user->markets()],
-            'tipster' => ['Tipster', $user->tipsters()],
-            'tag' => ['Tag', $user->tags()],
+            'bookmaker' => [Dimension::Bookmaker, $user->bookmakers()],
+            'sport' => [Dimension::Sport, $user->sports()],
+            'competition' => [Dimension::Competition, $user->competitions()],
+            'team' => [Dimension::Team, $user->teams()],
+            'market' => [Dimension::Market, $user->markets()],
+            'tipster' => [Dimension::Tipster, $user->tipsters()],
+            'tag' => [Dimension::Tag, $user->tags()],
         ];
         $chips = [];
 
-        foreach ($entries as $filter => [$label, $relation]) {
+        foreach ($entries as $filter => [$dimension, $relation]) {
             $id = $this->entryId($this->{$filter});
 
-            if ($id !== null) {
-                $name = $relation->whereKey($id)->value('name');
-                $chips[] = ['filter' => $filter, 'label' => "{$label}: ".(is_string($name) ? $name : 'unknown')];
+            if ($id === StatisticsFilter::NONE && $dimension->hasNone()) {
+                $chips[] = ['filter' => $filter, 'label' => $dimension->noneLabel()];
+            } elseif ($id !== null) {
+                $name = $id === StatisticsFilter::NONE ? null : $relation->whereKey($id)->value('name');
+                $chips[] = ['filter' => $filter, 'label' => "{$dimension->label()}: ".(is_string($name) ? $name : 'unknown')];
             }
         }
 
@@ -385,6 +452,16 @@ class Index extends Component
 
         if ($type !== null) {
             $chips[] = ['filter' => 'type', 'label' => self::typeLabels()[$type->value]];
+        }
+
+        $oddsBand = OddsBand::tryFrom($this->odds);
+
+        if ($oddsBand !== null) {
+            $chips[] = ['filter' => 'odds', 'label' => "Total odds {$oddsBand->label()}"];
+        }
+
+        if ($this->freeBets === 'exclude') {
+            $chips[] = ['filter' => 'freeBets', 'label' => 'No free bets'];
         }
 
         [$from, $to] = $this->days();
@@ -453,9 +530,17 @@ class Index extends Component
         return in_array($sort, $tab->sorts(), true) ? $sort : $tab->sorts()[0];
     }
 
+    /**
+     * The id in a filter's URL value: StatisticsFilter::NONE for "none", null for
+     * anything that isn't an id.
+     */
     private function entryId(string $value): ?int
     {
-        return ctype_digit($value) ? (int) $value : null;
+        return match (true) {
+            $value === self::NONE => StatisticsFilter::NONE,
+            ctype_digit($value) => (int) $value,
+            default => null,
+        };
     }
 
     private function user(): User

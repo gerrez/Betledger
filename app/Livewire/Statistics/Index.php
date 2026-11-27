@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Statistics;
 
+use App\Domain\BetStatus;
 use App\Domain\BetType;
 use App\Domain\Currency;
 use App\Domain\Statistics\BreakdownRow;
@@ -10,6 +11,7 @@ use App\Domain\Statistics\OddsBandRow;
 use App\Domain\Statistics\StatisticsCalculator;
 use App\Domain\Statistics\StatisticsFilter;
 use App\Domain\Statistics\StatisticsQuery;
+use App\Livewire\Bets\Index as BetsIndex;
 use App\Models\Competition;
 use App\Models\Team;
 use App\Models\User;
@@ -25,7 +27,8 @@ use Livewire\Component;
 /**
  * The statistics page: date range, filters and the free bets toggle, KPI tiles, risk
  * figures, the profit-over-time chart, the breakdown table by dimension, odds ranges and closing line
- * value.
+ * value. Each breakdown row and odds range with settled bets links to those bets on the
+ * bets list.
  */
 #[Title('Statistics')]
 class Index extends Component
@@ -131,7 +134,8 @@ class Index extends Component
         $currency = $user->base_currency;
         $dimension = $this->breakdownDimension();
         $bets = $query->bets($user, $this->filter());
-        $display = function (BreakdownRow|OddsBandRow $row) use ($dimension, $currency): array {
+        $settledBetsQuery = BetsIndex::queryFor($this->filter(BetStatus::Settled));
+        $display = function (BreakdownRow|OddsBandRow $row) use ($dimension, $currency, $settledBetsQuery): array {
             $totals = TotalsDisplay::fromTotals($row->totals, $currency);
 
             return [
@@ -139,6 +143,9 @@ class Index extends Component
                 'isNone' => $row instanceof BreakdownRow && $row->group->isNone(),
                 'totals' => $totals,
                 'breakEven' => $this->breakEvenNote($totals),
+                'href' => $row->totals->settledBets === 0 ? null : $this->settledBetsLink($settledBetsQuery, $row instanceof BreakdownRow
+                    ? [$dimension->value => $row->group->isNone() ? BetsIndex::NONE : (string) $row->group->key]
+                    : ['odds' => $row->band->value]),
             ];
         };
         $totals = TotalsDisplay::fromTotals($calculator->totals($bets), $currency);
@@ -200,6 +207,25 @@ class Index extends Component
     }
 
     /**
+     * The bets list's Settled tab with the page's filters plus a row's value, so it shows
+     * the row's settled bets. Null when the page already filters that dimension by another
+     * value: an accumulator can count under both, and the list filters by one value.
+     *
+     * @param  array<string, string>  $pageQuery  the list's URL parameters for the page's filters
+     * @param  array<string, string>  $rowQuery  the row's own parameter
+     */
+    private function settledBetsLink(array $pageQuery, array $rowQuery): ?string
+    {
+        foreach ($rowQuery as $parameter => $value) {
+            if (($pageQuery[$parameter] ?? $value) !== $value) {
+                return null;
+            }
+        }
+
+        return route('bets.index', [...$pageQuery, ...$rowQuery]);
+    }
+
+    /**
      * "needs 51.3%" (plus the suffix): the strike rate the bets need to break even; null
      * while none of them is a win or a loss.
      */
@@ -245,7 +271,10 @@ class Index extends Component
         return $grouped;
     }
 
-    private function filter(): StatisticsFilter
+    /**
+     * The page's filters, limited to bets with the status if one is given.
+     */
+    private function filter(?BetStatus $status = null): StatisticsFilter
     {
         [$from, $to] = $this->days();
 
@@ -261,6 +290,7 @@ class Index extends Component
             tagId: $this->entryId($this->tag),
             type: BetType::tryFrom($this->type),
             includeFreeBets: $this->includesFreeBets(),
+            status: $status,
         );
     }
 

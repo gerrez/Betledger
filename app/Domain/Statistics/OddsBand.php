@@ -42,6 +42,18 @@ enum OddsBand: string
     }
 
     /**
+     * The total odds the band starts above (the upper bound of the band below it); null
+     * for the lowest band.
+     */
+    public function above(): ?string
+    {
+        $cases = self::cases();
+        $index = array_search($this, $cases, true);
+
+        return $index === false || $index === 0 ? null : $cases[$index - 1]->upTo();
+    }
+
+    /**
      * The highest total odds in the band; null for the open-ended top band.
      */
     public function upTo(): ?string

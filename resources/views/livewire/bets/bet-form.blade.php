@@ -21,6 +21,10 @@
         </section>
     @else
         <form wire:submit="save" class="flex flex-col gap-4">
+            @if (session('status'))
+                <flux:callout variant="success" icon="check-circle" :heading="session('status')" />
+            @endif
+
             @if ($settlement !== null)
                 <section class="flex flex-col gap-1 rounded-[18px] border border-line bg-surface p-4 text-sm">
                     <p class="text-[15px] font-medium">Settled · payout {{ $settlement['payout'] }} · profit {{ $settlement['profit'] }}</p>
@@ -435,7 +439,14 @@
             @endif
 
             <div class="sticky bottom-[calc(max(20px,env(safe-area-inset-bottom))+4.75rem)] -mx-1 bg-canvas/90 px-1 py-2 backdrop-blur lg:bottom-0">
-                <flux:button type="submit" variant="primary" class="h-12 w-full text-base">{{ $bet === null ? 'Save bet' : 'Save changes' }}</flux:button>
+                @if ($bet === null)
+                    <div class="grid grid-cols-2 gap-2">
+                        <flux:button wire:click="saveAndAddAnother" class="h-12 w-full px-2 text-[15px]">Save and add another</flux:button>
+                        <flux:button type="submit" variant="primary" class="h-12 w-full text-base">Save bet</flux:button>
+                    </div>
+                @else
+                    <flux:button type="submit" variant="primary" class="h-12 w-full text-base">Save changes</flux:button>
+                @endif
             </div>
         </form>
 

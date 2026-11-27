@@ -863,6 +863,18 @@ same items. Touch targets ≥ 44 px.
   - *Exchange and lay bets.* Do you place lay bets? Sportmarket picks like "AGAINST
     Under 2.0" are stored as ordinary bets and the export's `Exchange Role` is ignored.
     Real lay bets (liability, commission) are not planned.
+  - *Duplicate a bet and "Save and add another" (assumed in 6.4).*
+    - *Duplicate.* "Duplicate bet" on the bet page opens the New bet form as a copy:
+      every field, including the bet's own exchange rate (not the bookmaker's current
+      one) and the selections' start times, except placed (now), results and closing
+      odds. If the bookmaker has been deactivated since, the copy starts at the first
+      active bookmaker and its rate. A copy is always open, never imported.
+    - *Save and add another.* Keeps the bookmaker and its rate, the placed date **and
+      time** (the task names only the date; keeping the time suits entering an
+      evening's or a past day's bets), tipster, tags and each selection's sport and
+      competition. An accumulator stays an accumulator with the same number of
+      selections. Everything else is cleared, including market, teams, start, free bet,
+      notes, probability and bet value. Only the New bet form has the button.
   - *Roadmap order.* 4.5 (merging list entries) is suggested ahead of 4.4 (cash out),
     since the import creates differently spelled entries; 4.7 (automatic exchange
     rates) and 4.8 (each-way and system bets) are suggested last, and 4.7 could be

@@ -277,7 +277,7 @@ test for anything that reads or changes user data.
       - Tests: each filter, the search (case, wildcard characters), combined filters,
         pagination reset on change, and that neither search nor a filter id from
         another user reveals that user's bets.
-- [ ] **6.4 Duplicate a bet and "Save and add another".** `Bets\Create` pre-fills only
+- [x] **6.4 Duplicate a bet and "Save and add another".** `Bets\Create` pre-fills only
       the bookmaker and sport of the latest bet. The same event at two bookmakers, or
       an evening of similar bets, means retyping everything.
       - "Duplicate" on the bet detail page opens `bets/create?from={bet}`: every field

@@ -16,7 +16,10 @@ use App\Domain\Settlement\SettlementCalculator;
 use App\Domain\TimeOfDay;
 use App\Models\Bet;
 use App\Models\Bookmaker;
+use App\Models\Selection;
 use App\Models\Sport;
+use App\Models\Tag;
+use App\Models\Team;
 use App\Models\User;
 use Closure;
 use Illuminate\Contracts\View\View;
@@ -656,6 +659,46 @@ abstract class BetForm extends Component
     private function eventNameFor(array $teams): string
     {
         return implode(' v ', $teams);
+    }
+
+    /**
+     * Fill the form with a saved bet as it is, in the user's time zone.
+     */
+    protected function fillFromBet(Bet $bet): void
+    {
+        $bet->load(['tipster', 'tags', 'selections.sport', 'selections.competition', 'selections.market', 'selections.teams']);
+
+        $localTime = $this->user()->localTime();
+        $placedAt = $localTime->toLocal($bet->placed_at);
+        $this->bookmaker_id = (string) $bet->bookmaker_id;
+        $this->placed_date = $placedAt->format(self::DATE);
+        $this->placed_time = $placedAt->format(self::TIME);
+        $this->stake = Money::fromMinorUnits($bet->stake);
+        $this->exchange_rate = Decimal::normalize($bet->exchange_rate);
+        $this->is_free_bet = $bet->is_free_bet;
+        $this->tipster = $bet->tipster->name ?? '';
+        $this->tags = array_values($bet->tags->map(fn (Tag $tag): string => $tag->name)->all());
+        $this->notes = $bet->notes ?? '';
+        $this->probability = $bet->probability === null ? '' : Decimal::normalize($bet->probability);
+        $this->bet_value = $bet->bet_value === null ? '' : Decimal::normalize($bet->bet_value);
+        $this->selections = array_values($bet->selections->map(fn (Selection $selection): array => [
+            'id' => $selection->id,
+            'sport' => $selection->sport->name,
+            'competition' => $selection->competition->name ?? '',
+            'market' => $selection->market->name ?? '',
+            'teams' => array_values($selection->teams->map(fn (Team $team): string => $team->name)->all()),
+            'team_name' => '',
+            'event_name' => $selection->event_name,
+            'event_starts_date' => $selection->event_starts_at === null ? '' : $localTime->toLocal($selection->event_starts_at)->format(self::DATE),
+            'event_starts_time' => $selection->event_starts_at === null ? '' : $localTime->toLocal($selection->event_starts_at)->format(self::TIME),
+            'pick' => $selection->pick,
+            'odds' => Odds::format($selection->odds),
+            'closing_odds' => $selection->closing_odds === null ? '' : Odds::format($selection->closing_odds),
+            'result' => $selection->result->value ?? '',
+            'show_details' => $selection->competition_id !== null || $selection->market_id !== null || $selection->closing_odds !== null,
+        ])->all());
+
+        $this->showDetails = $this->tipster !== '' || $this->tags !== [] || $this->notes !== '' || $this->probability !== '' || $this->bet_value !== '';
     }
 
     protected function selectBookmaker(?Bookmaker $bookmaker): void

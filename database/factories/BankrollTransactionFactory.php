@@ -27,7 +27,7 @@ class BankrollTransactionFactory extends Factory
             'type' => TransactionType::Deposit,
             'amount' => fake()->numberBetween(1, 40) * 2500,
             'currency' => fn (array $attributes) => Bookmaker::findOrFail($attributes['bookmaker_id'])->currency,
-            'occurred_on' => fake()->dateTimeBetween('-60 days', 'today')->format('Y-m-d'),
+            'occurred_on' => fake()->dateTimeBetween(today()->subDays(60), today())->format('Y-m-d'),
             'note' => null,
         ];
     }

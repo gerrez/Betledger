@@ -40,6 +40,8 @@ use Illuminate\Support\Carbon;
  * @property int|null $profit minor units
  * @property string|null $notes
  * @property string|null $external_ref where an imported bet came from ("sportmarket:<Order Id>"), unique per user
+ * @property string|null $import_batch the import the bet came from: a ULID shared by the bets of one confirmed import; internal, not in the API or the CSV
+ * @property Carbon $created_at
  * @property-read User $user
  * @property-read Bookmaker $bookmaker
  * @property-read Tipster|null $tipster

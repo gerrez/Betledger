@@ -116,6 +116,7 @@ and saving another currency is refused with a validation error. The rate stays e
 | `profit` | bigint, nullable | `payout − stake` (free bets: `payout`) |
 | `notes` | text, nullable | |
 | `external_ref` | string, nullable | where an imported bet came from, e.g. `sportmarket:2384015187`; unique per user, so an import never creates a bet twice |
+| `import_batch` | string(26), nullable | the import a bet came from (6.15): a ULID shared by every bet of one confirmed import, so the bets list can filter to it and an import can be undone (filter, Select all, Delete). Null for bets entered by hand and those imported before 6.15. Indexed with `user_id`. Internal: not in the API or the CSV export |
 | timestamps | | |
 
 `bet_tag` pivot: `bet_id`, `tag_id`, `user_id` (the bet's owner).
@@ -407,6 +408,14 @@ can't have) is imported as **lost** with payout 0, and its notes and the preview
 - the order was imported before (`bets.external_ref` = `sportmarket:<Order Id>`, a new
   nullable column, unique per user).
 
+**Undoing an import (6.15).** Every bet of one confirmed import gets the same
+`import_batch`. After importing, the page goes to the bets list (Settled tab) filtered to
+that import, with "Imported n bets. To undo the import, choose Select, then Select all
+and Delete." The Filters sheet has an "Import" field listing the user's imports that
+still have bets, newest first ("27 Nov 2026 14:03 · 16 bets", the time the import was
+confirmed, in the user's time zone). Deleting the bets frees their `external_ref`, so the
+file can be imported again.
+
 ## Export
 
 Settings → Export downloads all of the user's bets as one CSV file,
@@ -536,7 +545,7 @@ They are the reference for layout and copy; sample numbers in them are illustrat
 |---|---|---|
 | Home / overview | `Main.dc.html` | Month profit card with sparkline, 4 KPI tiles, open bets preview |
 | New / edit bet | `NewBet.dc.html` | Single/Accumulator switch; essentials first, "More details" folds competition, market, closing odds, tipster, tags, notes, exchange rate; live payout preview; sticky Save |
-| Bets list | `Bets.dc.html` | Open/Settled/All tabs, filter chips; **inline settle buttons** per pending selection (Won, Lost, Void, ½ Won, ½ Lost) with Undo |
+| Bets list | `Bets.dc.html` | Open/Settled/All tabs, filter chips; **inline settle buttons** per pending selection (Won, Lost, Void, ½ Won, ½ Lost) with Undo; a Select mode for bulk Delete and Add/Remove tag (6.15, not mocked) |
 | Bet detail | `BetDetail.dc.html` | Result, profit in bet + base currency, CLV, result buttons, clear result, **manual payout override**, facts, delete |
 | Statistics | `Statistics.dc.html` | Date range, filter chips, include-free-bets toggle, KPI tiles, cumulative profit chart, breakdown table by dimension, odds-range ROI bars, CLV panel |
 | Bankroll | not mocked | Total card (balance, then bets, in open bets, turnover, ROI, profit tiles); one card per bookmaker with the same figures in its currency plus deposited/withdrawn, Add deposit / Add withdrawal, expandable transaction list with Edit and Delete |
@@ -864,8 +873,8 @@ same items. Touch targets ≥ 44 px.
   "Imported n bets."; orders with errors are left out. A file with nothing to import
   (everything skipped or an error, e.g. a file in another currency than the bookmaker)
   has no Import button. Imported bets get the bookmaker's current rate, as in the bet
-  form. There is no undo for a whole import: imported bets are deleted one by one like
-  any other bet.
+  form. Since 6.15 a whole import can be undone from the bets list (see "Undoing an
+  import" above).
 - **Losses larger than the stake (owner, in 4.1b).** Some orders in the owner's export
   report a P&L below −stake. Until the owner knows why, they are imported as lost with
   payout 0 (profit −stake) instead of being refused, and the reported P&L is kept in the
@@ -1101,3 +1110,28 @@ same items. Touch targets ≥ 44 px.
   or delete the account). The reset asks for the password, as deleting the account does,
   so a stray click can't wipe the ledger. A "delete everything but the login" option can
   be added later if the owner wants it.
+- **Bulk actions and undoing an import (assumed in 6.15).** See "Undoing an import"
+  under "Import from Sportmarket". Assumed:
+  - *Select mode.* A "Select" button in the row with the order and the chips (it reads
+    "Done" while selecting). Each card gets a checkbox; its result buttons and Undo are
+    hidden meanwhile, so a tap can't settle a bet by mistake. A bar above the cards says
+    how many are selected and offers "Select all n", where n is every bet matching the
+    tab, search and filters on every page, not only the page shown. Changing the tab,
+    search or a filter clears the selection (other bets are shown); changing the order
+    keeps it. After an action the list leaves the Select mode and says what was done
+    ("16 bets deleted.").
+  - *What is counted.* "Tag value added to 3 bets" counts only the bets that changed: a
+    bet that already had the tag (or, for Remove, didn't) is left alone. Ids that aren't
+    the user's bets are ignored.
+  - *Delete is permanent* until 6.11 (soft delete) is built; the confirmation says so
+    and names the number of bets.
+  - *Tag.* One dialog with a tag picker and both "Remove from n" and "Add to n", rather
+    than two actions; only existing tags (new ones are made under Lists or on a bet).
+  - *Import filter.* In the Filters sheet only once the user has an import with bets
+    left (or the URL names one). The URL parameter is `batch`; the chip reads "Imported
+    27 Nov 2026 14:03". When every bet of the filtered import is deleted, the filter is
+    cleared, as that import no longer exists.
+  - *Older imports.* Bets imported before 6.15 have no batch and are not backfilled
+    (nothing recorded which confirm they came from); they can still be found with the
+    bookmaker filter and a date range. Owner: is there an older import you want to be
+    able to undo as a whole?

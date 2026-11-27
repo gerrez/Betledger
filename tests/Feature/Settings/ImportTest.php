@@ -5,6 +5,7 @@ namespace Tests\Feature\Settings;
 use App\Domain\BetStatus;
 use App\Domain\Currency;
 use App\Domain\Settlement\SelectionResult;
+use App\Livewire\Bets\Index;
 use App\Livewire\Settings\Import;
 use App\Models\Bet;
 use App\Models\Bookmaker;
@@ -81,12 +82,16 @@ class ImportTest extends TestCase
         $user = User::factory()->create();
         $sportmarket = Bookmaker::factory()->for($user)->create(['name' => 'Sportmarket']);
 
-        $this->preview($user, $sportmarket)
+        $component = $this->preview($user, $sportmarket)
             ->call('import')
-            ->assertHasNoErrors()
-            ->assertRedirect(route('bets.index', ['status' => 'settled']));
+            ->assertHasNoErrors();
 
-        $this->assertSame('Imported 16 bets.', session('status'));
+        $batches = $user->bets()->distinct()->pluck('import_batch')->all();
+        $this->assertCount(1, $batches);
+        $this->assertIsString($batches[0]);
+        $component->assertRedirect(route('bets.index', ['status' => 'settled', 'batch' => $batches[0]]));
+
+        $this->assertSame('Imported 16 bets. To undo the import, choose Select, then Select all and Delete.', session('status'));
         $this->assertSame(self::IMPORTABLE_ORDERS, $user->bets()->count());
         $this->assertSame(self::IMPORTABLE_ORDERS, $sportmarket->bets()->where('status', BetStatus::Settled)->count());
 
@@ -175,6 +180,35 @@ class ImportTest extends TestCase
             ->assertNoRedirect();
 
         $this->assertSame(self::IMPORTABLE_ORDERS, $user->bets()->count());
+    }
+
+    public function test_an_import_is_undone_from_the_bets_list_and_can_then_be_imported_again(): void
+    {
+        $user = User::factory()->create();
+        $sportmarket = Bookmaker::factory()->for($user)->create();
+        $enteredByHand = Bet::factory()->forBookmaker($sportmarket)->settled()->create();
+
+        $this->preview($user, $sportmarket)->call('import');
+        $batch = $user->bets()->whereNotNull('import_batch')->value('import_batch');
+        $this->assertNull($enteredByHand->fresh()?->import_batch);
+
+        Livewire::withQueryParams(['status' => 'settled', 'batch' => $batch])
+            ->test(Index::class)
+            ->assertSee('16 bets')
+            ->call('startSelecting')
+            ->call('selectAllMatching')
+            ->call('deleteSelected')
+            ->assertSee('16 bets deleted.');
+
+        $this->assertSame([$enteredByHand->id], $user->bets()->pluck('id')->all());
+
+        $this->preview($user, $sportmarket)
+            ->assertSee('17 orders: 16 to import, 1 skipped, 0 errors.')
+            ->call('import')
+            ->assertHasNoErrors();
+
+        $this->assertSame(self::IMPORTABLE_ORDERS + 1, $user->bets()->count());
+        $this->assertNotSame($batch, $user->bets()->whereNotNull('import_batch')->value('import_batch'));
     }
 
     public function test_a_file_in_another_currency_is_rejected(): void

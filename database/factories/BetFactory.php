@@ -105,6 +105,16 @@ class BetFactory extends Factory
     }
 
     /**
+     * A bet saved by the import with this batch id (`import_batch`).
+     */
+    public function inImportBatch(string $batchId): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'import_batch' => $batchId,
+        ]);
+    }
+
+    /**
      * A free bet: the stake is not returned.
      */
     public function freeBet(): static

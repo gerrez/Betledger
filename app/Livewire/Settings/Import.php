@@ -80,8 +80,9 @@ class Import extends Component
     }
 
     /**
-     * Save the bets of the previewed file. The file is read again, so an order imported
-     * in the meantime is skipped rather than created twice.
+     * Save the bets of the previewed file and show them on the bets list (filtered to this
+     * import). The file is read again, so an order imported in the meantime is skipped
+     * rather than created twice.
      */
     public function import(SportmarketImport $import, RecordOrders $recordOrders): void
     {
@@ -95,7 +96,8 @@ class Import extends Component
             return;
         }
 
-        $created = $recordOrders->handle($this->user(), $this->selectedBookmaker(), $orders);
+        $batch = $recordOrders->handle($this->user(), $this->selectedBookmaker(), $orders);
+        $created = $batch->betCount;
 
         if ($created === 0) {
             $this->addError('file', 'There is nothing to import in this file.');
@@ -103,9 +105,9 @@ class Import extends Component
             return;
         }
 
-        session()->flash('status', $created === 1 ? 'Imported 1 bet.' : "Imported {$created} bets.");
+        session()->flash('status', ($created === 1 ? 'Imported 1 bet.' : "Imported {$created} bets.").' To undo the import, choose Select, then Select all and Delete.');
 
-        $this->redirectRoute('bets.index', ['status' => 'settled'], navigate: true);
+        $this->redirectRoute('bets.index', ['status' => 'settled', 'batch' => $batch->id], navigate: true);
     }
 
     /**

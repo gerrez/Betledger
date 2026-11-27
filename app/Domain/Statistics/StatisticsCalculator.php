@@ -8,7 +8,8 @@ use InvalidArgumentException;
 
 /**
  * Statistics rules from docs/spec.md over bets already reduced to BetFigures (in the
- * base currency, filtered): totals, breakdowns, odds bands and profit over time.
+ * base currency, filtered): totals, breakdowns, odds bands, profit over time and risk
+ * figures.
  */
 final class StatisticsCalculator
 {
@@ -134,6 +135,85 @@ final class StatisticsCalculator
         }
 
         return new ProfitSeries($period, $points);
+    }
+
+    /**
+     * Drawdowns, streaks, the biggest win and loss and the average stake of the settled
+     * bets, taken in event order (`BetFigures::$eventAt`, ties by bet id). Free bets
+     * count when they are in the set; open bets don't count.
+     *
+     * @param  list<BetFigures>  $bets
+     */
+    public function risk(array $bets): RiskFigures
+    {
+        $settled = $this->inEventOrder(array_values(array_filter($bets, fn (BetFigures $bet): bool => $bet->isSettled())));
+
+        $cumulative = 0;
+        $peak = 0;
+        $peakAt = null;
+        $maxDrawdown = null;
+        $run = 0;
+        $longestWinningStreak = 0;
+        $longestLosingStreak = 0;
+        $biggestWin = null;
+        $biggestLoss = null;
+        $lastAt = null;
+
+        foreach ($settled as $bet) {
+            $profit = $bet->profit ?? 0;
+            $lastAt = $bet->eventAt ?? throw new InvalidArgumentException('Risk figures need the event date of every settled bet.');
+            $cumulative += $profit;
+
+            if ($cumulative >= $peak) {
+                $peak = $cumulative;
+                $peakAt = $lastAt;
+            } elseif ($maxDrawdown === null || $peak - $cumulative > $maxDrawdown->amount) {
+                $maxDrawdown = new Drawdown($peak - $cumulative, $peakAt, $lastAt);
+            }
+
+            if ($bet->isWin()) {
+                $run = $run > 0 ? $run + 1 : 1;
+                $longestWinningStreak = max($longestWinningStreak, $run);
+            } elseif ($bet->isLoss()) {
+                $run = $run < 0 ? $run - 1 : -1;
+                $longestLosingStreak = max($longestLosingStreak, -$run);
+            }
+
+            if ($profit > 0 && ($biggestWin === null || $profit > $biggestWin->profit)) {
+                $biggestWin = $bet;
+            }
+
+            if ($profit < 0 && ($biggestLoss === null || $profit < $biggestLoss->profit)) {
+                $biggestLoss = $bet;
+            }
+        }
+
+        $cashBets = array_filter($settled, fn (BetFigures $bet): bool => ! $bet->isFreeBet);
+        $cashBetCount = count($cashBets);
+
+        return new RiskFigures(
+            maxDrawdown: $maxDrawdown,
+            currentDrawdown: $lastAt !== null && $cumulative < $peak ? new Drawdown($peak - $cumulative, $peakAt, $lastAt) : null,
+            longestWinningStreak: $longestWinningStreak,
+            longestLosingStreak: $longestLosingStreak,
+            currentStreak: $run === 0 ? null : new Streak($run > 0, abs($run)),
+            biggestWin: $biggestWin,
+            biggestLoss: $biggestLoss,
+            averageStake: $cashBetCount === 0 ? null : intdiv(2 * $this->sumOfStakes($cashBets) + $cashBetCount, 2 * $cashBetCount),
+        );
+    }
+
+    /**
+     * The bets by event time, then by bet id; bets with neither keep their order.
+     *
+     * @param  list<BetFigures>  $bets
+     * @return list<BetFigures>
+     */
+    private function inEventOrder(array $bets): array
+    {
+        usort($bets, fn (BetFigures $a, BetFigures $b): int => [$a->eventAt?->getTimestamp(), $a->betId] <=> [$b->eventAt?->getTimestamp(), $b->betId]);
+
+        return $bets;
     }
 
     /**

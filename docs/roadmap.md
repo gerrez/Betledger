@@ -291,7 +291,7 @@ test for anything that reads or changes user data.
 
 ### Statistics
 
-- [ ] **6.5 Risk figures (domain and page).** `Totals` has no measure of variance, so the
+- [x] **6.5 Risk figures (domain and page).** `Totals` has no measure of variance, so the
       page can't say whether a bad run is normal or how much bankroll the staking needs.
       - Domain, in `app/Domain/Statistics/`: over the settled bets in `event_at`
         order (6.1; ties by id), in base currency — **max drawdown** (largest fall of

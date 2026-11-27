@@ -34,6 +34,13 @@ class ProfitChartTest extends TestCase
             ['label' => '12 Oct', 'left' => '75.0%', 'isLast' => false, 'isMinor' => false],
             ['label' => '19 Oct', 'left' => '100.0%', 'isLast' => true, 'isMinor' => false],
         ], $chart->dates);
+        $this->assertSame('Week', $chart->periodHeading);
+        $this->assertSame([
+            ['label' => 'Week of 28 Sep 2026', 'value' => '+210.00 kr', 'left' => '25.0%', 'top' => '79.0%', 'isRightHalf' => false, 'isNearTop' => false],
+            ['label' => 'Week of 5 Oct 2026', 'value' => '+480.00 kr', 'left' => '50.0%', 'top' => '52.0%', 'isRightHalf' => false, 'isNearTop' => false],
+            ['label' => 'Week of 12 Oct 2026', 'value' => '+390.00 kr', 'left' => '75.0%', 'top' => '61.0%', 'isRightHalf' => true, 'isNearTop' => false],
+            ['label' => 'Week of 19 Oct 2026', 'value' => '+820.00 kr', 'left' => '100.0%', 'top' => '18.0%', 'isRightHalf' => true, 'isNearTop' => true],
+        ], $chart->points);
     }
 
     public function test_a_loss_extends_the_axis_below_zero_and_the_area_closes_on_zero(): void
@@ -46,6 +53,11 @@ class ProfitChartTest extends TestCase
         $this->assertSame([false, true, false, false, false], array_column($chart->ticks, 'isZero'));
         $this->assertSame('M0 65 L333.3 110.5 L666.7 221 L1000 11.7', $chart->line);
         $this->assertSame('M0 65 L333.3 110.5 L666.7 221 L1000 11.7 L1000 65 L0 65 Z', $chart->area);
+        $this->assertSame('Day', $chart->periodHeading);
+        $this->assertSame(['19 Oct 2026', '20 Oct 2026', '21 Oct 2026'], array_column($chart->points, 'label'));
+        $this->assertSame(['−€35.00', '−€120.00', '+€41.00'], array_column($chart->points, 'value'));
+        $this->assertSame(['42.5%', '85.0%', '4.5%'], array_column($chart->points, 'top'));
+        $this->assertSame([false, false, true], array_column($chart->points, 'isNearTop'));
     }
 
     public function test_a_flat_line_at_zero_still_gets_an_axis(): void
@@ -57,6 +69,7 @@ class ProfitChartTest extends TestCase
         $this->assertSame(['4', '3', '2', '1', '0'], array_column($chart->ticks, 'value'));
         $this->assertSame('M0 260 L1000 260', $chart->line);
         $this->assertSame([['label' => 'Oct 2026', 'left' => '100.0%', 'isLast' => true, 'isMinor' => false]], $chart->dates);
+        $this->assertSame([['label' => 'October 2026', 'value' => '€0.00', 'left' => '100.0%', 'top' => '100.0%', 'isRightHalf' => true, 'isNearTop' => false]], $chart->points);
     }
 
     public function test_five_periods_spread_from_the_first_to_the_last_are_labelled(): void

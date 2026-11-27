@@ -215,18 +215,72 @@
                         </div>
 
                         <div class="flex min-w-0 grow flex-col gap-2">
-                            <svg width="100%" height="260" viewBox="0 0 {{ $profitChart::WIDTH }} {{ $profitChart::HEIGHT }}" preserveAspectRatio="none" role="img" aria-label="{{ $profitChart->description }}" class="overflow-visible">
-                                @foreach ($profitChart->ticks as $tick)
-                                    <line
-                                        wire:key="grid-{{ $loop->index }}"
-                                        x1="0" y1="{{ $tick['y'] }}" x2="{{ $profitChart::WIDTH }}" y2="{{ $tick['y'] }}"
-                                        vector-effect="non-scaling-stroke"
-                                        @class(['stroke-zinc-300 dark:stroke-zinc-600' => $tick['isZero'], 'stroke-line' => ! $tick['isZero']])
-                                    />
+                            {{-- Hovering, tapping or dragging across the chart shows the nearest period's date and cumulative profit. --}}
+                            <div
+                                x-data="{
+                                    active: null,
+                                    pick(event) {
+                                        const box = this.$root.getBoundingClientRect();
+                                        const periods = Number(this.$root.dataset.periods);
+                                        this.active = Math.min(periods, Math.max(1, Math.round((event.clientX - box.left) / box.width * periods)));
+                                    },
+                                }"
+                                data-periods="{{ count($profitChart->points) }}"
+                                x-on:pointerdown="pick($event)"
+                                x-on:pointermove="pick($event)"
+                                x-on:pointerleave="if ($event.pointerType === 'mouse') active = null"
+                                x-on:click.outside="active = null"
+                                class="relative h-[260px] touch-pan-y"
+                            >
+                                <svg width="100%" height="260" viewBox="0 0 {{ $profitChart::WIDTH }} {{ $profitChart::HEIGHT }}" preserveAspectRatio="none" role="img" aria-label="{{ $profitChart->description }}" class="overflow-visible">
+                                    @foreach ($profitChart->ticks as $tick)
+                                        <line
+                                            wire:key="grid-{{ $loop->index }}"
+                                            x1="0" y1="{{ $tick['y'] }}" x2="{{ $profitChart::WIDTH }}" y2="{{ $tick['y'] }}"
+                                            vector-effect="non-scaling-stroke"
+                                            @class(['stroke-zinc-300 dark:stroke-zinc-600' => $tick['isZero'], 'stroke-line' => ! $tick['isZero']])
+                                        />
+                                    @endforeach
+                                    <path d="{{ $profitChart->area }}" class="fill-accent-soft" stroke="none" />
+                                    <path d="{{ $profitChart->line }}" fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" class="stroke-accent" />
+                                </svg>
+
+                                @foreach ($profitChart->points as $point)
+                                    <div wire:key="point-{{ $loop->index }}" aria-hidden="true" style="left: {{ $point['left'] }}; top: {{ $point['top'] }}" class="pointer-events-none absolute">
+                                        <div x-show="active === {{ $loop->iteration }}" style="display: none">
+                                            <span class="absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface bg-accent"></span>
+                                            <span @class([
+                                                'absolute flex flex-col whitespace-nowrap rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs shadow-sm',
+                                                'right-2.5' => $point['isRightHalf'],
+                                                'left-2.5' => ! $point['isRightHalf'],
+                                                'top-2.5' => $point['isNearTop'],
+                                                'bottom-2.5' => ! $point['isNearTop'],
+                                            ])>
+                                                <span class="text-muted">{{ $point['label'] }}</span>
+                                                <span class="font-semibold">{{ $point['value'] }}</span>
+                                            </span>
+                                        </div>
+                                    </div>
                                 @endforeach
-                                <path d="{{ $profitChart->area }}" class="fill-accent-soft" stroke="none" />
-                                <path d="{{ $profitChart->line }}" fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" class="stroke-accent" />
-                            </svg>
+                            </div>
+
+                            <table class="sr-only">
+                                <caption>Profit over time: {{ $profitChart->caption }}</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">{{ $profitChart->periodHeading }}</th>
+                                        <th scope="col">Cumulative profit</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($profitChart->points as $point)
+                                        <tr wire:key="point-row-{{ $loop->index }}">
+                                            <th scope="row">{{ $point['label'] }}</th>
+                                            <td>{{ $point['value'] }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
 
                             <div aria-hidden="true" class="relative h-4 text-xs text-muted">
                                 @foreach ($profitChart->dates as $date)

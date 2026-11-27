@@ -308,8 +308,23 @@
                                     <tr wire:key="breakdown-{{ $breakdownBy->value }}-{{ $loop->index }}" class="text-right">
                                         <th scope="row" @class([
                                             'border-b border-line py-3 pr-2 text-left font-semibold',
-                                            'text-muted' => $row['isNone'],
-                                        ])>{{ $row['label'] }}</th>
+                                            'text-muted' => $row['isNone'] && $row['href'] === null,
+                                        ])>
+                                            @if ($row['href'] === null)
+                                                {{ $row['label'] }}
+                                            @else
+                                                <a
+                                                    href="{{ $row['href'] }}"
+                                                    wire:navigate
+                                                    aria-label="{{ $row['label'] }}: view its settled bets"
+                                                    @class([
+                                                        '-my-3 inline-flex min-h-11 items-center hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                                                        'text-accent-content' => ! $row['isNone'],
+                                                        'text-muted' => $row['isNone'],
+                                                    ])
+                                                >{{ $row['label'] }}</a>
+                                            @endif
+                                        </th>
                                         <td class="border-b border-line p-2">
                                             {{ $row['totals']->settledBets }}
                                             @if ($row['totals']->openBets > 0)
@@ -351,10 +366,22 @@
                         <ul class="flex flex-col gap-3">
                             @foreach ($oddsBands as $band)
                                 <li wire:key="band-{{ $loop->index }}" class="grid grid-cols-[80px_minmax(0,1fr)_56px_76px] items-center gap-2.5 text-[13px]">
-                                    <span class="flex flex-col">
-                                        <span class="font-semibold">{{ $band['label'] }}</span>
-                                        <span class="text-xs text-muted">{{ $band['totals']->settledBets }} {{ Str::plural('bet', $band['totals']->settledBets) }}</span>
-                                    </span>
+                                    @if ($band['href'] === null)
+                                        <span class="flex flex-col">
+                                            <span class="font-semibold">{{ $band['label'] }}</span>
+                                            <span class="text-xs text-muted">{{ $band['totals']->settledBets }} {{ Str::plural('bet', $band['totals']->settledBets) }}</span>
+                                        </span>
+                                    @else
+                                        <a
+                                            href="{{ $band['href'] }}"
+                                            wire:navigate
+                                            aria-label="Total odds {{ $band['label'] }}: view the {{ $band['totals']->settledBets }} settled {{ Str::plural('bet', $band['totals']->settledBets) }}"
+                                            class="group flex min-h-11 flex-col justify-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                                        >
+                                            <span class="font-semibold text-accent-content group-hover:underline">{{ $band['label'] }}</span>
+                                            <span class="text-xs text-muted">{{ $band['totals']->settledBets }} {{ Str::plural('bet', $band['totals']->settledBets) }}</span>
+                                        </a>
+                                    @endif
 
                                     <span aria-hidden="true" class="grid h-3.5 grid-cols-2">
                                         <span class="flex justify-end border-r border-zinc-300 dark:border-zinc-600">

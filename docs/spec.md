@@ -277,6 +277,15 @@ in event order (`event_at`, ties by bet id), free bets included when they are:
    3.01–5.00, 5.01–10.00, 10.01+.
 4. **CLV:** average CLV, share of bets that beat the closing line, and CLV by breakdown.
 
+**From a row to its bets** (6.7): each breakdown row and odds range with settled bets
+links to the bets list's Settled tab with the page's date range, filters and free bets
+choice plus the row's value, so the list shows exactly the bets the row counts. The
+"No competition / No teams / No market / No tipster / No tags" rows link with the value
+`none` (a selection without one, as in the breakdown). Odds ranges link with
+`odds=<band>` (above the band below's upper bound, up to and including its own). Team,
+`none`, odds range and `free=exclude` are URL-only filters on the list, shown as
+removable chips.
+
 ## Bankroll
 
 The Bankroll page (`/bankroll`) shows, per bookmaker and in total: **number of bets**,
@@ -1020,7 +1029,7 @@ same items. Touch targets ≥ 44 px.
     added later. Dates entered the wrong way round are swapped, as on statistics.
   - *Which filters.* Bookmaker, sport, competition, market, tipster, tag, bet type and the
     date range, as the task lists. Team and "include free bets" (statistics has both)
-    are not on the list yet; 6.7 can add them when its links need them.
+    came with 6.7, as URL-only filters for its links.
   - *Layout.* Search field and a "Filters" button on the first row, the tabs on the
     second, then one sideways-scrolling row with the order, the active-filter chips and
     "Clear …". Bookmaker and sport moved from that row into the Filters sheet with the
@@ -1035,6 +1044,18 @@ same items. Touch targets ≥ 44 px.
     "Clear filters" in the sheet keeps the search; the button on the page clears both.
   - *Another user's id* in the URL still filters, so no bets match, and its chip reads
     "Tipster: unknown" (the name is never looked up outside the user's own lists).
+- **From a statistics row to its bets (assumed in 6.7).** See "From a row to its bets"
+  under Statistics. Assumed:
+  - *Same dimension filtered twice.* The list filters each dimension by one value. When
+    the statistics page already filters a dimension (e.g. sport = Football) and the
+    breakdown is by that dimension, a row for another value (Tennis, from accumulators
+    that also have a football leg) would need "Football and Tennis", so that row is not
+    linked; the row matching the filter is. Multi-value filters could lift this later.
+  - *Rows without settled bets* (only open bets, or an empty odds range) are not linked:
+    the Settled tab would be empty.
+  - *Team, odds range and free bets on the list* have no field in the Filters sheet,
+    only a chip from a link, as the task asked for the odds range. A team field could be
+    added to the sheet later.
 - **Reset account (assumed in 6.19).** See "Reset account". The request was "all bets
   will be deleted", so only bets go: bookmakers, list entries and bankroll deposits and
   withdrawals are kept (a user who wants those gone too can delete them on their pages,

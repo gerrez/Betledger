@@ -318,7 +318,7 @@ test for anything that reads or changes user data.
       - Keep "average odds" as defined; add the median next to it only if it fits the
         tile.
       - Spec: add the definition. Unit tests with hand-checked values.
-- [ ] **6.7 From a statistics row to its bets.** Breakdown rows and odds bands are plain
+- [x] **6.7 From a statistics row to its bets.** Breakdown rows and odds bands are plain
       text; "Tennis −12 % ROI" can't be followed up.
       - Each breakdown row and odds band links to the bets list with the page's current
         filters plus that row's value (and the settled tab). The "no competition / no

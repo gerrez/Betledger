@@ -13,10 +13,19 @@ use InvalidArgumentException;
  * the user's LocalTime): settled bets count by their event date (`event_at`), open bets
  * by the date they were placed. Selection-level filters
  * (sport, competition, team, market) match a bet when any of its selections matches.
- * A status limits the bets to open or settled ones. Null means no filter.
+ * A status limits the bets to open or settled ones, an odds band to the bets whose total
+ * odds are in it. Null means no filter.
+ *
+ * An id of NONE picks the bets without such an entry: no tipster, no tags, or a selection
+ * without a competition, market or teams (the "none" rows of a breakdown).
  */
 final readonly class StatisticsFilter
 {
+    /**
+     * The id that stands for "none"; no entry has it, ids start at 1.
+     */
+    public const NONE = 0;
+
     public ?CarbonImmutable $from;
 
     public ?CarbonImmutable $to;
@@ -34,6 +43,7 @@ final readonly class StatisticsFilter
         public ?BetType $type = null,
         public bool $includeFreeBets = true,
         public ?BetStatus $status = null,
+        public ?OddsBand $oddsBand = null,
     ) {
         $this->from = $from?->startOfDay();
         $this->to = $to?->startOfDay();

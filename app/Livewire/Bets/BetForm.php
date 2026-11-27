@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Json;
 use Livewire\Component;
 
 /**
@@ -38,6 +39,9 @@ abstract class BetForm extends Component
 {
     /** The most selections an accumulator may have. */
     public const MAX_SELECTIONS = 20;
+
+    /** The most competitions or teams `suggest()` returns. */
+    public const MAX_SUGGESTIONS = 20;
 
     /** The format of the date fields, as `<input type="date">` sends it. */
     protected const DATE = 'Y-m-d';
@@ -190,8 +194,8 @@ abstract class BetForm extends Component
         }
 
         if ($name !== '' && ! in_array(mb_strtolower($name), array_map(mb_strtolower(...), $teams), true)) {
-            $suggestions = $this->sportSuggestions($this->user()->sports()->get(), $this->selections[$index]['sport']);
-            $this->changeTeams($index, [...$teams, $this->spelledAsSaved($name, $suggestions['teams'])]);
+            $sport = $this->savedSport($this->selections[$index]['sport']);
+            $this->changeTeams($index, [...$teams, $this->spelledAsSaved($name, $sport === null ? [] : $this->namesInSport('teams', $sport->id))]);
         }
 
         $this->selections[$index]['team_name'] = '';
@@ -233,11 +237,28 @@ abstract class BetForm extends Component
         $this->tags = array_values($this->tags);
     }
 
+    /**
+     * The user's competitions or teams in a sport whose names contain the search, best
+     * match first, for the bet form's combobox (fetched while typing, not rendered).
+     *
+     * @return list<string>
+     */
+    #[Json]
+    public function suggest(string $list, string $sport, string $search): array
+    {
+        $savedSport = $this->savedSport($sport);
+
+        if ($savedSport === null || ! in_array($list, ['competitions', 'teams'], true)) {
+            return [];
+        }
+
+        return ListName::matching($this->namesInSport($list, $savedSport->id), $search, self::MAX_SUGGESTIONS);
+    }
+
     public function render(): View
     {
         $user = $this->user();
         $bookmaker = $this->availableBookmakers()->firstWhere('id', (int) $this->bookmaker_id);
-        $sports = $user->sports()->orderBy('name')->get();
         $totalOdds = $this->totalOdds();
 
         return view('livewire.bets.bet-form', [
@@ -256,12 +277,11 @@ abstract class BetForm extends Component
             'resultButtons' => array_map(fn (array $selection): array => BetDetail::resultButtons(SelectionResult::tryFrom($selection['result'])), $this->selections),
             'settlement' => $this->savedSettlement(),
             'suggestions' => [
-                'sports' => $sports->pluck('name'),
+                'sports' => $user->sports()->orderBy('name')->pluck('name'),
                 'markets' => $user->markets()->orderBy('name')->pluck('name'),
                 'tipsters' => $user->tipsters()->orderBy('name')->pluck('name'),
                 'tags' => $user->tags()->orderBy('name')->pluck('name'),
             ],
-            'sportSuggestions' => array_map(fn (array $selection): array => $this->sportSuggestions($sports, $selection['sport']), $this->selections),
         ]);
     }
 
@@ -599,23 +619,38 @@ abstract class BetForm extends Component
     }
 
     /**
-     * Competitions and teams the user has in the sport typed for a selection.
+     * The user's sports, loaded once per request.
      *
-     * @param  Collection<int, Sport>  $sports
-     * @return array{competitions: list<string>, teams: list<string>}
+     * @return Collection<int, Sport>
      */
-    private function sportSuggestions(Collection $sports, string $sportName): array
+    private function savedSports(): Collection
     {
-        $sport = $sports->first(fn (Sport $sport): bool => mb_strtolower($sport->name) === mb_strtolower(trim($sportName)));
+        return once(fn () => $this->user()->sports()->orderBy('name')->get());
+    }
 
-        if ($sport === null) {
-            return ['competitions' => [], 'teams' => []];
-        }
+    /**
+     * The user's sport with this name, ignoring case and surrounding spaces, or null.
+     */
+    private function savedSport(string $name): ?Sport
+    {
+        return $this->savedSports()->first(fn (Sport $sport): bool => mb_strtolower($sport->name) === mb_strtolower(trim($name)));
+    }
 
-        return [
-            'competitions' => array_values($sport->competitions()->orderBy('name')->pluck('name')->all()),
-            'teams' => array_values($sport->teams()->orderBy('name')->pluck('name')->all()),
-        ];
+    /**
+     * The names of the user's competitions or teams in a sport, loaded once per sport
+     * and request however many selections share it.
+     *
+     * @param  'competitions'|'teams'  $list
+     * @return list<string>
+     */
+    private function namesInSport(string $list, int $sportId): array
+    {
+        return once(fn (): array => array_values(
+            ($list === 'teams' ? $this->user()->teams() : $this->user()->competitions())
+                ->where('sport_id', $sportId)
+                ->pluck('name')
+                ->all(),
+        ));
     }
 
     /**

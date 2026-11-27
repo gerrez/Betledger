@@ -43,13 +43,14 @@ class Team extends Model
     }
 
     /**
-     * The selections on events this team took part in.
+     * The selections on events this team took part in, of bets that aren't deleted: a
+     * deleted bet doesn't keep the team in use.
      *
      * @return BelongsToMany<Selection, $this, OwnedPivot>
      */
     public function selections(): BelongsToMany
     {
-        return $this->belongsToMany(Selection::class)->using(OwnedPivot::class);
+        return $this->belongsToMany(Selection::class)->using(OwnedPivot::class)->whereHas('bet');
     }
 
     /**

@@ -14,6 +14,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -90,11 +91,13 @@ class Index extends Component
     }
 
     /**
-     * Delete one of the user's entries, as long as nothing uses it.
+     * Delete one of the user's entries, as long as nothing uses it. Deleted bets that
+     * use it are deleted for good with it (the confirmation says how many).
      */
     public function delete(int $id): void
     {
         $entry = $this->findEntry($id, 'delete');
+        $user = $this->user();
 
         $this->resetValidation();
 
@@ -104,13 +107,19 @@ class Index extends Component
             return;
         }
 
-        $entry->delete();
+        $deletedBetIds = $this->listType()->deletedBetIds($user)[$entry->id] ?? [];
+
+        DB::transaction(function () use ($user, $deletedBetIds, $entry): void {
+            $user->bets()->onlyTrashed()->whereKey($deletedBetIds)->forceDelete();
+            $entry->delete();
+        });
     }
 
     public function render(): View
     {
         $type = $this->listType();
         $query = $type->entries($this->user());
+        $deletedBetIds = $type->deletedBetIds($this->user());
 
         $entries = $query
             ->withExists($query->getRelated()::usageRelations())
@@ -122,6 +131,9 @@ class Index extends Component
             'types' => ListType::cases(),
             'type' => $type,
             'groups' => $this->groupBySport($type, $entries),
+            'deleteWarnings' => array_map(fn (array $betIds): string => count($betIds) === 1
+                ? 'A recently deleted bet uses it and is deleted for good too.'
+                : count($betIds).' recently deleted bets use it and are deleted for good too.', $deletedBetIds),
         ]);
     }
 

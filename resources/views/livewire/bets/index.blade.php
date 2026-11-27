@@ -137,7 +137,7 @@
                             icon="trash"
                             wire:click="deleteSelected"
                             :disabled="! $hasSelection"
-                            data-confirm="Their selections, results and tags are deleted too. This can’t be undone."
+                            data-confirm="You can restore them from Settings → Deleted bets for {{ \App\Models\Bet::DAYS_KEPT_DELETED }} days."
                             data-confirm-title="Delete {{ $selectedCount }}?"
                             data-confirm-button="Delete {{ $selectedCount }}"
                             data-confirm-danger

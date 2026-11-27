@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * An entry in one of the user's lists: sports, competitions, teams, markets, tipsters
  * and tags. Entries are renamed on the Lists page and can be deleted only while unused.
+ * Deleted bets don't keep an entry in use; deleting the entry deletes them for good
+ * (see App\Livewire\Lists\ListType::deletedBetIds()).
  */
 trait IsListEntry
 {

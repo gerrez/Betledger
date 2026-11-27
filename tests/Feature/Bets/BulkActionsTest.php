@@ -48,7 +48,7 @@ class BulkActionsTest extends TestCase
             ->assertSee('How did it go?');
     }
 
-    public function test_the_ticked_bets_are_deleted_with_their_selections(): void
+    public function test_the_ticked_bets_are_moved_to_deleted_bets(): void
     {
         $arsenal = $this->bet('Arsenal v Chelsea');
         $everton = $this->bet('Everton v Leeds');
@@ -62,11 +62,13 @@ class BulkActionsTest extends TestCase
             ->call('deleteSelected')
             ->assertSet('selecting', false)
             ->assertSet('selected', [])
-            ->assertSee(['2 bets deleted.', 'Celtic v Rangers'])
+            ->assertSee(['2 bets deleted. You can restore them from Settings → Deleted bets for 30 days.', 'Celtic v Rangers'])
             ->assertDontSee(['Arsenal v Chelsea', 'Everton v Leeds']);
 
         $this->assertSame([$celtic->id], $this->user->bets()->pluck('id')->all());
-        $this->assertSame(0, Selection::query()->whereIn('bet_id', [$arsenal->id, $everton->id])->count());
+        $this->assertSoftDeleted($arsenal);
+        $this->assertSoftDeleted($everton);
+        $this->assertSame(2, Selection::query()->whereIn('bet_id', [$arsenal->id, $everton->id])->count());
     }
 
     public function test_select_all_takes_every_matching_bet_on_every_page_and_nothing_else(): void
@@ -200,8 +202,8 @@ class BulkActionsTest extends TestCase
             ->call('deleteSelected')
             ->assertSee('1 bet deleted.');
 
-        $this->assertModelMissing($own);
-        $this->assertModelExists($theirs);
+        $this->assertSoftDeleted($own);
+        $this->assertNotSoftDeleted($theirs);
         $this->assertSame(1, $theirs->tags()->count());
         $this->assertFalse($ownTag->bets()->exists());
     }

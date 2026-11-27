@@ -105,7 +105,7 @@ class Import extends Component
             return;
         }
 
-        session()->flash('status', ($created === 1 ? 'Imported 1 bet.' : "Imported {$created} bets.").' To undo the import, choose Select, then Select all and Delete.');
+        session()->flash('status', ($created === 1 ? 'Imported 1 bet.' : "Imported {$created} bets.").' To undo the import, choose Select, then Select all and Delete; to import the file again after that, delete the bets for good in Settings → Deleted bets.');
 
         $this->redirectRoute('bets.index', ['status' => 'settled', 'batch' => $batch->id], navigate: true);
     }
@@ -169,7 +169,9 @@ class Import extends Component
             return null;
         }
 
-        $importedRefs = $user->bets()->whereNotNull('external_ref')->pluck('external_ref')->all();
+        // Deleted bets too: deleting an imported bet must not make the next import bring it
+        // back. Deleting it for good frees its order.
+        $importedRefs = $user->bets()->withTrashed()->whereNotNull('external_ref')->pluck('external_ref')->all();
 
         try {
             return $import->read($this->file->get(), $this->selectedBookmaker()->currency, $importedRefs, $user->localTime());

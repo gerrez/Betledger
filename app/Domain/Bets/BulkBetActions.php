@@ -24,7 +24,8 @@ final class BulkBetActions
     private const CHUNK_SIZE = 500;
 
     /**
-     * Delete the bets, with their selections, teams and tags (cascading foreign keys).
+     * Delete the bets: they move to Settings → Deleted bets (soft delete) with their
+     * selections, teams and tags, and can be restored until they are pruned.
      *
      * @param  list<int>  $betIds
      */

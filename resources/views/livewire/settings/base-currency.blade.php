@@ -30,7 +30,8 @@
             @else
                 <flux:text>
                     The base currency can’t be changed once you have recorded bets: each bet’s
-                    exchange rate converts to the base currency it was saved with.
+                    exchange rate converts to the base currency it was saved with. Recently deleted bets
+                    count too, until they are deleted for good in Settings → Deleted bets.
                 </flux:text>
             @endif
         </form>

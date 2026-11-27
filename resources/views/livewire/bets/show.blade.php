@@ -186,7 +186,7 @@
     <button
         type="button"
         wire:click="delete"
-        data-confirm="Its selections and result are deleted too. This can’t be undone."
+        data-confirm="You can restore it from Settings for {{ \App\Models\Bet::DAYS_KEPT_DELETED }} days."
         data-confirm-title="Delete this bet?"
         data-confirm-button="Delete bet"
         data-confirm-danger

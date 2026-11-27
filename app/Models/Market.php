@@ -30,11 +30,13 @@ class Market extends Model
     ];
 
     /**
+     * Selections of bets that aren't deleted: a deleted bet doesn't keep the entry in use.
+     *
      * @return HasMany<Selection, $this>
      */
     public function selections(): HasMany
     {
-        return $this->hasMany(Selection::class);
+        return $this->hasMany(Selection::class)->whereHas('bet');
     }
 
     /**

@@ -51,7 +51,7 @@
                                             variant="ghost"
                                             class="w-[4.5rem]"
                                             wire:click="delete({{ $entry->id }})"
-                                            data-confirm="This can’t be undone."
+                                            data-confirm="{{ isset($deleteWarnings[$entry->id]) ? $deleteWarnings[$entry->id].' ' : '' }}This can’t be undone."
                                             data-confirm-title="Delete “{{ $entry->name }}”?"
                                             data-confirm-button="Delete"
                                             data-confirm-danger

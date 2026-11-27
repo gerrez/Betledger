@@ -171,7 +171,7 @@ class BetSchemaTest extends TestCase
         $this->assertDatabaseHas('selection_team', ['selection_id' => $selection->id, 'team_id' => $teams[0]->id, 'user_id' => $user->id]);
     }
 
-    public function test_deleting_a_bet_deletes_its_selections_and_links(): void
+    public function test_deleting_a_bet_keeps_its_selections_and_links_until_it_is_deleted_for_good(): void
     {
         $bet = Bet::factory()->accumulator()->create();
         $bet->tags()->attach(Tag::factory()->for($bet->user)->create());
@@ -179,6 +179,13 @@ class BetSchemaTest extends TestCase
 
         $bet->delete();
 
+        $this->assertSoftDeleted($bet);
+        $this->assertDatabaseCount('bet_tag', 1);
+        $this->assertDatabaseCount('selection_team', 1);
+
+        $bet->forceDelete();
+
+        $this->assertModelMissing($bet);
         $this->assertDatabaseEmpty('selections');
         $this->assertDatabaseEmpty('bet_tag');
         $this->assertDatabaseEmpty('selection_team');

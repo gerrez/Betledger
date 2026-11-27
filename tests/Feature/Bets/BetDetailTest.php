@@ -274,18 +274,20 @@ class BetDetailTest extends TestCase
         $this->assertSeeInOrder($this->page($bet), ['Won', 'FREE BET', '+€200.00', 'Payout €200.00', 'Stake', '€100.00 · free bet']);
     }
 
-    public function test_deleting_a_bet_removes_it_with_its_selections(): void
+    public function test_deleting_a_bet_moves_it_to_deleted_bets_with_its_selections(): void
     {
         $bet = Bet::factory()->forBookmaker($this->bookmaker)->accumulator()->create();
+        $selectionCount = $bet->selections()->count();
 
         $this->page($bet)
-            ->assertSeeHtml(['data-confirm-title="Delete this bet?"', 'data-confirm-danger'])
+            ->assertSeeHtml(['data-confirm-title="Delete this bet?"', 'data-confirm="You can restore it from Settings for 30 days."', 'data-confirm-danger'])
             ->call('delete')
             ->assertRedirect(route('bets.index'));
 
-        $this->assertModelMissing($bet);
-        $this->assertSame(0, Selection::query()->where('bet_id', $bet->id)->count());
-        $this->assertSame('Bet deleted.', session('status'));
+        $this->assertSoftDeleted($bet);
+        $this->assertSame($selectionCount, Selection::query()->where('bet_id', $bet->id)->count());
+        $this->assertSame('Bet deleted. You can restore it from Settings → Deleted bets for 30 days.', session('status'));
+        $this->get(route('bets.show', $bet))->assertNotFound();
     }
 
     public function test_an_unknown_result_is_refused(): void

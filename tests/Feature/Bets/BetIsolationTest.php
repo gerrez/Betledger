@@ -28,7 +28,7 @@ class BetIsolationTest extends TestCase
         $bet = Bet::factory()->create();
         $otherUser = User::factory()->create();
 
-        foreach (['view', 'update', 'delete'] as $ability) {
+        foreach (['view', 'update', 'delete', 'restore', 'forceDelete'] as $ability) {
             $this->assertTrue(Gate::forUser($bet->user)->allows($ability, $bet));
             $this->assertFalse(Gate::forUser($otherUser)->allows($ability, $bet));
         }

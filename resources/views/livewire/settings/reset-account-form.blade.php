@@ -28,6 +28,9 @@
                 <flux:callout.text>
                     {{ $betCount === 1 ? __('Your 1 bet will be permanently deleted,') : __('All :count of your bets will be permanently deleted,', ['count' => $betCount]) }}
                     {{ __('including their selections, results and tags. Your statistics will be empty, and bankroll balances will only include your deposits and withdrawals.') }}
+                    @if ($deletedCount > 0)
+                        {{ $deletedCount === 1 ? __('This includes 1 recently deleted bet.') : __('This includes :count recently deleted bets.', ['count' => $deletedCount]) }}
+                    @endif
                 </flux:callout.text>
                 <flux:callout.text>
                     {{ __('Your account, bookmakers, lists, bankroll deposits and withdrawals, settings and API tokens are kept.') }}

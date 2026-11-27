@@ -7,12 +7,15 @@ use App\Domain\BetStatus;
 use App\Domain\BetType;
 use App\Domain\Currency;
 use Database\Factories\BetFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -39,9 +42,10 @@ use Illuminate\Support\Carbon;
  * @property bool $payout_is_manual
  * @property int|null $profit minor units
  * @property string|null $notes
- * @property string|null $external_ref where an imported bet came from ("sportmarket:<Order Id>"), unique per user
+ * @property string|null $external_ref where an imported bet came from ("sportmarket:<Order Id>"), unique per user (deleted bets included)
  * @property string|null $import_batch the import the bet came from: a ULID shared by the bets of one confirmed import; internal, not in the API or the CSV
  * @property Carbon $created_at
+ * @property Carbon|null $deleted_at when the user deleted the bet; it can be restored until it is pruned DAYS_KEPT_DELETED days later
  * @property-read User $user
  * @property-read Bookmaker $bookmaker
  * @property-read Tipster|null $tipster
@@ -52,6 +56,19 @@ class Bet extends Model
 {
     /** @use HasFactory<BetFactory> */
     use HasFactory;
+
+    use Prunable;
+
+    /**
+     * Deleting a bet only marks it deleted: it drops out of every list, total and check
+     * on bets until it is restored (Settings → Deleted bets) or deleted for good.
+     */
+    use SoftDeletes;
+
+    /**
+     * How long a deleted bet can be restored before model:prune deletes it for good.
+     */
+    public const DAYS_KEPT_DELETED = 30;
 
     /**
      * The model's default values for attributes.
@@ -157,6 +174,25 @@ class Bet extends Model
     public function isSettled(): bool
     {
         return $this->status === BetStatus::Settled;
+    }
+
+    /**
+     * The day a deleted bet is pruned: DAYS_KEPT_DELETED days after it was deleted.
+     */
+    public function prunedAt(): ?Carbon
+    {
+        return $this->deleted_at?->copy()->addDays(self::DAYS_KEPT_DELETED);
+    }
+
+    /**
+     * Bets deleted more than DAYS_KEPT_DELETED days ago, which model:prune deletes for
+     * good (selections, selection teams and tag links go with them by cascading keys).
+     *
+     * @return Builder<self>
+     */
+    public function prunable(): Builder
+    {
+        return static::onlyTrashed()->where('deleted_at', '<=', now()->subDays(self::DAYS_KEPT_DELETED));
     }
 
     /**

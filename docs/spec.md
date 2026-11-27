@@ -630,7 +630,8 @@ same items. Touch targets ≥ 44 px.
   bet's own bookmaker stays selectable after it is deactivated, marked "(inactive)".
 - **Bets list (assumed in 2.8).** The bookmaker filter lists every bookmaker, inactive
   ones included; the sport filter shows a bet when any of its selections is in that
-  sport. "Open · n" counts the open bets that pass the filters. Each tab has its own
+  sport. "Open · n" counts the open bets that pass the filters (and, since 6.3, the
+  search). Each tab has its own
   orders, the first being its default: Open — starts soonest (the next pending
   selection's start; bets without a start time last), newest, oldest placed; Settled —
   recently settled, newest, oldest placed; All — newest, oldest placed. Changing tab
@@ -956,6 +957,30 @@ same items. Touch targets ≥ 44 px.
   - *Possible follow-ups (out of scope for 4.3):* transfers between bookmakers as their own
     type; bonuses or adjustments as their own type (for now a deposit with a note);
     transactions in the CSV export (that format is a contract) and in the API.
+- **Bets list search and filters (assumed in 6.3).** The list's filters are the
+  statistics page's conditions (one query class, `App\Domain\Bets\BetFilterQuery`), so a
+  statistics row can link to exactly its bets (6.7). Assumed:
+  - *Date range.* "A placed/settled date range" is the statistics rule: settled bets by
+    their event date (`event_at`), open bets by the day they were placed, days in the
+    user's time zone. There is no choice between placed and settled date; it could be
+    added later. Dates entered the wrong way round are swapped, as on statistics.
+  - *Which filters.* Bookmaker, sport, competition, market, tipster, tag, bet type and the
+    date range, as the task lists. Team and "include free bets" (statistics has both)
+    are not on the list yet; 6.7 can add them when its links need them.
+  - *Layout.* Search field and a "Filters" button on the first row, the tabs on the
+    second, then one sideways-scrolling row with the order, the active-filter chips and
+    "Clear …". Bookmaker and sport moved from that row into the Filters sheet with the
+    others (a flyout from the right on desktop, full width on phones). Filters apply as
+    they are chosen; the sheet's button says how many bets match ("Show 12 bets").
+  - *Search.* Matches the notes and any selection's event name, pick, team or competition
+    containing the text, ignoring case; `%`, `_` and `\` are literal. At most 100
+    characters are used. SQLite (local and tests) only folds ASCII letters, so "ø" and
+    "Ø" only match each other on Postgres (production).
+  - *"n bets".* Shown above the cards only while a search or filter is in use. The empty
+    state says what is in use ("No open bets match this search and these filters").
+    "Clear filters" in the sheet keeps the search; the button on the page clears both.
+  - *Another user's id* in the URL still filters, so no bets match, and its chip reads
+    "Tipster: unknown" (the name is never looked up outside the user's own lists).
 - **Reset account (assumed in 6.19).** See "Reset account". The request was "all bets
   will be deleted", so only bets go: bookmakers, list entries and bankroll deposits and
   withdrawals are kept (a user who wants those gone too can delete them on their pages,

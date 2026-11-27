@@ -177,6 +177,12 @@
         @endif
     </dl>
 
+    <a
+        href="{{ route('bets.create', ['from' => $bet]) }}"
+        wire:navigate
+        class="flex h-12 items-center justify-center rounded-xl border border-line bg-surface text-[15px] font-medium text-ink hover:bg-canvas"
+    >Duplicate bet</a>
+
     <button
         type="button"
         wire:click="delete"

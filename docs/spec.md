@@ -768,7 +768,9 @@ same items. Touch targets ≥ 44 px.
   for "All time") to its end (or the last settled bet).
 - **Statistics page (assumed in 2.13).** `/statistics` opens on the last 90 days (as in
   the mockup). "30 days" and "90 days" are today (the user's today, 6.2) and the 29 or 89 days before, "This
-  year" runs from 1 January to today, and "Custom…" shows From and To dates, starting
+  month" and "This year" run from the 1st of the month or 1 January to today, "Last
+  month" and "Last year" are the whole calendar month or year before (6.16), and
+  "Custom…" shows From and To dates, starting
   from the range shown until then; either can be left empty (no limit), and dates
   entered the wrong way round are read the right way round. The range, filters, free
   bets toggle and breakdown dimension are kept in the URL. Each filter is a dropdown with
@@ -791,8 +793,13 @@ same items. Touch targets ≥ 44 px.
   power of ten), labelled in whole units without the symbol. Up to five periods spread
   from the first to the last are labelled under their points ("13 Oct" by day or week,
   the Monday for a week; "Oct 2026" by month), three on phones. Without settled bets in
-  the range the card says the chart shows once bets are settled. No tooltips: the chart
-  has a text description for screen readers (periods and the final cumulative profit).
+  the range the card says the chart shows once bets are settled. The chart has a text
+  description for screen readers (periods and the final cumulative profit). Since 6.16,
+  hovering, tapping or dragging across the chart marks the nearest period's point with a
+  dot and a small label with its date in full ("19 Oct 2026", "Week of 19 Oct 2026",
+  "October 2026") and its cumulative profit with the symbol; the label opens away from the
+  nearest edges. Moving the mouse off the chart, or tapping outside it, hides it. The same
+  values are in a visually hidden table (one row per period) for screen readers.
 - **Home overview (assumed in 2.15).** The home page stays at `/dashboard`, where logging
   in leads. The month selector lists every month from the user's first bet (by placed
   or event date) to the current one, newest first; the month is kept in the URL, and an
@@ -1110,6 +1117,13 @@ same items. Touch targets ≥ 44 px.
   or delete the account). The reset asks for the password, as deleting the account does,
   so a stray click can't wipe the ledger. A "delete everything but the login" option can
   be added later if the owner wants it.
+- **Chart values and more date ranges (assumed in 6.16).** See the 2.13 and 2.14 notes.
+  Assumed: the label is for pointer and touch only; the chart is not a keyboard stop,
+  since keyboard and screen reader users get the hidden table and a focusable chart with
+  arrow keys would need its own role and announcements. The label shows the cumulative
+  profit only, not the period's own profit, as the task asked. The eight range buttons
+  keep the one-row group, which wraps on phones. Owner: should sighted keyboard users
+  get a way to read the values (a "Show values" toggle for the table, say)?
 - **Bulk actions and undoing an import (assumed in 6.15).** See "Undoing an import"
   under "Import from Sportmarket". Assumed:
   - *Select mode.* A "Select" button in the row with the order and the chips (it reads

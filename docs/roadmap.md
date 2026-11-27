@@ -432,7 +432,7 @@ test for anything that reads or changes user data.
         bets of one confirm) and add an "imported in batch" filter, so "undo the last
         import" is: filter, select all, delete.
       - Depends on 6.3; much safer after 6.11 (bulk delete becomes recoverable).
-- [ ] **6.16 Chart values and more date ranges.** The profit chart has no way to read a
+- [x] **6.16 Chart values and more date ranges.** The profit chart has no way to read a
       value (2.14 chose no tooltips), and the ranges are 30/90 days, this year, all
       time and custom.
       - Chart: tapping or hovering a point shows its date and cumulative profit in a

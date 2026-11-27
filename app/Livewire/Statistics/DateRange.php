@@ -6,13 +6,17 @@ use Carbon\CarbonImmutable;
 
 /**
  * The date ranges the statistics page offers. The rolling ones end today and include it:
- * "30 days" is today and the 29 days before.
+ * "30 days" is today and the 29 days before. "This month" and "This year" also end today;
+ * "Last month" and "Last year" are the whole calendar month or year before the current one.
  */
 enum DateRange: string
 {
     case Last30Days = '30d';
     case Last90Days = '90d';
+    case ThisMonth = 'month';
+    case LastMonth = 'last-month';
     case ThisYear = 'year';
+    case LastYear = 'last-year';
     case AllTime = 'all';
     case Custom = 'custom';
 
@@ -21,7 +25,10 @@ enum DateRange: string
         return match ($this) {
             self::Last30Days => '30 days',
             self::Last90Days => '90 days',
+            self::ThisMonth => 'This month',
+            self::LastMonth => 'Last month',
             self::ThisYear => 'This year',
+            self::LastYear => 'Last year',
             self::AllTime => 'All time',
             self::Custom => 'Custom…',
         };
@@ -40,7 +47,10 @@ enum DateRange: string
         return match ($this) {
             self::Last30Days => [$today->subDays(29), $today],
             self::Last90Days => [$today->subDays(89), $today],
+            self::ThisMonth => [$today->startOfMonth(), $today],
+            self::LastMonth => [$today->startOfMonth()->subMonthNoOverflow(), $today->startOfMonth()->subDay()],
             self::ThisYear => [$today->startOfYear(), $today],
+            self::LastYear => [$today->startOfYear()->subYear(), $today->startOfYear()->subDay()],
             self::AllTime, self::Custom => [null, null],
         };
     }

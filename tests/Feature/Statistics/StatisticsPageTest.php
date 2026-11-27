@@ -100,6 +100,27 @@ class StatisticsPageTest extends TestCase
             ->assertSee('No bets in this date range');
     }
 
+    public function test_this_month_last_month_and_last_year(): void
+    {
+        $this->seedBets();
+        Bet::factory()->forBookmaker($this->unibet)->single('3.00')->settled()->create(['stake' => 1000, 'placed_at' => '2025-12-31 20:00']);
+        Bet::factory()->forBookmaker($this->unibet)->single('2.00')->settled(SelectionResult::Lost)->create(['stake' => 1500, 'placed_at' => '2026-09-30 20:00']);
+        $this->actingAs($this->user);
+
+        Livewire::test(Index::class)
+            ->assertSeeInOrder(['30 days', '90 days', 'This month', 'Last month', 'This year', 'Last year', 'All time', 'Custom…'])
+            ->call('useRange', 'month')
+            ->assertSet('range', 'month')
+            ->assertSee(['2 settled bets', '+51.50'])
+            ->call('useRange', 'last-month')
+            ->assertSee(['1 settled bet', '−15.00'])
+            ->call('useRange', 'last-year')
+            ->assertSee(['1 settled bet', '+20.00'])
+            ->call('useRange', 'custom')
+            ->assertSet('from', '2025-01-01')
+            ->assertSet('to', '2025-12-31');
+    }
+
     public function test_filters_and_the_free_bets_toggle(): void
     {
         $this->seedBets();
@@ -238,6 +259,34 @@ class StatisticsPageTest extends TestCase
             ->set('from', '2026-10-13')
             ->assertSee('The chart shows once bets in this range are settled.')
             ->assertDontSee('Cumulative profit over');
+    }
+
+    public function test_every_point_of_the_profit_chart_has_its_date_and_value_in_a_table(): void
+    {
+        $this->seedBets();
+        $this->actingAs($this->user);
+
+        Livewire::test(Index::class)
+            ->call('useRange', 'month')
+            ->assertSeeHtmlInOrder([
+                '<table class="sr-only">',
+                '<caption>Profit over time: Cumulative, by day of the event</caption>',
+                '<th scope="col">Day</th>',
+                '<th scope="col">Cumulative profit</th>',
+                '<th scope="row">1 Oct 2026</th>', '<td>€0.00</td>',
+                '<th scope="row">10 Oct 2026</th>', '<td>+€110.00</td>',
+                '<th scope="row">11 Oct 2026</th>', '<td>+€110.00</td>',
+                '<th scope="row">12 Oct 2026</th>', '<td>+€51.50</td>',
+                '<th scope="row">21 Oct 2026</th>', '<td>+€51.50</td>',
+                '</table>',
+            ])
+            ->call('useRange', 'year')
+            ->assertSeeHtmlInOrder([
+                '<th scope="col">Month</th>',
+                '<th scope="row">January 2026</th>', '<td>€0.00</td>',
+                '<th scope="row">May 2026</th>', '<td>+€20.00</td>',
+                '<th scope="row">October 2026</th>', '<td>+€71.50</td>',
+            ]);
     }
 
     public function test_the_risk_panel_follows_the_range_and_filters_and_links_to_the_biggest_win_and_loss(): void

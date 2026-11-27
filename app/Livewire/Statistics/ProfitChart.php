@@ -15,7 +15,8 @@ use Illuminate\Support\Str;
  * The profit-over-time series as the statistics page draws it: an SVG line from 0 at the
  * start of the first period through the cumulative profit at the end of each period, on
  * a value axis with round steps that always includes 0, and dates under a few of the
- * periods. Coordinates are in a WIDTH × HEIGHT view box the SVG stretches to fit.
+ * periods. Each period also has its point (date, cumulative profit and where it sits), for
+ * the label shown on hover or tap and the table for screen readers. Coordinates are in a WIDTH × HEIGHT view box the SVG stretches to fit.
  */
 final readonly class ProfitChart
 {
@@ -34,6 +35,7 @@ final readonly class ProfitChart
      * @param  string  $area  the SVG path of the area between the line and 0
      * @param  list<array{value: string, y: string, isZero: bool}>  $ticks  the value axis, top to bottom
      * @param  list<array{label: string, left: string, isLast: bool, isMinor: bool}>  $dates  the date axis, left to right
+     * @param  list<array{label: string, value: string, left: string, top: string, isRightHalf: bool, isNearTop: bool}>  $points  one per period, left to right: its date, the cumulative profit at its end, and its position as a share of the chart's width and height
      */
     private function __construct(
         public string $caption,
@@ -42,6 +44,8 @@ final readonly class ProfitChart
         public string $area,
         public array $ticks,
         public array $dates,
+        public string $periodHeading,
+        public array $points,
     ) {}
 
     /**
@@ -90,6 +94,8 @@ final readonly class ProfitChart
             area: $line.' L'.self::WIDTH." {$zero} L0 {$zero} Z",
             ticks: $ticks,
             dates: self::dates($series),
+            periodHeading: Str::ucfirst($series->period->value),
+            points: self::points($series, $currency, $top, $bottom),
         );
     }
 
@@ -121,6 +127,40 @@ final readonly class ProfitChart
         }
 
         return array_values($dates);
+    }
+
+    /**
+     * Every period's point: its date in full ("19 Oct 2026", "Week of 19 Oct 2026",
+     * "October 2026"), its cumulative profit with the symbol, and where it sits. A label
+     * in the right half opens to the left of its point and one near the top opens below it,
+     * so labels stay inside the chart.
+     *
+     * @return list<array{label: string, value: string, left: string, top: string, isRightHalf: bool, isNearTop: bool}>
+     */
+    private static function points(ProfitSeries $series, Currency $currency, int $top, int $bottom): array
+    {
+        $periods = count($series->points);
+        $points = [];
+
+        foreach ($series->points as $index => $point) {
+            $number = $index + 1;
+            $fromTop = $top - $point->cumulativeProfit;
+
+            $points[] = [
+                'label' => match ($series->period) {
+                    Period::Day => $point->start->format('j M Y'),
+                    Period::Week => 'Week of '.$point->start->format('j M Y'),
+                    Period::Month => $point->start->format('F Y'),
+                },
+                'value' => Money::format($point->cumulativeProfit, $currency, signed: true),
+                'left' => Percent::format(Decimal::divide((string) $number, (string) $periods)),
+                'top' => Percent::format(Decimal::divide((string) $fromTop, (string) ($top - $bottom))),
+                'isRightHalf' => 2 * $number > $periods,
+                'isNearTop' => 4 * $fromTop < $top - $bottom,
+            ];
+        }
+
+        return $points;
     }
 
     /**

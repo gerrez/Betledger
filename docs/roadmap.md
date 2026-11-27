@@ -439,7 +439,7 @@ test for anything that reads or changes user data.
         small label (Alpine, no library); the same values are available to screen
         readers as a visually hidden table.
       - Ranges: add "This month", "Last month" and "Last year" to `DateRange`.
-- [ ] **6.17 Statistics performance.** `StatisticsQuery::bets()` loads every matching bet
+- [x] **6.17 Statistics performance.** `StatisticsQuery::bets()` loads every matching bet
       with seven relations on each render, and Home runs it twice. Fine at ~600 bets;
       revisit when a page takes over ~300 ms or a user passes ~10,000 bets.
       - First, cheap: on Home, get the open stake with one aggregate query instead of
@@ -451,6 +451,12 @@ test for anything that reads or changes user data.
         user's bets changes. Do not move the calculations into SQL: they must stay in
         `app/Domain/` and unit-tested.
       - Add a query-count test on the statistics page so regressions show up.
+      - Done: the cheap step, then plain rows (still slow before them: the page took
+        ~340 ms at 600 bets in the last 90 days, ~1.1 s at 2,000 and ran out of 128 MB
+        before 5,000; now ~120 ms, ~225 ms and ~1 s at 10,000, measured on SQLite).
+        Odds bands now find each bet's band once. Caching `BetFigures` was left out:
+        it needs invalidation on every change to bets, list names, time zone, and is
+        the next step if a user with ~10,000 bets finds the page slow.
 - [ ] **6.18 Editable settlement date.** Since 6.1 statistics no longer depend on
       `settled_at`, it only matters for the bankroll balance by date (4.3) and the
       "Recently settled" sort. Build when the owner wants the bankroll to match a

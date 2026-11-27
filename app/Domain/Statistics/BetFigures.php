@@ -85,7 +85,9 @@ final readonly class BetFigures
     }
 
     /**
-     * What the bet counts under in a breakdown by the dimension, each value once.
+     * What the bet counts under in a breakdown by the dimension, each value once. By
+     * month the key is "2026-11" and the label "Nov 2026"; by weekday the key is the ISO
+     * day number (1 = Monday) and the label the day's name; both are of the event date.
      *
      * @return list<Group>
      */
@@ -96,6 +98,14 @@ final readonly class BetFigures
                 BetType::Single => 'Singles',
                 BetType::Accumulator => 'Accumulators',
             })];
+        }
+
+        if ($dimension->isCalendar()) {
+            $eventAt = $this->eventAt ?? throw new InvalidArgumentException('A breakdown by month or weekday needs the event date of every bet.');
+
+            return [$dimension === Dimension::Month
+                ? new Group($eventAt->format('Y-m'), $eventAt->format('M Y'))
+                : new Group($eventAt->isoWeekday(), $eventAt->format('l'))];
         }
 
         $unique = [];

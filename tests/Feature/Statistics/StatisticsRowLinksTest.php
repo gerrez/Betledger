@@ -51,11 +51,17 @@ class StatisticsRowLinksTest extends TestCase
     }
 
     /**
+     * The dimensions whose values are entries or bet types; months and weekdays have tests
+     * of their own.
+     *
      * @return array<string, array{Dimension}>
      */
     public static function dimensions(): array
     {
-        return collect(Dimension::cases())->mapWithKeys(fn (Dimension $dimension): array => [$dimension->label() => [$dimension]])->all();
+        return collect(Dimension::cases())
+            ->reject(fn (Dimension $dimension): bool => $dimension->isCalendar())
+            ->mapWithKeys(fn (Dimension $dimension): array => [$dimension->label() => [$dimension]])
+            ->all();
     }
 
     #[DataProvider('dimensions')]
@@ -68,6 +74,44 @@ class StatisticsRowLinksTest extends TestCase
         $this->assertGreaterThan(1, count($rows));
         $this->assertSame($dimension->hasNone(), in_array(true, array_column($rows, 'isNone'), true), 'The data has a "none" row where the dimension can have one.');
         $this->assertLinksShowTheRowsBets($rows);
+    }
+
+    public function test_each_month_links_to_a_list_of_its_settled_bets(): void
+    {
+        $this->actingAs($this->user);
+
+        $rows = Livewire::test(Index::class)->call('useRange', 'all')->set('dimension', 'month')->viewData('breakdown');
+
+        $this->assertSame(['Oct 2026', 'May 2026'], array_column($rows, 'label'));
+        $this->assertSame([7, 1], array_map(fn (array $row): int => $row['totals']->settledBets, $rows));
+        $this->assertLinksShowTheRowsBets($rows);
+        $this->assertStringContainsString('from=2026-05-01&to=2026-05-31', (string) $rows[1]['href']);
+    }
+
+    public function test_a_month_links_to_the_days_of_it_in_the_pages_range(): void
+    {
+        $this->actingAs($this->user);
+
+        $rows = Livewire::test(Index::class)
+            ->call('useRange', 'custom')
+            ->set('from', '2026-10-05')
+            ->set('to', '2026-10-20')
+            ->set('dimension', 'month')
+            ->viewData('breakdown');
+
+        $this->assertSame(['Oct 2026'], array_column($rows, 'label'));
+        $this->assertLinksShowTheRowsBets($rows);
+        $this->assertStringContainsString('from=2026-10-05&to=2026-10-20', (string) $rows[0]['href']);
+    }
+
+    public function test_weekdays_are_not_linked_because_the_list_has_no_weekday_filter(): void
+    {
+        $this->actingAs($this->user);
+
+        $rows = Livewire::test(Index::class)->call('useRange', 'all')->set('dimension', 'weekday')->viewData('breakdown');
+
+        $this->assertSame(['Friday', 'Saturday'], array_column($rows, 'label'));
+        $this->assertSame([null, null], array_column($rows, 'href'));
     }
 
     public function test_each_odds_range_links_to_a_list_of_its_settled_bets(): void
@@ -96,7 +140,7 @@ class StatisticsRowLinksTest extends TestCase
             $rows = $page->set('dimension', $dimension->value)->viewData('breakdown');
 
             $this->assertNotSame([], $rows);
-            $this->assertLinksShowTheRowsBets($rows);
+            $this->assertLinksShowTheRowsBets($rows, unlinked: $dimension === Dimension::Weekday ? array_column($rows, 'label') : []);
         }
 
         $bands = $page->viewData('oddsBands');

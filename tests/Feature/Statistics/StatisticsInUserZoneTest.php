@@ -4,6 +4,8 @@ namespace Tests\Feature\Statistics;
 
 use App\Domain\BetStatus;
 use App\Domain\Settlement\SelectionResult;
+use App\Domain\Statistics\BreakdownRow;
+use App\Domain\Statistics\Dimension;
 use App\Domain\Statistics\Period;
 use App\Domain\Statistics\ProfitPoint;
 use App\Domain\Statistics\StatisticsCalculator;
@@ -112,6 +114,25 @@ class StatisticsInUserZoneTest extends TestCase
         $bets = app(StatisticsQuery::class)->bets($this->copenhagen, $filter);
 
         $this->assertCount($included ? 2 : 0, $bets, 'settled by event date and open by placed date');
+    }
+
+    public function test_the_breakdown_by_month_and_weekday_uses_the_users_local_date(): void
+    {
+        // 00:30 on Tuesday 1 December in Copenhagen, 23:30 on Monday 30 November in UTC.
+        foreach ([$this->copenhagen, $this->utc] as $user) {
+            $this->settledBet($user, profitStake: 1000, eventAt: '2026-11-30 23:30:00');
+        }
+
+        $labels = function (User $user, Dimension $dimension): array {
+            $rows = app(StatisticsCalculator::class)->breakdown(app(StatisticsQuery::class)->bets($user, new StatisticsFilter), $dimension);
+
+            return array_map(fn (BreakdownRow $row): ?string => $row->group->label, $rows);
+        };
+
+        $this->assertSame(['Dec 2026'], $labels($this->copenhagen, Dimension::Month));
+        $this->assertSame(['Tuesday'], $labels($this->copenhagen, Dimension::Weekday));
+        $this->assertSame(['Nov 2026'], $labels($this->utc, Dimension::Month));
+        $this->assertSame(['Monday'], $labels($this->utc, Dimension::Weekday));
     }
 
     public function test_two_users_get_their_own_days_for_the_same_range(): void

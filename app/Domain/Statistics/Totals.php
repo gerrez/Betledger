@@ -24,8 +24,12 @@ final readonly class Totals
         public int $winningBets,
         /** Settled bets that count as a loss in the strike rate. */
         public int $losingBets,
+        /** Mean of 1 ÷ total odds over the bets the strike rate counts: the strike rate at which they would break even. */
+        public ?string $breakEvenStrikeRate,
         /** Mean total odds of settled bets. */
         public ?string $averageOdds,
+        /** Median total odds of settled bets (the mean of the middle two for an even number). */
+        public ?string $medianOdds,
         /** Mean CLV of the settled bets with closing odds on every selection. */
         public ?string $averageClv,
         /** Settled bets with closing odds on every selection. */

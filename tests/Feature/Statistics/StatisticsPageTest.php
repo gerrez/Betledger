@@ -65,8 +65,9 @@ class StatisticsPageTest extends TestCase
             ->assertSeeInOrder(['Profit', '+51.50', '€ · 2 settled bets'])
             ->assertSeeInOrder(['Turnover', '158.50', '€ · cash stakes only'])
             ->assertSeeInOrder(['ROI', '+32.5%', 'profit ÷ turnover'])
-            ->assertSeeInOrder(['Strike rate', '50.0%', 'pushes excluded'])
-            ->assertSeeInOrder(['Average odds', '2.05', 'settled bets'])
+            // (1/2.10 + 1/2.00) ÷ 2 = 48.8 %; median of 2.00 and 2.10
+            ->assertSeeInOrder(['Strike rate', '50.0%', 'needs 48.8% to break even'])
+            ->assertSeeInOrder(['Average odds', '2.05', 'median 2.05'])
             ->assertSeeInOrder(['Open', '1', '€20.00 at stake']);
     }
 
@@ -135,6 +136,8 @@ class StatisticsPageTest extends TestCase
         Livewire::test(Index::class)
             ->assertSet('dimension', 'sport')
             ->assertSeeInOrder(['Sport', 'Football', '2', '+130.00', 'Tennis', '2', '−38.50'])
+            // Football: won @ 2.10 and the won accumulator @ 3.00; Tennis: lost @ 2.00 and the accumulator
+            ->assertSeeInOrder(['Strike', 'Break-even', 'Football', '100.0%', '40.5%', 'Tennis', '50.0%', '41.7%'])
             ->assertSee('Accumulators count under every value their selections include')
             ->set('dimension', 'bookmaker')
             ->assertSeeInOrder(['Bookmaker', 'Unibet', '2', '110.00', 'Bet365', '1', '58.50'])
@@ -156,7 +159,7 @@ class StatisticsPageTest extends TestCase
         $this->actingAs($this->user);
 
         Livewire::test(Index::class)
-            ->assertSeeInOrder(['Odds ranges', '1.51–2.00', '1 bet', '−100.0%', '2.01–3.00', '1 bet', '+110.0%', '10.01+', '0 bets', '—'])
+            ->assertSeeInOrder(['Odds ranges', '1.51–2.00', '1 bet', '−100.0%', '0.0%', 'needs 50.0%', '2.01–3.00', '1 bet', '+110.0%', '100.0%', 'needs 47.6%', '10.01+', '0 bets', '—', '—', 'Closing line value'])
             ->assertSeeInOrder(['Closing line value', '+5.0%', '100%'])
             ->assertSee('1 of 1 bet with closing odds beat the closing line. 1 settled bet has no closing odds.');
     }

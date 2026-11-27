@@ -42,9 +42,17 @@ class TotalsDisplayTest extends TestCase
 
         $this->assertSame('0.00', $display->profit);
         $this->assertSame('even', $display->profitTone);
-        $this->assertSame(['—', '—', '—', '—', '—'], [$display->roi, $display->strikeRate, $display->averageOdds, $display->averageClv, $display->beatCloseRate]);
+        $this->assertSame(['—', '—', '—', '—', '—', '—', '—'], [$display->roi, $display->strikeRate, $display->breakEvenStrikeRate, $display->averageOdds, $display->medianOdds, $display->averageClv, $display->beatCloseRate]);
         $this->assertSame(['even', 'even'], [$display->roiTone, $display->clvTone]);
         $this->assertSame(['0%', '0%'], [$display->roiBar, $display->beatCloseBar]);
+    }
+
+    public function test_the_break_even_strike_rate_and_median_odds_round_half_up_once(): void
+    {
+        $this->assertSame('51.3%', TotalsDisplay::fromTotals($this->totals(breakEvenStrikeRate: '0.5125000000'), Currency::Eur)->breakEvenStrikeRate);
+        $this->assertSame('51.2%', TotalsDisplay::fromTotals($this->totals(breakEvenStrikeRate: '0.5124999999'), Currency::Eur)->breakEvenStrikeRate);
+        $this->assertSame('2.03', TotalsDisplay::fromTotals($this->totals(medianOdds: '2.0250000000'), Currency::Eur)->medianOdds);
+        $this->assertSame('2.10', TotalsDisplay::fromTotals($this->totals(medianOdds: '2.1000'), Currency::Eur)->medianOdds);
     }
 
     public function test_a_roi_that_rounds_to_zero_is_even(): void
@@ -71,6 +79,8 @@ class TotalsDisplayTest extends TestCase
         ?string $strikeRate = null,
         ?string $averageOdds = null,
         ?string $averageClv = null,
+        ?string $breakEvenStrikeRate = null,
+        ?string $medianOdds = null,
         ?string $beatCloseRate = null,
         int $openStake = 0,
     ): Totals {
@@ -83,7 +93,9 @@ class TotalsDisplayTest extends TestCase
             strikeRate: $strikeRate,
             winningBets: 0,
             losingBets: 0,
+            breakEvenStrikeRate: $breakEvenStrikeRate,
             averageOdds: $averageOdds,
+            medianOdds: $medianOdds,
             averageClv: $averageClv,
             clvBets: 0,
             beatCloseBets: 0,

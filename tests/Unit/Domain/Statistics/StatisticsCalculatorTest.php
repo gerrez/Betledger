@@ -75,7 +75,11 @@ class StatisticsCalculatorTest extends TestCase
             strikeRate: '0.6250000000',
             winningBets: 5,
             losingBets: 3,
+            // #1–#5, #7–#9 (not the void #6): (1/2.1 + 1/1.95 + 1/5.4 + 1/3 + 1/1.75 + 1/12 + 1/2.5 + 1/1.5) ÷ 8, each 1/odds to 10 places
+            breakEvenStrikeRate: '0.4036197598',
             averageOdds: '3.5833333333',
+            // 1.50 1.75 1.95 2.05 [2.10] 2.50 3.00 5.40 12.00
+            medianOdds: '2.1000',
             averageClv: '0.0347444385',
             clvBets: 5,
             beatCloseBets: 3,
@@ -86,7 +90,68 @@ class StatisticsCalculatorTest extends TestCase
 
     public function test_totals_of_no_bets_have_no_ratios(): void
     {
-        $this->assertEquals(new Totals(0, 0, 0, 0, null, null, 0, 0, null, null, 0, 0, null, 0), $this->calculator->totals([]));
+        $this->assertEquals(new Totals(0, 0, 0, 0, null, null, 0, 0, null, null, null, null, 0, 0, null, 0), $this->calculator->totals([]));
+    }
+
+    public function test_one_long_shot_moves_the_average_odds_but_hardly_the_break_even_strike_rate_or_the_median(): void
+    {
+        $bets = array_map(fn (int $id): BetFigures => $this->settled(1000, $id % 2 === 0 ? 1000 : -1000, '2026-10-01', betId: $id), range(1, 20));
+        $bets[] = $this->settled(1000, -1000, '2026-10-02', betId: 21, totalOdds: '50.0000');
+
+        $totals = $this->calculator->totals($bets);
+
+        // (20 × 2.00 + 50.00) ÷ 21
+        $this->assertSame('4.2857142857', $totals->averageOdds);
+        // (20 × 0.5 + 0.02) ÷ 21
+        $this->assertSame('0.4771428571', $totals->breakEvenStrikeRate);
+        $this->assertSame('2.0000', $totals->medianOdds);
+    }
+
+    public function test_the_break_even_strike_rate_leaves_out_pushes_and_open_bets(): void
+    {
+        $totals = $this->calculator->totals([
+            $this->settled(1000, 1000, '2026-10-01', totalOdds: '2.0000'),
+            $this->settled(1000, -1000, '2026-10-02', totalOdds: '4.0000'),
+            $this->settled(1000, 0, '2026-10-03', totalOdds: '10.0000'),
+            $this->bet('Unibet', 1000, null, null, '1.2500', null, [$this->leg('Football', 'Premier League')]),
+        ]);
+
+        // (1/2 + 1/4) ÷ 2; the push at 10.00 counts in the median of settled bets only
+        $this->assertSame('0.3750000000', $totals->breakEvenStrikeRate);
+        $this->assertSame('4.0000', $totals->medianOdds);
+    }
+
+    public function test_a_lost_free_bet_counts_in_the_break_even_strike_rate_like_in_the_strike_rate(): void
+    {
+        $totals = $this->calculator->totals([
+            $this->settled(1000, 0, '2026-10-01', factor: '0', isFreeBet: true, totalOdds: '5.0000'),
+            $this->settled(1000, 1000, '2026-10-02', totalOdds: '2.0000'),
+        ]);
+
+        $this->assertSame('0.5000000000', $totals->strikeRate);
+        // (1/5 + 1/2) ÷ 2
+        $this->assertSame('0.3500000000', $totals->breakEvenStrikeRate);
+    }
+
+    public function test_the_median_of_an_even_number_of_bets_is_the_mean_of_the_middle_two(): void
+    {
+        $totals = $this->calculator->totals([
+            $this->settled(1000, 1000, '2026-10-01', totalOdds: '3.0000'),
+            $this->settled(1000, 1000, '2026-10-02', totalOdds: '1.5000'),
+            $this->settled(1000, -1000, '2026-10-03', totalOdds: '2.5000'),
+            $this->settled(1000, -1000, '2026-10-04', totalOdds: '2.0000'),
+        ]);
+
+        $this->assertSame('2.2500000000', $totals->medianOdds);
+    }
+
+    public function test_only_pushes_have_no_break_even_strike_rate(): void
+    {
+        $totals = $this->calculator->totals([$this->settled(1000, 0, '2026-10-01')]);
+
+        $this->assertNull($totals->strikeRate);
+        $this->assertNull($totals->breakEvenStrikeRate);
+        $this->assertSame('2.0000', $totals->medianOdds);
     }
 
     public function test_free_bets_add_profit_but_no_turnover(): void
@@ -184,6 +249,8 @@ class StatisticsCalculatorTest extends TestCase
         $this->assertSame([2500, -2219, 5043, 0, 1700, 0], array_map(fn (OddsBandRow $row): int => $row->totals->profit, $rows));
         $this->assertSame(['0.5000000000', '-0.7167312661', '0.9452671040', null, '1.7000000000', null], array_map(fn (OddsBandRow $row): ?string => $row->totals->roi, $rows));
         $this->assertSame(['1.0000000000', '0.0000000000', '1.0000000000', null, '1.0000000000', '0.0000000000'], array_map(fn (OddsBandRow $row): ?string => $row->totals->strikeRate, $rows));
+        // 1/1.5; (1/1.95 + 1/1.75) ÷ 2; (1/2.1 + 1/3 + 1/2.5) ÷ 3 without the void 2.05; none; 1/5.4; 1/12
+        $this->assertSame(['0.6666666666', '0.5421245421', '0.4031746031', null, '0.1851851851', '0.0833333333'], array_map(fn (OddsBandRow $row): ?string => $row->totals->breakEvenStrikeRate, $rows));
     }
 
     public function test_profit_over_time_by_week(): void
@@ -381,7 +448,7 @@ class StatisticsCalculatorTest extends TestCase
      * A settled single at Unibet (EUR) on football; the factor follows from the profit
      * unless given.
      */
-    private function settled(int $stake, int $profit, string $eventAt, ?string $factor = null, bool $isFreeBet = false, ?int $betId = null): BetFigures
+    private function settled(int $stake, int $profit, string $eventAt, ?string $factor = null, bool $isFreeBet = false, ?int $betId = null, string $totalOdds = '2.0000'): BetFigures
     {
         return new BetFigures(
             stake: $stake,
@@ -390,7 +457,7 @@ class StatisticsCalculatorTest extends TestCase
             exchangeRate: '1',
             type: BetType::Single,
             isFreeBet: $isFreeBet,
-            totalOdds: '2.0000',
+            totalOdds: $totalOdds,
             eventAt: CarbonImmutable::parse($eventAt),
             betId: $betId,
         );

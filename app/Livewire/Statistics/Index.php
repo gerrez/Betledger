@@ -131,11 +131,16 @@ class Index extends Component
         $currency = $user->base_currency;
         $dimension = $this->breakdownDimension();
         $bets = $query->bets($user, $this->filter());
-        $display = fn (BreakdownRow|OddsBandRow $row): array => [
-            'label' => $row instanceof BreakdownRow ? ($row->group->label ?? $dimension->noneLabel()) : $row->band->label(),
-            'isNone' => $row instanceof BreakdownRow && $row->group->isNone(),
-            'totals' => TotalsDisplay::fromTotals($row->totals, $currency),
-        ];
+        $display = function (BreakdownRow|OddsBandRow $row) use ($dimension, $currency): array {
+            $totals = TotalsDisplay::fromTotals($row->totals, $currency);
+
+            return [
+                'label' => $row instanceof BreakdownRow ? ($row->group->label ?? $dimension->noneLabel()) : $row->band->label(),
+                'isNone' => $row instanceof BreakdownRow && $row->group->isNone(),
+                'totals' => $totals,
+                'breakEven' => $this->breakEvenNote($totals),
+            ];
+        };
         $totals = TotalsDisplay::fromTotals($calculator->totals($bets), $currency);
         $moreDimensions = array_values(array_filter(Dimension::cases(), fn (Dimension $option): bool => ! in_array($option, self::MAIN_DIMENSIONS, true)));
 
@@ -188,10 +193,19 @@ class Index extends Component
             ['label' => 'Profit', 'value' => $totals->profit, 'tone' => $totals->profitTone, 'sub' => "{$symbol} · {$totals->settledBets} settled ".Str::plural('bet', $totals->settledBets)],
             ['label' => 'Turnover', 'value' => $totals->turnover, 'tone' => 'even', 'sub' => "{$symbol} · cash stakes only"],
             ['label' => 'ROI', 'value' => $totals->roi, 'tone' => $totals->roiTone, 'sub' => 'profit ÷ turnover'],
-            ['label' => 'Strike rate', 'value' => $totals->strikeRate, 'tone' => 'even', 'sub' => 'pushes excluded'],
-            ['label' => 'Average odds', 'value' => $totals->averageOdds, 'tone' => 'even', 'sub' => 'settled bets'],
+            ['label' => 'Strike rate', 'value' => $totals->strikeRate, 'tone' => 'even', 'sub' => $this->breakEvenNote($totals, ' to break even') ?? 'pushes excluded'],
+            ['label' => 'Average odds', 'value' => $totals->averageOdds, 'tone' => 'even', 'sub' => $totals->medianOdds === TotalsDisplay::NONE ? 'settled bets' : "median {$totals->medianOdds}"],
             ['label' => 'Open', 'value' => (string) $totals->openBets, 'tone' => 'even', 'sub' => "{$totals->openStake} at stake"],
         ];
+    }
+
+    /**
+     * "needs 51.3%" (plus the suffix): the strike rate the bets need to break even; null
+     * while none of them is a win or a loss.
+     */
+    private function breakEvenNote(TotalsDisplay $totals, string $suffix = ''): ?string
+    {
+        return $totals->breakEvenStrikeRate === TotalsDisplay::NONE ? null : "needs {$totals->breakEvenStrikeRate}{$suffix}";
     }
 
     /**

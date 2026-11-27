@@ -73,8 +73,10 @@ class CreateBetTest extends TestCase
             ->set('selections.0.sport', 'Football')
             ->set('showDetails', true)
             ->call('toggleSelectionDetails', 0)
-            ->assertSee(['Football', 'Arsenal', 'Asian handicap'])
-            ->assertDontSee(['Other Users Sport', 'Other Users Team', 'Other Users Market', 'Other Users Tag', 'Other Users Tipster']);
+            ->assertSee(['Football', 'Asian handicap'])
+            ->assertDontSee(['Other Users Sport', 'Other Users Team', 'Other Users Market', 'Other Users Tag', 'Other Users Tipster'])
+            ->call('suggest', 'teams', 'Football', '')->assertReturned(['Arsenal'])
+            ->call('suggest', 'teams', 'Other Users Sport', '')->assertReturned([]);
     }
 
     public function test_the_form_starts_now_at_the_bookmaker_and_sport_of_the_latest_bet(): void

@@ -36,7 +36,7 @@ class BetFactory extends Factory
             'bookmaker_id' => fn (array $attributes) => Bookmaker::factory()->create(['user_id' => $attributes['user_id']])->id,
             'tipster_id' => null,
             'type' => BetType::Single,
-            'placed_at' => fake()->dateTimeBetween('-60 days', '-1 day'),
+            'placed_at' => fake()->dateTimeBetween(now()->subDays(60), now()->subDay()),
             'event_at' => fn (array $attributes) => $attributes['placed_at'], // worked out from the selections after creating
             'stake' => fake()->numberBetween(1, 40) * 500,
             'currency' => fn (array $attributes) => Bookmaker::findOrFail($attributes['bookmaker_id'])->currency,

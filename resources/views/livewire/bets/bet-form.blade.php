@@ -130,12 +130,14 @@
                         @endif
 
                         <div class="flex gap-2">
-                            <flux:input
+                            <x-combobox
+                                id="team-name-{{ $index }}"
                                 wire:model="selections.{{ $index }}.team_name"
-                                wire:keydown.enter.prevent="addTeam({{ $index }})"
                                 aria-labelledby="teams-label-{{ $index }}"
-                                list="teams-list-{{ $index }}"
-                                autocomplete="off"
+                                list-label="Teams"
+                                search="$wire.suggest('teams', $wire.selections[{{ $index }}].sport, query)"
+                                on-pick="$wire.addTeam({{ $index }})"
+                                :adds-on-enter="true"
                                 placeholder="Type a name, then Add"
                                 class="flex-1"
                             />
@@ -143,12 +145,6 @@
                         </div>
 
                         <flux:error name="selections.{{ $index }}.teams" class="mt-0" />
-
-                        <datalist id="teams-list-{{ $index }}">
-                            @foreach ($sportSuggestions[$index]['teams'] as $name)
-                                <option value="{{ $name }}"></option>
-                            @endforeach
-                        </datalist>
                     </div>
 
                     <flux:input
@@ -228,11 +224,12 @@
 
                     @if ($selection['show_details'])
                         <div class="grid grid-cols-2 gap-3">
-                            <flux:input
+                            <x-combobox
+                                id="competition-{{ $index }}"
                                 wire:model="selections.{{ $index }}.competition"
                                 label="Competition"
-                                list="competitions-list-{{ $index }}"
-                                autocomplete="off"
+                                list-label="Competitions"
+                                search="$wire.suggest('competitions', $wire.selections[{{ $index }}].sport, query)"
                                 class="col-span-2"
                             />
 
@@ -246,12 +243,6 @@
                                 placeholder="Add later"
                             />
                         </div>
-
-                        <datalist id="competitions-list-{{ $index }}">
-                            @foreach ($sportSuggestions[$index]['competitions'] as $name)
-                                <option value="{{ $name }}"></option>
-                            @endforeach
-                        </datalist>
                     @endif
                 </section>
             @endforeach

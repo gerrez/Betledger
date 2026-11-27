@@ -411,7 +411,7 @@ test for anything that reads or changes user data.
 
 ### Later, when needed
 
-- [ ] **6.14 Team and competition picker in the bet form.** The form uses native
+- [x] **6.14 Team and competition picker in the bet form.** The form uses native
       `<datalist>`s, which are awkward on phone keyboards, and renders every team of
       the sport into the page for each selection. `BetForm::sportSuggestions()` also
       runs two queries per selection on every render (40 for a 20-leg accumulator).

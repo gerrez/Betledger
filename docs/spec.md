@@ -647,6 +647,15 @@ same items. Touch targets ≥ 44 px.
   event field, but `event_name` is required, so the form has an "Event" field that fills
   in from the teams ("Arsenal v Chelsea") until the user edits it; a bet without teams
   (e.g. an outright) needs it typed. The sport is a field in the selection card.
+  **Changed in 6.14 (assumed):** Competition and team are a combobox (`<x-combobox>`,
+  built on the 3.2 dropdown) instead of a datalist: while typing, the form fetches up to
+  20 of the user's names in the selection's sport (none while the sport is new) that
+  contain the typed text, ignoring case: names starting with it first, then names with
+  a word starting with it, then the rest, each group alphabetical
+  (`ListName::matching()`). "Create ‘…’" is the last option unless a suggestion matches
+  the typed name exactly. Picking a team adds its chip; Enter adds the highlighted
+  option, else the typed name. Sport, market, tipster and tag keep their datalists
+  (short lists).
 - **Bet form defaults (assumed in 2.6).** A new bet starts at the bookmaker and sport of
   the user's latest bet (else the first active bookmaker alphabetically, and no sport),
   placed now. **Answered in 6.2:** users have a time zone (Settings → Currency and time

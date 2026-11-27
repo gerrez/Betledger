@@ -40,6 +40,28 @@ document.addEventListener(
     true,
 );
 
+/**
+ * Places a popover listbox under its control, or above it when there is more room there.
+ * Shared by `<x-select>` and `<x-combobox>`.
+ */
+function placeListbox(control, listbox) {
+    const gap = 6;
+    const margin = 8;
+    const anchor = control.getBoundingClientRect();
+    const below = window.innerHeight - anchor.bottom - gap - margin;
+    const above = anchor.top - gap - margin;
+
+    listbox.style.minWidth = `${anchor.width}px`;
+    listbox.style.maxHeight = `${Math.min(320, Math.max(below, above))}px`;
+
+    const height = listbox.offsetHeight;
+    const width = listbox.offsetWidth;
+    const top = height <= below || below >= above ? anchor.bottom + gap : anchor.top - gap - height;
+
+    listbox.style.top = `${top}px`;
+    listbox.style.left = `${Math.max(margin, Math.min(anchor.left, window.innerWidth - width - margin))}px`;
+}
+
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('confirmDialog', () => ({
         title: '',
@@ -259,30 +281,206 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /**
-         * Places the listbox under the button, or above it when there is more room there.
-         */
         position() {
+            if (this.isOpen) {
+                placeListbox(this.button(), this.listbox());
+            }
+        },
+    }));
+
+    /**
+     * The `<x-combobox>`: a text input with a list of suggestions (WAI-ARIA editable
+     * combobox with list autocomplete). `search(text)` returns a promise of names, fetched
+     * from the server while typing (debounced); the last option offers to create the
+     * typed name when no suggestion matches it exactly. Picking a name writes it into the
+     * input (so `wire:model` on the input sees it) and dispatches `combobox-pick` with
+     * `{ value }`. With `addsOnEnter`, Enter always picks: the highlighted option, else
+     * the typed name (team chips); otherwise Enter on a closed list keeps its default.
+     */
+    window.Alpine.data('combobox', (search, { addsOnEnter = false } = {}) => ({
+        isOpen: false,
+        // The typed text as last seen by onInput, read by options() for reactivity.
+        text: '',
+        results: [],
+        resultsFor: null,
+        activeIndex: -1,
+        timer: null,
+        requests: 0,
+
+        input() {
+            return this.$root.querySelector('input');
+        },
+
+        listbox() {
+            return this.$root.querySelector('[role="listbox"]');
+        },
+
+        query() {
+            return this.input().value.trim();
+        },
+
+        /**
+         * The suggestions, plus "Create ‘…’" for a typed name no suggestion matches.
+         */
+        options() {
+            this.text;
+
+            const query = this.query();
+            const options = this.results.map((value) => ({ value, isNew: false }));
+
+            if (query !== '' && !this.results.some((value) => value.toLowerCase() === query.toLowerCase())) {
+                options.push({ value: query, isNew: true });
+            }
+
+            return options;
+        },
+
+        optionId(index) {
+            return `${this.input().id}-option-${index}`;
+        },
+
+        activeId() {
+            return this.isOpen && this.activeIndex >= 0 ? this.optionId(this.activeIndex) : null;
+        },
+
+        /**
+         * Fetches suggestions for the typed text after a short pause; a reply to older
+         * text, or one arriving after the input lost focus, is dropped.
+         */
+        refresh(delay = 200) {
+            clearTimeout(this.timer);
+            this.timer = setTimeout(async () => {
+                const query = this.query();
+                const request = ++this.requests;
+                let results = [];
+
+                try {
+                    results = await search(query);
+                } catch {
+                    // No suggestions this time; typing a name still works.
+                }
+
+                if (request !== this.requests || document.activeElement !== this.input()) {
+                    return;
+                }
+
+                this.results = Array.isArray(results) ? results : [];
+                this.resultsFor = query;
+                this.show();
+            }, delay);
+        },
+
+        show() {
+            if (this.options().length === 0) {
+                this.close();
+
+                return;
+            }
+
+            this.activeIndex = 0;
+
+            if (!this.isOpen) {
+                this.isOpen = true;
+                this.listbox().showPopover();
+            }
+
+            this.$nextTick(() => this.position());
+        },
+
+        close() {
+            clearTimeout(this.timer);
+            this.requests++;
+
             if (!this.isOpen) {
                 return;
             }
 
-            const gap = 6;
-            const margin = 8;
-            const button = this.button().getBoundingClientRect();
-            const listbox = this.listbox();
-            const below = window.innerHeight - button.bottom - gap - margin;
-            const above = button.top - gap - margin;
+            this.isOpen = false;
+            this.activeIndex = -1;
+            this.listbox().hidePopover();
+        },
 
-            listbox.style.minWidth = `${button.width}px`;
-            listbox.style.maxHeight = `${Math.min(320, Math.max(below, above))}px`;
+        pick(value) {
+            const input = this.input();
 
-            const height = listbox.offsetHeight;
-            const width = listbox.offsetWidth;
-            const top = height <= below || below >= above ? button.bottom + gap : button.top - gap - height;
+            this.close();
+            input.value = value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            this.$dispatch('combobox-pick', { value });
+        },
 
-            listbox.style.top = `${top}px`;
-            listbox.style.left = `${Math.max(margin, Math.min(button.left, window.innerWidth - width - margin))}px`;
+        choose(index) {
+            const option = this.options()[index];
+
+            if (option !== undefined) {
+                this.pick(option.value);
+            }
+        },
+
+        move(step) {
+            const count = this.options().length;
+
+            this.activeIndex = Math.min(Math.max(this.activeIndex + step, 0), count - 1);
+            this.$nextTick(() => document.getElementById(this.activeId())?.scrollIntoView({ block: 'nearest' }));
+        },
+
+        onInput(event) {
+            this.text = this.input().value;
+
+            // pick() writes the input itself; that write needs no new search.
+            if (event.isTrusted) {
+                this.refresh();
+            }
+        },
+
+        onKeydown(event) {
+            const isCurrent = this.isOpen && this.resultsFor === this.query();
+
+            switch (event.key) {
+                case 'ArrowDown':
+                case 'ArrowUp':
+                    event.preventDefault();
+
+                    if (!this.isOpen) {
+                        this.refresh(0);
+                    } else if (event.altKey && event.key === 'ArrowUp') {
+                        this.close();
+                    } else {
+                        this.move(event.key === 'ArrowDown' ? 1 : -1);
+                    }
+                    break;
+                case 'Enter':
+                    if (isCurrent && this.activeIndex >= 0) {
+                        event.preventDefault();
+                        this.choose(this.activeIndex);
+                    } else if (addsOnEnter) {
+                        event.preventDefault();
+
+                        if (this.query() !== '') {
+                            this.pick(this.query());
+                        }
+                    } else {
+                        this.close();
+                    }
+                    break;
+                case 'Escape':
+                    if (this.isOpen) {
+                        // Stop here so an enclosing modal stays open.
+                        event.preventDefault();
+                        event.stopPropagation();
+                        this.close();
+                    }
+                    break;
+                case 'Tab':
+                    this.close();
+                    break;
+            }
+        },
+
+        position() {
+            if (this.isOpen) {
+                placeListbox(this.input(), this.listbox());
+            }
         },
     }));
 });

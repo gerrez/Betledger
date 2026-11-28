@@ -370,7 +370,7 @@ test for anything that reads or changes user data.
 
 ### Safety
 
-- [ ] **6.11 Recently deleted bets.** `Bets\Show::delete()` removes the bet and its
+- [x] **6.11 Recently deleted bets.** `Bets\Show::delete()` removes the bet and its
       selections for good; one wrong tap loses the result history.
       - Soft-delete bets (`deleted_at`, new migration; `SoftDeletes` on `Bet`).
         Selections stay attached to the trashed bet. Check that every query on bets
@@ -386,6 +386,10 @@ test for anything that reads or changes user data.
         restore it from Settings for 30 days".
       - Tests: trashed bets are absent from every page and total, restore, prune with
         frozen time, isolation on restore and force-delete, on both databases.
+      - Done, plus "Delete all for good" and pagination on the page (undoing a large
+        import and importing it again needs them). Deleting a list entry deletes the
+        deleted bets that use it for good, with a warning; deleted bets keep the
+        currencies locked. See "Deleted bets" in the spec.
 - [ ] **6.12 Email verification: decide and make it true.** `User` has
       `implements MustVerifyEmail` commented out, so the `verified` middleware on the
       app routes does nothing, while registration is open to anyone.

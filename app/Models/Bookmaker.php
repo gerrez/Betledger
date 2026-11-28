@@ -83,10 +83,11 @@ class Bookmaker extends Model
 
     /**
      * The currency can only change while the bookmaker has no bets and no transactions:
-     * both are amounts in the bookmaker's currency, and its balance adds them up.
+     * both are amounts in the bookmaker's currency, and its balance adds them up. Deleted
+     * bets count too, since restoring one brings its amounts back.
      */
     public function canChangeCurrency(): bool
     {
-        return $this->bets()->doesntExist() && $this->bankrollTransactions()->doesntExist();
+        return $this->bets()->withTrashed()->doesntExist() && $this->bankrollTransactions()->doesntExist();
     }
 }

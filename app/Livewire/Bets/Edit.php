@@ -26,6 +26,15 @@ class Edit extends BetForm
         $this->fillFromBet($bet);
     }
 
+    /**
+     * Livewire reloads the bet without its "not deleted" scope, so a bet deleted in
+     * another tab would still be found: this form must not save it.
+     */
+    public function hydrate(): void
+    {
+        abort_if($this->bet->trashed(), 404);
+    }
+
     public function save(RecordBet $recordBet): void
     {
         Gate::authorize('update', $this->bet);

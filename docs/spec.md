@@ -115,9 +115,10 @@ and saving another currency is refused with a validation error. The rate stays e
 | `payout_is_manual` | bool | true when the user replaced the calculated payout with the amount actually paid |
 | `profit` | bigint, nullable | `payout − stake` (free bets: `payout`) |
 | `notes` | text, nullable | |
-| `external_ref` | string, nullable | where an imported bet came from, e.g. `sportmarket:2384015187`; unique per user, so an import never creates a bet twice |
+| `external_ref` | string, nullable | where an imported bet came from, e.g. `sportmarket:2384015187`; unique per user (deleted bets included), so an import never creates a bet twice |
 | `import_batch` | string(26), nullable | the import a bet came from (6.15): a ULID shared by every bet of one confirmed import, so the bets list can filter to it and an import can be undone (filter, Select all, Delete). Null for bets entered by hand and those imported before 6.15. Indexed with `user_id`. Internal: not in the API or the CSV export |
 | timestamps | | |
+| `deleted_at` | datetime, nullable | set when the user deletes the bet (6.11, soft delete); the bet and its selections stay until it is restored, deleted for good, or pruned 30 days later. See "Deleted bets" |
 
 `bet_tag` pivot: `bet_id`, `tag_id`, `user_id` (the bet's owner).
 
@@ -406,15 +407,18 @@ can't have) is imported as **lost** with payout 0, and its notes and the preview
 - any non-failed row is not `settled` or `void` (the order isn't settled yet; import it
   again later);
 - the order was imported before (`bets.external_ref` = `sportmarket:<Order Id>`, a new
-  nullable column, unique per user).
+  nullable column, unique per user). A bet in Settings → Deleted bets still counts (6.11):
+  deleting an imported bet must not make the next import bring it back. Deleting it for
+  good frees its order.
 
 **Undoing an import (6.15).** Every bet of one confirmed import gets the same
 `import_batch`. After importing, the page goes to the bets list (Settled tab) filtered to
 that import, with "Imported n bets. To undo the import, choose Select, then Select all
 and Delete." The Filters sheet has an "Import" field listing the user's imports that
 still have bets, newest first ("27 Nov 2026 14:03 · 16 bets", the time the import was
-confirmed, in the user's time zone). Deleting the bets frees their `external_ref`, so the
-file can be imported again.
+confirmed, in the user's time zone). Since 6.11 the deleted bets go to Settings → Deleted
+bets and still hold their `external_ref`; deleting them for good there ("Delete all for
+good") frees it, so the file can be imported again. The message after importing says so.
 
 ## Export
 
@@ -494,10 +498,44 @@ The rows are built by `App\Domain\Export\BetsCsv` and written by
 `App\Http\Controllers\Settings\ExportBetsController`, which reads the bets through the
 user's own relation in chunks with every relation eager loaded.
 
+## Deleted bets
+
+Deleting a bet (the bet page, or Delete in the bets list's Select mode) only marks it
+deleted (`bets.deleted_at`, roadmap 6.11); its selections, results, teams and tags stay
+attached. The confirmation says "You can restore it from Settings for 30 days", and the
+message after deleting points to Settings → Deleted bets.
+
+A deleted bet is left out of everything that reads bets: the bets list (every tab,
+search, filters, import batches and Select all), the bet page and edit form (404, also
+from a page left open in another tab), inline settling, Home, statistics, the bankroll,
+the CSV export and the API. Every bet query goes through the `Bet` model (`SoftDeletes`),
+so the scope applies; the statistics query's plain rows (6.17) start from it too.
+
+**Settings → Deleted bets** lists the user's deleted bets, most recently deleted first,
+25 per page, each with its title, bookmaker, stake and result, the day it was deleted and
+the day it will be deleted for good. **Restore** brings it back unchanged (with "View
+bet"); **Delete for good** removes it with its selections and links after a
+confirmation; **Delete all for good** (with a confirmation naming the count) empties the
+page, e.g. after undoing an import. Everything goes through the user's own
+`bets()->onlyTrashed()`, so another user's bet, or one that isn't deleted, is "not
+found". `model:prune` runs daily (`routes/console.php`) and deletes bets deleted 30 or
+more days ago (`Bet::DAYS_KEPT_DELETED`, `Prunable`).
+
+What a deleted bet still affects, because restoring it brings it back:
+- *Imports.* Its `external_ref` still blocks importing the same order (see "Import from
+  Sportmarket").
+- *Currencies.* A bookmaker's currency and the user's base currency stay locked while
+  deleted bets use them, until those are deleted for good; the pages say so.
+- *List entries.* A deleted bet doesn't keep a sport, competition, team, market, tipster
+  or tag "in use". Deleting such an entry on the Lists page deletes the deleted bets that
+  use it for good (a restored bet must not lose its sport or tag), and the confirmation
+  says how many.
+- *Reset account.* Deletes deleted bets for good too, and its warning counts them.
+
 ## Reset account
 
 Settings → Profile has a "Reset Account" section above "Delete Account" (roadmap 6.19).
-It permanently deletes all of the user's bets, with their selections, selection teams,
+It permanently deletes all of the user's bets (recently deleted ones included, 6.11), with their selections, selection teams,
 tag links and results, and keeps the account itself, bookmakers, list entries (sports,
 teams, tags, …), bankroll deposits and withdrawals, settings and API tokens. Statistics
 are then empty and bankroll balances only include deposits and withdrawals.
@@ -648,7 +686,8 @@ same items. Touch targets ≥ 44 px.
   settling it (2.9) keep these consistent.
 - **Base currency with bets (assumed in 2.5).** Once a user has a bet, the Currency page
   shows the base currency without a Save button and explains why; the model refuses the
-  change too. Deleting every bet unlocks it again.
+  change too. Deleting every bet unlocks it again (since 6.11, once deleted bets are
+  deleted for good).
 - **Bet form details (assumed in 2.6).** List entries are typed with suggestions from the
   user's own lists (a plain `<datalist>`, since Flux's combobox is a Pro component); a
   new name is added to the list when the bet is saved. Teams and tags are added as chips
@@ -929,8 +968,8 @@ same items. Touch targets ≥ 44 px.
     Default: turn verification on and keep registration open.
   - *Open Sportmarket orders (6.10).* Do you enter open Sportmarket bets by hand before
     they are settled and imported? If not, 6.10 can be dropped.
-  - *Deleted bets (6.11).* Should a deleted bet be recoverable, and for how long?
-    Default: 30 days.
+  - *Deleted bets (6.11).* Built with the default: a deleted bet can be restored for 30
+    days. Say if another period suits better (`Bet::DAYS_KEPT_DELETED`).
   - *Exchange and lay bets.* Do you place lay bets? Sportmarket picks like "AGAINST
     Under 2.0" are stored as ordinary bets and the export's `Exchange Role` is ignored.
     Real lay bets (liability, commission) are not planned.
@@ -963,6 +1002,18 @@ same items. Touch targets ≥ 44 px.
     "needs …" line under each odds range's strike rate. The median odds fit the
     average-odds tile as its second line ("median 2.05"), in place of "settled bets".
     Home's tiles are unchanged.
+  - *Deleted bets (assumed in 6.11).*
+    - *List entries.* The task says deleted bets drop out of the Lists "in use" checks,
+      but they still reference their entries (foreign keys without cascade). Deleting
+      an entry therefore deletes the deleted bets that use it for good, with a warning
+      in the confirmation, rather than leaving a bet that can't be restored whole.
+    - *Currencies.* Deleted bets keep the bookmaker and base currencies locked, since
+      a restored bet's amounts and exchange rate are in them.
+    - *Delete all for good.* Not in the task; added because undoing a large import
+      (6.15) and importing the file again would otherwise mean deleting hundreds of
+      bets for good one at a time. For the same reason the page is paginated.
+    - *Pruning.* Daily, at midnight UTC; a bet is pruned once it has been deleted for
+      30 days, so "can be restored until" shows the day 30 days after deleting.
   - *Sortable breakdown; month and weekday (assumed in 6.8).*
     - *Which date.* The task says "settlement month", but since 6.1 statistics count a
       bet on its event date, so month and weekday are of `event_at` (as profit over

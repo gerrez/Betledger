@@ -12,6 +12,7 @@ use App\Livewire\Overview\Index as Overview;
 use App\Livewire\Settings\ApiTokens;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\BaseCurrency;
+use App\Livewire\Settings\DeletedBets;
 use App\Livewire\Settings\Export;
 use App\Livewire\Settings\Import;
 use App\Livewire\Settings\Password;
@@ -42,6 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('lists', ListsIndex::class)->name('lists.index');
 
     Route::get('settings/import', Import::class)->name('settings.import');
+    Route::get('settings/deleted-bets', DeletedBets::class)->name('settings.deleted-bets');
     Route::get('settings/api-tokens', ApiTokens::class)->name('settings.api-tokens');
 });
 

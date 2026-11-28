@@ -15,7 +15,7 @@
                     @endforeach
                 </x-select>
 
-                <flux:input type="file" wire:model="file" label="Sportmarket orders export" accept=".csv" description:trailing="The bookmaker must be in the file’s currency. Orders imported before are skipped, so you can import a newer export of the same orders." />
+                <flux:input type="file" wire:model="file" label="Sportmarket orders export" accept=".csv" description:trailing="The bookmaker must be in the file’s currency. Orders imported before are skipped, also ones whose bet is in Settings → Deleted bets, so you can import a newer export of the same orders." />
 
                 <flux:button variant="primary" type="submit" wire:loading.attr="disabled" wire:target="file">Preview</flux:button>
             </form>

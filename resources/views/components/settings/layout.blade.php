@@ -7,6 +7,7 @@
             <flux:navlist.item href="{{ route('settings.appearance') }}" wire:navigate>Appearance</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.import') }}" wire:navigate>Import</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.export') }}" wire:navigate>Export</flux:navlist.item>
+            <flux:navlist.item href="{{ route('settings.deleted-bets') }}" wire:navigate>Deleted bets</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.api-tokens') }}" wire:navigate>API tokens</flux:navlist.item>
         </flux:navlist>
 

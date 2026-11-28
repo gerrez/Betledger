@@ -230,11 +230,11 @@ class Index extends Component
     /**
      * Give a pending selection of an open bet a result, which settles the bet when the
      * settlement rules say so. A page that is out of date (the selection already has a
-     * result, or its bet is settled) changes nothing.
+     * result, or its bet is settled) changes nothing; a deleted bet's selection is not found.
      */
     public function settle(int $selectionId, string $result, SettleBet $settleBet): void
     {
-        $selection = $this->user()->selections()->with('bet')->findOrFail($selectionId);
+        $selection = $this->user()->selections()->whereHas('bet')->with('bet')->findOrFail($selectionId);
         $outcome = SelectionResult::tryFrom($result);
 
         Gate::authorize('update', $selection->bet);
@@ -261,7 +261,7 @@ class Index extends Component
         $change = $this->undoable[$betId] ?? null;
         unset($this->undoable[$betId]);
 
-        $selection = $change === null ? null : $this->user()->selections()->with('bet')->find($change['selection']);
+        $selection = $change === null ? null : $this->user()->selections()->whereHas('bet')->with('bet')->find($change['selection']);
 
         if ($selection === null || $selection->result?->value !== $change['result']) {
             return;
@@ -358,7 +358,7 @@ class Index extends Component
             $this->reset('importBatch');
         }
 
-        $this->finishBulkAction(Str::ucfirst(self::betCount($deleted)).' deleted.');
+        $this->finishBulkAction(Str::ucfirst(self::betCount($deleted)).' deleted. You can restore them from Settings → Deleted bets for '.Bet::DAYS_KEPT_DELETED.' days.');
     }
 
     /**

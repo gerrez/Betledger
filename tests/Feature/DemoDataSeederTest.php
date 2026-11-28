@@ -36,6 +36,7 @@ class DemoDataSeederTest extends TestCase
         $this->assertSame(2, $demo->tipsters()->count());
         $this->assertSame(3, $demo->tags()->count());
         $this->assertSame(25, $demo->bets()->count());
+        $this->assertSame(1, $demo->bets()->onlyTrashed()->count());
         $decidedBeforeTheMonthItWasSettled = $demo->bets()->where('status', BetStatus::Settled)->get()
             ->filter(fn (Bet $bet): bool => $bet->event_at->format('Y-m') < $bet->settled_at?->format('Y-m'));
         $this->assertCount(1, $decidedBeforeTheMonthItWasSettled);

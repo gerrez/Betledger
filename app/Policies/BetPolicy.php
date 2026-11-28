@@ -33,4 +33,20 @@ class BetPolicy
     {
         return $user->id === $bet->user_id;
     }
+
+    /**
+     * Determine whether the user can restore the deleted bet.
+     */
+    public function restore(User $user, Bet $bet): bool
+    {
+        return $user->id === $bet->user_id;
+    }
+
+    /**
+     * Determine whether the user can delete the bet for good.
+     */
+    public function forceDelete(User $user, Bet $bet): bool
+    {
+        return $user->id === $bet->user_id;
+    }
 }

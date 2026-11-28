@@ -46,6 +46,15 @@ class Show extends Component
     }
 
     /**
+     * Livewire reloads the bet without its "not deleted" scope, so a bet deleted in
+     * another tab would still be found: this page must not change it.
+     */
+    public function hydrate(): void
+    {
+        abort_if($this->bet->trashed(), 404);
+    }
+
+    /**
      * Give one of the bet's selections a result, which settles the bet again.
      */
     public function setResult(int $selectionId, string $result, SettleBet $settleBet): void
@@ -139,7 +148,7 @@ class Show extends Component
 
         $this->bet->delete();
 
-        session()->flash('status', 'Bet deleted.');
+        session()->flash('status', 'Bet deleted. You can restore it from Settings → Deleted bets for '.Bet::DAYS_KEPT_DELETED.' days.');
 
         $this->redirectRoute('bets.index', navigate: true);
     }

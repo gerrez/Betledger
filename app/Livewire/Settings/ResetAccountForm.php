@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 /**
- * Deletes all of the user's bets (with their selections and tags) and keeps the account,
+ * Deletes all of the user's bets for good (with their selections and tags, recently
+ * deleted bets included) and keeps the account,
  * bookmakers, lists, bankroll transactions and settings.
  */
 class ResetAccountForm extends Component
@@ -25,8 +26,9 @@ class ResetAccountForm extends Component
 
         $user = $this->user();
 
-        // Selections, their teams and the bet's tags go with it (cascading foreign keys).
-        DB::transaction(fn () => $user->bets()->delete());
+        // Deleted bets go too, for good. Selections, their teams and the bet's tags go with
+        // them (cascading foreign keys).
+        DB::transaction(fn () => $user->bets()->withTrashed()->forceDelete());
 
         $this->reset('password');
 
@@ -38,7 +40,8 @@ class ResetAccountForm extends Component
     public function render(): View
     {
         return view('livewire.settings.reset-account-form', [
-            'betCount' => $this->user()->bets()->count(),
+            'betCount' => $this->user()->bets()->withTrashed()->count(),
+            'deletedCount' => $this->user()->bets()->onlyTrashed()->count(),
         ]);
     }
 

@@ -64,7 +64,7 @@
                     label="Currency"
                     :value="$currencyLabel"
                     disabled
-                    description="It can’t change once the bookmaker has bets or transactions: they are amounts in this currency."
+                    description="It can’t change once the bookmaker has bets or transactions: they are amounts in this currency. Recently deleted bets count too, until they are deleted for good."
                 />
                 <flux:error name="currency" />
             @else

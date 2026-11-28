@@ -6,6 +6,7 @@ use App\Domain\BetStatus;
 use App\Domain\Currency;
 use App\Domain\Settlement\SelectionResult;
 use App\Livewire\Bets\Index;
+use App\Livewire\Settings\DeletedBets;
 use App\Livewire\Settings\Import;
 use App\Models\Bet;
 use App\Models\Bookmaker;
@@ -91,7 +92,7 @@ class ImportTest extends TestCase
         $this->assertIsString($batches[0]);
         $component->assertRedirect(route('bets.index', ['status' => 'settled', 'batch' => $batches[0]]));
 
-        $this->assertSame('Imported 16 bets. To undo the import, choose Select, then Select all and Delete.', session('status'));
+        $this->assertSame('Imported 16 bets. To undo the import, choose Select, then Select all and Delete; to import the file again after that, delete the bets for good in Settings → Deleted bets.', session('status'));
         $this->assertSame(self::IMPORTABLE_ORDERS, $user->bets()->count());
         $this->assertSame(self::IMPORTABLE_ORDERS, $sportmarket->bets()->where('status', BetStatus::Settled)->count());
 
@@ -201,6 +202,13 @@ class ImportTest extends TestCase
             ->assertSee('16 bets deleted.');
 
         $this->assertSame([$enteredByHand->id], $user->bets()->pluck('id')->all());
+
+        // The deleted bets still count as imported, until they are deleted for good.
+        $this->preview($user, $sportmarket)->assertSee('17 orders: 0 to import, 17 skipped, 0 errors.');
+
+        Livewire::test(DeletedBets::class)
+            ->call('forceDeleteAll')
+            ->assertSee('16 bets deleted for good.');
 
         $this->preview($user, $sportmarket)
             ->assertSee('17 orders: 16 to import, 1 skipped, 0 errors.')

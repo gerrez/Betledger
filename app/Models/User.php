@@ -153,11 +153,12 @@ class User extends Authenticatable // implements MustVerifyEmail
 
     /**
      * The base currency can only change while the user has no bets: each bet's exchange
-     * rate converts to the base currency it was saved with.
+     * rate converts to the base currency it was saved with. Deleted bets count too, since
+     * restoring one brings its rate back.
      */
     public function canChangeBaseCurrency(): bool
     {
-        return $this->bets()->doesntExist();
+        return $this->bets()->withTrashed()->doesntExist();
     }
 
     /**

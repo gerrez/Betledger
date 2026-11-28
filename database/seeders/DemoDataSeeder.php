@@ -200,6 +200,13 @@ class DemoDataSeeder extends Seeder
             ]);
         }
 
+        // A bet deleted two days ago, so Settings → Deleted bets has one to restore. It
+        // is left out of every other page and total until it is restored.
+        $deleted = $this->placeBet($unibet, 1500, daysAgo: 10, selections: [
+            $leg('Liverpool', 'Real Madrid', 'Champions League', '1X2', 'Real Madrid', '3.40', SelectionResult::Lost, 9),
+        ]);
+        $deleted->forceFill(['deleted_at' => now()->subDays(2)])->save();
+
         // Bankroll: Sportmarket has no transactions, so its card shows the empty state.
         // Old Bookie withdrew more than it held (€50 + €50 profit − €150), so its balance
         // is negative; Bet365 and Danske Spil have balances in their own currency.
